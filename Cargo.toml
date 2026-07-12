@@ -1,0 +1,22 @@
+[package]
+name = "quire-code-rs"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Deterministic source-code knowledge-graph extraction (tree-sitter) for the Filament/Quire ecosystem."
+authors = ["Peter Krenesky <kreneskyp@gmail.com>"]
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/agent-ix/quire-code-rs"
+
+[lib]
+name = "quire_code_rs"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+
+[dependencies]
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+# Stable SHA-256 record ids, matching quire-rs canonical extraction conventions.
+sha2 = "^0.10"
+thiserror = "^2"
+regex = "^1"
