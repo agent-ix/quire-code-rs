@@ -1,0 +1,639 @@
+{
+  "nodes": [
+    {
+      "id": "8ff4bde9a1c1823c5ba3e873f1c07f1af379dc8bb2ac046074d5ac13335d3e83",
+      "reference": "ix://agent-ix/demo/src/lib.rs",
+      "object_type": "code_file",
+      "name": "agent-ix/demo/src/lib.rs",
+      "data": {
+        "kind": "file",
+        "path": "src/lib.rs",
+        "span": {
+          "start": 1,
+          "end": 11
+        }
+      }
+    },
+    {
+      "id": "0f7983226d781c03fede9f0476ecc07c2724b70837e167c9e2ae101fdb9d41cc",
+      "reference": "ix://agent-ix/demo/src/store.rs",
+      "object_type": "code_file",
+      "name": "agent-ix/demo/src/store.rs",
+      "data": {
+        "kind": "file",
+        "path": "src/store.rs",
+        "span": {
+          "start": 1,
+          "end": 22
+        }
+      }
+    },
+    {
+      "id": "34af62f16e1738b628cbedf00b22b1be054fe50c47ad8a57e4dec7cd8c9c9a6e",
+      "reference": "ix://agent-ix/demo/tool/main.py",
+      "object_type": "code_file",
+      "name": "agent-ix/demo/tool/main.py",
+      "data": {
+        "kind": "file",
+        "path": "tool/main.py",
+        "span": {
+          "start": 1,
+          "end": 10
+        }
+      }
+    },
+    {
+      "id": "51ee77f749a314914a001991516be83c7afd573c807c1c725c04ec6a05b0ec37",
+      "reference": "ix://agent-ix/demo/ui/app.ts",
+      "object_type": "code_file",
+      "name": "agent-ix/demo/ui/app.ts",
+      "data": {
+        "kind": "file",
+        "path": "ui/app.ts",
+        "span": {
+          "start": 1,
+          "end": 3
+        }
+      }
+    },
+    {
+      "id": "34c866a0290343211eba90c6a1803efc1f01e223733c30b5a776b5376a7a6100",
+      "reference": "ix://agent-ix/demo/ui/store.ts",
+      "object_type": "code_file",
+      "name": "agent-ix/demo/ui/store.ts",
+      "data": {
+        "kind": "file",
+        "path": "ui/store.ts",
+        "span": {
+          "start": 1,
+          "end": 9
+        }
+      }
+    },
+    {
+      "id": "94a59bb0236c74893cf18314904287cf08e1f70d16d6cf32076658e9cd4ae654",
+      "reference": "ix://agent-ix/demo/src/lib.rs::exercises_the_store",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/src/lib.rs::exercises_the_store",
+      "data": {
+        "kind": "function",
+        "path": "src/lib.rs",
+        "span": {
+          "start": 8,
+          "end": 11
+        },
+        "parent": "agent-ix/demo/src/lib.rs"
+      }
+    },
+    {
+      "id": "41870e4462e8dd12e3dc3f56a63615f3834909f6f959ff19aea382f3f130e2ba",
+      "reference": "ix://agent-ix/demo/src/lib.rs::inner::helper",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/src/lib.rs::inner::helper",
+      "data": {
+        "kind": "function",
+        "path": "src/lib.rs",
+        "span": {
+          "start": 4,
+          "end": 4
+        },
+        "parent": "agent-ix/demo/src/lib.rs::inner"
+      }
+    },
+    {
+      "id": "c0561db7f68899d9766e7ce28585cc5fd6d8ffa38d6032e131142f82ca60ae42",
+      "reference": "ix://agent-ix/demo/src/store.rs::Store::save",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/src/store.rs::Store::save",
+      "data": {
+        "kind": "function",
+        "path": "src/store.rs",
+        "span": {
+          "start": 16,
+          "end": 16
+        },
+        "parent": "agent-ix/demo/src/store.rs"
+      }
+    },
+    {
+      "id": "55d676ba11aee4638d68254470ad13b7114fbe37e1d19031cddd1c0173e5ae0b",
+      "reference": "ix://agent-ix/demo/src/store.rs::Store::upsert",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/src/store.rs::Store::upsert",
+      "data": {
+        "kind": "function",
+        "path": "src/store.rs",
+        "span": {
+          "start": 12,
+          "end": 12
+        },
+        "parent": "agent-ix/demo/src/store.rs"
+      }
+    },
+    {
+      "id": "802274e4d90fec5221fc1aa0d89fb5dfc39711e29354207985f4f62b33e37fd6",
+      "reference": "ix://agent-ix/demo/tool/main.py::Runner::run",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/tool/main.py::Runner::run",
+      "data": {
+        "kind": "function",
+        "path": "tool/main.py",
+        "span": {
+          "start": 5,
+          "end": 6
+        },
+        "parent": "agent-ix/demo/tool/main.py::Runner"
+      }
+    },
+    {
+      "id": "36c5c4d01938c76fbd2ba337a15d08d17a07b4ac2d7a54220d82d3cb0afdb23f",
+      "reference": "ix://agent-ix/demo/tool/main.py::main",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/tool/main.py::main",
+      "data": {
+        "kind": "function",
+        "path": "tool/main.py",
+        "span": {
+          "start": 9,
+          "end": 10
+        },
+        "parent": "agent-ix/demo/tool/main.py"
+      }
+    },
+    {
+      "id": "8869836117acfb0d6a3edf5bda84827257b8cfaa54fa71dcb7015b49595685e9",
+      "reference": "ix://agent-ix/demo/ui/app.ts::boot",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/ui/app.ts::boot",
+      "data": {
+        "kind": "function",
+        "path": "ui/app.ts",
+        "span": {
+          "start": 3,
+          "end": 3
+        },
+        "parent": "agent-ix/demo/ui/app.ts"
+      }
+    },
+    {
+      "id": "61613883c2c4fe355822a326b758b88b9d86ffe1984d0c1f295d72ed833a8e61",
+      "reference": "ix://agent-ix/demo/ui/store.ts::Store::upsert",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/ui/store.ts::Store::upsert",
+      "data": {
+        "kind": "method",
+        "path": "ui/store.ts",
+        "span": {
+          "start": 8,
+          "end": 8
+        },
+        "parent": "agent-ix/demo/ui/store.ts::Store"
+      }
+    },
+    {
+      "id": "b88986c8fdbf6c0f40fe661f9f30fb63849e207cca2941f50c52a63c5a22412b",
+      "reference": "ix://agent-ix/demo/src/lib.rs::inner",
+      "object_type": "code_module",
+      "name": "agent-ix/demo/src/lib.rs::inner",
+      "data": {
+        "kind": "module",
+        "path": "src/lib.rs",
+        "span": {
+          "start": 3,
+          "end": 5
+        },
+        "parent": "agent-ix/demo/src/lib.rs"
+      }
+    },
+    {
+      "id": "57414c49598596db5b566fb63aab5785f64ed7e15d7867a1b992b36e9443c763",
+      "reference": "ix://agent-ix/demo/src/store.rs::Mode",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/src/store.rs::Mode",
+      "data": {
+        "kind": "enum",
+        "path": "src/store.rs",
+        "span": {
+          "start": 19,
+          "end": 22
+        },
+        "parent": "agent-ix/demo/src/store.rs"
+      }
+    },
+    {
+      "id": "e84c2e351f6eec902bed5accacfd768a16254d731a23d4f6773ba1700d13bf7e",
+      "reference": "ix://agent-ix/demo/src/store.rs::Persist",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/src/store.rs::Persist",
+      "data": {
+        "kind": "trait",
+        "path": "src/store.rs",
+        "span": {
+          "start": 7,
+          "end": 9
+        },
+        "parent": "agent-ix/demo/src/store.rs"
+      }
+    },
+    {
+      "id": "16fb01d5ec579c0ce2e14ca221ad7a37505432ac9341cb30f81ac69524159b22",
+      "reference": "ix://agent-ix/demo/src/store.rs::Store",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/src/store.rs::Store",
+      "data": {
+        "kind": "struct",
+        "path": "src/store.rs",
+        "span": {
+          "start": 3,
+          "end": 5
+        },
+        "parent": "agent-ix/demo/src/store.rs"
+      }
+    },
+    {
+      "id": "e6e8ee7c4ac2e0e3b0bb5f2888a7eb832c600aa1d8a2cb94ebf946a5e239ec53",
+      "reference": "ix://agent-ix/demo/tool/main.py::Runner",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/tool/main.py::Runner",
+      "data": {
+        "kind": "class",
+        "path": "tool/main.py",
+        "span": {
+          "start": 4,
+          "end": 6
+        },
+        "parent": "agent-ix/demo/tool/main.py"
+      }
+    },
+    {
+      "id": "1ba9e5cd861d36abb31d710eaa8ef8bca504a80d4dd0b77f11b1a73f69482ed5",
+      "reference": "ix://agent-ix/demo/ui/store.ts::Alias",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/ui/store.ts::Alias",
+      "data": {
+        "kind": "type_alias",
+        "path": "ui/store.ts",
+        "span": {
+          "start": 5,
+          "end": 5
+        },
+        "parent": "agent-ix/demo/ui/store.ts"
+      }
+    },
+    {
+      "id": "c0ebc945439aed99326b9508ab08af1f64e59b0937e7884fbfb15d7ab5389f60",
+      "reference": "ix://agent-ix/demo/ui/store.ts::Shape",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/ui/store.ts::Shape",
+      "data": {
+        "kind": "interface",
+        "path": "ui/store.ts",
+        "span": {
+          "start": 1,
+          "end": 3
+        },
+        "parent": "agent-ix/demo/ui/store.ts"
+      }
+    },
+    {
+      "id": "00ee8525a40aafb8c5942981cacd40e61fd5c02eabb55791493fd46d06be4184",
+      "reference": "ix://agent-ix/demo/ui/store.ts::Store",
+      "object_type": "code_type",
+      "name": "agent-ix/demo/ui/store.ts::Store",
+      "data": {
+        "kind": "class",
+        "path": "ui/store.ts",
+        "span": {
+          "start": 7,
+          "end": 9
+        },
+        "parent": "agent-ix/demo/ui/store.ts"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source_ref": "agent-ix/demo/src/lib.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/lib.rs::exercises_the_store",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/lib.rs",
+          "line": 8
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/lib.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/lib.rs::inner",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/lib.rs",
+          "line": 3
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/lib.rs",
+      "edge_type": "imports",
+      "target_ref": "agent-ix/demo/src/store.rs",
+      "confidence": 1.0,
+      "reason": "path-resolved",
+      "evidence": [
+        {
+          "file": "src/lib.rs",
+          "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/lib.rs::exercises_the_store",
+      "edge_type": "references",
+      "target_ref": "TC-001",
+      "confidence": 1.0,
+      "reason": "explicit-mention",
+      "evidence": [
+        {
+          "file": "src/lib.rs",
+          "line": 9
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/lib.rs::inner",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/lib.rs::inner::helper",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/lib.rs",
+          "line": 4
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Mode",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 19
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Persist",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 7
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Store",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 3
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Store::save",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 16
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Store::upsert",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 12
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "references",
+      "target_ref": "FR-002",
+      "confidence": 1.0,
+      "reason": "explicit-mention",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs",
+      "edge_type": "references",
+      "target_ref": "ix://agent-ix/demo/FR-003",
+      "confidence": 1.0,
+      "reason": "explicit-mention",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/tool/main.py",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/tool/main.py::Runner",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "tool/main.py",
+          "line": 4
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/tool/main.py",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/tool/main.py::main",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "tool/main.py",
+          "line": 9
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/tool/main.py::Runner",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/tool/main.py::Runner::run",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "tool/main.py",
+          "line": 5
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/ui/app.ts",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/ui/app.ts::boot",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "ui/app.ts",
+          "line": 3
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/ui/app.ts",
+      "edge_type": "imports",
+      "target_ref": "agent-ix/demo/ui/store.ts",
+      "confidence": 1.0,
+      "reason": "path-resolved",
+      "evidence": [
+        {
+          "file": "ui/app.ts",
+          "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/ui/store.ts",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/ui/store.ts::Alias",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "ui/store.ts",
+          "line": 5
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/ui/store.ts",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/ui/store.ts::Shape",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "ui/store.ts",
+          "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/ui/store.ts",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/ui/store.ts::Store",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "ui/store.ts",
+          "line": 7
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/ui/store.ts::Store",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/ui/store.ts::Store::upsert",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "ui/store.ts",
+          "line": 8
+        }
+      ],
+      "count": 1
+    }
+  ],
+  "mentions": [
+    {
+      "identifier": "FR-002",
+      "kind": "requirement_citation",
+      "source": "agent-ix/demo/src/store.rs",
+      "file": "src/store.rs",
+      "line": 1
+    },
+    {
+      "identifier": "TC-001",
+      "kind": "tracking_tag",
+      "source": "agent-ix/demo/src/lib.rs::exercises_the_store",
+      "file": "src/lib.rs",
+      "line": 9
+    },
+    {
+      "identifier": "ix://agent-ix/demo/FR-003",
+      "kind": "artifact_reference",
+      "source": "agent-ix/demo/src/store.rs",
+      "file": "src/store.rs",
+      "line": 1
+    }
+  ],
+  "diagnostics": [],
+  "stats": {
+    "files": 5,
+    "files_with_errors": 0,
+    "unresolved_calls": 0
+  }
+}

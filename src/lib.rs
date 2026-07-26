@@ -7,9 +7,26 @@
 //! (stable SHA-256 record ids, ix:// refs, edge dedupe on
 //! `(source_ref, edge_type, target_ref)`).
 //!
-//! Planned module layout (authored via the spec cycle in `spec/`):
-//! per-file structural facts + type environments, an in-memory fact corpus
-//! driving a conservative receiver-typed fixpoint call resolver, and a
-//! spec↔code linker harvesting TC-/FR-/NFR-/ix:// mentions from comments.
+//! The normative contract is this repository's own `spec/` tree. This crate
+//! implements FR-001 through FR-008 and satisfies
+//! `ix://agent-ix/filament-ide-rs/FR-072-CON-1`.
 
 #![forbid(unsafe_code)]
+
+pub mod edges;
+pub mod extract;
+pub mod facts;
+pub mod imports;
+pub mod lang;
+pub mod mentions;
+pub mod naming;
+pub mod parse;
+pub mod records;
+
+pub use edges::{Edge, EdgeType, Evidence, Reason};
+pub use extract::{extract, ExtractionResult, ExtractionStats};
+pub use facts::{CodeFact, Diagnostic, LineSpan, ObjectType, Severity};
+pub use lang::Language;
+pub use mentions::{Mention, MentionKind};
+pub use parse::SourceFile;
+pub use records::{EdgeRecord, NodeRecord};
