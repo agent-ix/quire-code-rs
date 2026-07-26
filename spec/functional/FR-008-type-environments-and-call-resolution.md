@@ -65,6 +65,11 @@ other case.
 - The library SHALL resolve a call to a declaration in the same file without
   consulting other files, so that same-file resolution is unaffected by batch
   composition.
+- Where the file being resolved declares a type or method matching the
+  candidate, the library SHALL prefer that declaration over any batch-wide
+  candidate, so that a simple name occurring in more than one file — including
+  the same name in two languages — SHALL NOT suppress the relationships within
+  each file that declares it.
 - Where a Rust method is invoked through a trait object or a generic parameter,
   and the concrete implementation is therefore not determined by the source, the
   library SHALL emit no `calls` edge.
@@ -98,6 +103,7 @@ other case.
 | FR-008-AC-9 | Same-file resolution produces identical edges whether or not unrelated files are present in the batch | Test (TC-052) |
 | FR-008-AC-10 | Each resolution tier stamps its own `reason`, and `receiver-typed` outranks `import-scoped`, which outranks `name-match` | Test (TC-053) |
 | FR-008-AC-11 | The result reports the batch file count and the unresolved call-site count | Test (TC-073) |
+| FR-008-AC-12 | A simple type name declared in two files still resolves within each file that declares it | Test (TC-074) |
 
 ## Dependencies
 

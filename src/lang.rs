@@ -104,6 +104,16 @@ pub(crate) struct LanguageConfig {
     pub import_extensions: &'static [&'static str],
     /// Index file stems tried when a specifier names a directory.
     pub import_index_stems: &'static [&'static str],
+    /// Node kinds declaring a local binding (`let`, `const`, assignment).
+    pub binding_nodes: &'static [&'static str],
+    /// Node kinds for a call expression.
+    pub call_nodes: &'static [&'static str],
+    /// Node kind for a member/field access used as a call receiver.
+    pub member_nodes: &'static [&'static str],
+    /// Node kinds for a callable parameter carrying a declared type.
+    pub parameter_nodes: &'static [&'static str],
+    /// Node kinds declaring a field on a type.
+    pub field_nodes: &'static [&'static str],
 }
 
 static RUST: LanguageConfig = LanguageConfig {
@@ -161,6 +171,11 @@ static RUST: LanguageConfig = LanguageConfig {
     import_nodes: &["use_declaration"],
     import_extensions: &["rs"],
     import_index_stems: &["mod"],
+    binding_nodes: &["let_declaration", "const_item", "static_item"],
+    call_nodes: &["call_expression"],
+    member_nodes: &["field_expression"],
+    parameter_nodes: &["parameter", "self_parameter"],
+    field_nodes: &["field_declaration"],
 };
 
 static TYPESCRIPT: LanguageConfig = LanguageConfig {
@@ -233,6 +248,15 @@ static TYPESCRIPT: LanguageConfig = LanguageConfig {
     import_nodes: &["import_statement", "export_statement"],
     import_extensions: &["ts", "tsx", "d.ts", "js", "jsx"],
     import_index_stems: &["index"],
+    binding_nodes: &[
+        "variable_declarator",
+        "lexical_declaration",
+        "public_field_definition",
+    ],
+    call_nodes: &["call_expression", "new_expression"],
+    member_nodes: &["member_expression"],
+    parameter_nodes: &["required_parameter", "optional_parameter"],
+    field_nodes: &["property_signature", "public_field_definition"],
 };
 
 static PYTHON: LanguageConfig = LanguageConfig {
@@ -257,6 +281,11 @@ static PYTHON: LanguageConfig = LanguageConfig {
     import_nodes: &["import_statement", "import_from_statement"],
     import_extensions: &["py", "pyi"],
     import_index_stems: &["__init__"],
+    binding_nodes: &["assignment"],
+    call_nodes: &["call"],
+    member_nodes: &["attribute"],
+    parameter_nodes: &["typed_parameter", "identifier"],
+    field_nodes: &["assignment"],
 };
 
 impl LanguageConfig {
