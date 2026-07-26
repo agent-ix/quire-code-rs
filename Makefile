@@ -16,6 +16,7 @@ help:
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
+	@echo "  make bench            - NFR-003 budget + NFR-004 corpus-scale recall (performance lane)"
 
 # =============================================================================
 # Format / Lint / Test
@@ -60,6 +61,17 @@ cargo-audit:
 .PHONY: audit-unsafe
 audit-unsafe:
 	bash scripts/check_unsafe_comments.sh
+
+# =============================================================================
+# Performance lane
+# =============================================================================
+
+# Gates on the NFR-003 thresholds and reports NFR-004 recall at corpus scale.
+# Deliberately outside `make ci`: benchmark timings on a shared runner would
+# make the ordinary suite flaky, which NFR-003's Verification section calls out.
+.PHONY: bench
+bench:
+	$(CARGO) bench --bench extraction
 
 # =============================================================================
 # Composite

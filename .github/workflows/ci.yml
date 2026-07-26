@@ -6,6 +6,9 @@ on:
     tags: ["v*.*.*"]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Nightly, so a performance regression surfaces within a day.
+    - cron: "0 4 * * *"
 
 jobs:
   rust:
@@ -49,3 +52,18 @@ jobs:
           tool: cargo-deny
       - name: cargo deny check licenses
         run: cargo deny check licenses
+
+  benchmarks:
+    name: Performance Lane (NFR-003)
+    # Not on every PR: benchmark timings on a shared runner would make the
+    # ordinary gates flaky. Runs on demand and nightly against main.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+      - name: Extraction budget + corpus recall
+        run: make bench

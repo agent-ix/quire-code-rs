@@ -53,12 +53,18 @@ satisfiable.
 
 ## Verification
 
-A committed benchmark corpus of the stated size is extracted end to end on a
-single core, measuring wall time, peak resident memory and fixpoint iteration
-count against the thresholds. A separate benchmark re-extracts single files
-drawn from that corpus and reports the p95. Benchmarks report measurements on
-every run; they gate on threshold only when run in the performance lane, so that
-ordinary CI is not made flaky by shared-runner variance.
+A benchmark corpus of the stated size is generated deterministically and
+extracted end to end, measuring wall time, peak resident memory and the
+*measured* fixpoint iteration count against the thresholds. A separate benchmark
+re-extracts single files drawn from that corpus and reports the p95. The corpus
+is generated rather than committed because a fixture of this size would dominate
+the repository, would still not resemble a real codebase, and could not be
+regenerated at a different size when the budget changes; generation is a pure
+function of the requested size, so successive runs measure the same work.
+
+Benchmarks run in the performance lane — `make bench`, plus nightly and
+on-demand CI — and gate on threshold there. They are excluded from the per-PR
+gate so that shared-runner variance cannot make the ordinary suite flaky.
 
 ## Acceptance Criteria
 

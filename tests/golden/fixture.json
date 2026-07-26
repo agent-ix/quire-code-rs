@@ -481,6 +481,20 @@
       "count": 1
     },
     {
+      "source_ref": "agent-ix/demo/src/store.rs::Store",
+      "edge_type": "implements_trait",
+      "target_ref": "agent-ix/demo/src/store.rs::Persist",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
       "source_ref": "agent-ix/demo/tool/main.py",
       "edge_type": "contains",
       "target_ref": "agent-ix/demo/tool/main.py::Runner",
@@ -634,6 +648,8 @@
   "stats": {
     "files": 5,
     "files_with_errors": 0,
-    "unresolved_calls": 0
+    "unresolved_calls": 0,
+    "max_fixpoint_iterations": 1,
+    "files_hitting_iteration_bound": 0
   }
 }
