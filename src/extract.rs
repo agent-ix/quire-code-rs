@@ -8,16 +8,18 @@
 //! Load → resolve → emit → drop: the fact corpus lives for the call and is
 //! dropped with it (ADR-002).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
 use crate::edges::{EdgeAccumulator, EdgeType, Evidence, Reason};
-use crate::facts::{CodeFact, Diagnostic};
+use crate::facts::{CodeFact, Diagnostic, ObjectType};
 use crate::imports;
 use crate::mentions::{self, Mention};
-use crate::parse::{self, SourceFile};
+use crate::parse::{self, ParsedFile, SourceFile};
 use crate::records::{self, EdgeRecord, NodeRecord};
+use crate::resolve;
+use crate::typeenv::{Corpus, TypeEnv};
 
 /// What one extraction produced.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,14 +64,28 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
         ))
     });
 
-    for file in ordered {
+    // Resolution needs the whole batch before any call can be resolved, so the
+    // first pass parses and the second resolves (ADR-002: the corpus lives for
+    // the call and is dropped with it).
+    let mut parsed_files: Vec<(&SourceFile, String, ParsedFile)> = Vec::new();
+    for file in &ordered {
         let path = file.normalized_path();
         let parsed = parse::parse_file(file);
+        parsed_files.push((file, path, parsed));
+    }
+
+    let corpus = build_corpus(&parsed_files);
+    let import_edges = resolve_import_edges(&parsed_files, &batch_paths);
+    let types_by_file = types_by_file(&parsed_files);
+    let mut unresolved_calls = 0u32;
+
+    for (file, path, parsed) in &parsed_files {
+        let (file, path, parsed) = (*file, path.clone(), parsed);
 
         if parsed.diagnostics.iter().any(|d| d.code == "parse_error") {
             files_with_errors += 1;
         }
-        diagnostics.extend(parsed.diagnostics);
+        diagnostics.extend(parsed.diagnostics.iter().cloned());
 
         // Containment (FR-003): every fact with a parent contributes one edge.
         for fact in &parsed.facts {
@@ -128,7 +144,54 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
         }
         all_mentions.extend(found);
 
-        all_facts.extend(parsed.facts);
+        // Calls and type relations (FR-008). The type environment is built per
+        // file and dropped with the iteration.
+        let env = TypeEnv::build(&parsed.bindings, &parsed.enclosing_types, &corpus);
+        let reachable = resolve::imported_types(&path, &import_edges, &types_by_file);
+        let local = local_scope(parsed);
+
+        for call in &parsed.calls {
+            match resolve::resolve_call(call, &env, &corpus, &reachable, &local) {
+                Some(resolution) => accumulator.add(
+                    call.caller.clone(),
+                    EdgeType::Calls,
+                    resolution.target,
+                    resolution.reason,
+                    Evidence {
+                        file: path.clone(),
+                        line: call.line,
+                    },
+                ),
+                None => unresolved_calls += 1,
+            }
+        }
+
+        for (child, parent, is_trait) in &parsed.type_relations {
+            let Some(child_qualified) = resolve::resolve_type_relation(&corpus, &local, child)
+            else {
+                continue;
+            };
+            let Some(parent_qualified) = resolve::resolve_type_relation(&corpus, &local, parent)
+            else {
+                continue;
+            };
+            accumulator.add(
+                child_qualified,
+                if *is_trait {
+                    EdgeType::ImplementsTrait
+                } else {
+                    EdgeType::Extends
+                },
+                parent_qualified,
+                Reason::Syntactic,
+                Evidence {
+                    file: path.clone(),
+                    line: 1,
+                },
+            );
+        }
+
+        all_facts.extend(parsed.facts.iter().cloned());
     }
 
     let mut nodes: Vec<NodeRecord> = all_facts.iter().map(records::node_record).collect();
@@ -156,9 +219,144 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
         stats: ExtractionStats {
             files: files.len() as u32,
             files_with_errors,
-            unresolved_calls: 0,
+            unresolved_calls,
         },
     }
+}
+
+/// Build the batch-wide declaration index the solver resolves against.
+fn build_corpus(parsed_files: &[(&SourceFile, String, ParsedFile)]) -> Corpus {
+    let mut corpus = Corpus::default();
+
+    for (_, _, parsed) in parsed_files {
+        for fact in &parsed.facts {
+            match fact.object_type {
+                ObjectType::Type => {
+                    corpus
+                        .types
+                        .entry(fact.simple_name.clone())
+                        .or_default()
+                        .insert(fact.qualified_name.clone());
+                }
+                ObjectType::Function => {
+                    // A method's owning type is the segment before its own.
+                    match owning_type_segment(&fact.qualified_name) {
+                        Some(owner) => {
+                            corpus
+                                .methods
+                                .entry((owner, fact.simple_name.clone()))
+                                .or_default()
+                                .insert(fact.qualified_name.clone());
+                        }
+                        None => {
+                            corpus
+                                .functions
+                                .entry(fact.simple_name.clone())
+                                .or_default()
+                                .insert(fact.qualified_name.clone());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        corpus.return_types.extend(
+            parsed
+                .return_types
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone())),
+        );
+        corpus.field_types.extend(
+            parsed
+                .field_types
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone())),
+        );
+    }
+
+    corpus
+}
+
+/// The type segment owning a qualified callable name, when it has one.
+///
+/// `org/repo/path.rs::Store::upsert` -> `Store`; a free function's name has no
+/// segment before its own, so it yields `None`.
+fn owning_type_segment(qualified: &str) -> Option<String> {
+    let mut segments = qualified.split("::");
+    let _path = segments.next()?;
+    let parts: Vec<&str> = segments.collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    parts
+        .get(parts.len() - 2)
+        .map(|s| s.to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// What one file declares itself, so same-file resolution never depends on the
+/// rest of the batch (FR-008-AC-9).
+fn local_scope(parsed: &ParsedFile) -> resolve::LocalScope {
+    let mut local = resolve::LocalScope::default();
+    for fact in &parsed.facts {
+        match fact.object_type {
+            ObjectType::Type => {
+                local
+                    .types
+                    .entry(fact.simple_name.clone())
+                    .or_insert_with(|| fact.qualified_name.clone());
+            }
+            ObjectType::Function => match owning_type_segment(&fact.qualified_name) {
+                Some(owner) => {
+                    local
+                        .methods
+                        .entry((owner, fact.simple_name.clone()))
+                        .or_insert_with(|| fact.qualified_name.clone());
+                }
+                None => {
+                    local
+                        .functions
+                        .entry(fact.simple_name.clone())
+                        .or_insert_with(|| fact.qualified_name.clone());
+                }
+            },
+            _ => {}
+        }
+    }
+    local
+}
+
+/// The import graph, keyed by file path, for tier-2 candidate narrowing.
+fn resolve_import_edges(
+    parsed_files: &[(&SourceFile, String, ParsedFile)],
+    batch_paths: &BTreeSet<String>,
+) -> BTreeMap<String, BTreeSet<String>> {
+    let mut out: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (file, path, parsed) in parsed_files {
+        for (specifier, _) in &parsed.imports {
+            if let Some(target) = imports::resolve(specifier, path, file.language, batch_paths) {
+                out.entry(path.clone()).or_default().insert(target);
+            }
+        }
+    }
+    out
+}
+
+/// Simple type names declared per file, for tier-2 candidate narrowing.
+fn types_by_file(
+    parsed_files: &[(&SourceFile, String, ParsedFile)],
+) -> BTreeMap<String, BTreeSet<String>> {
+    let mut out: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (_, path, parsed) in parsed_files {
+        let declared: BTreeSet<String> = parsed
+            .facts
+            .iter()
+            .filter(|f| f.object_type == ObjectType::Type)
+            .map(|f| f.simple_name.clone())
+            .collect();
+        out.insert(path.clone(), declared);
+    }
+    out
 }
 
 #[cfg(test)]

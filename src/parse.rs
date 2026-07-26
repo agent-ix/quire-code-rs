@@ -16,6 +16,7 @@ use tree_sitter::{Node, Parser, Tree};
 use crate::facts::{CodeFact, Diagnostic, LineSpan, ObjectType};
 use crate::lang::{Language, LanguageConfig};
 use crate::naming::{anonymous_segment, child_name, file_name, normalize_path};
+use crate::typeenv::{RawBinding, TypeSource, FILE_SCOPE};
 
 /// A source file handed to the library. Content arrives in memory; this library
 /// never reads a path from disk (NFR-002).
@@ -63,6 +64,32 @@ pub struct ParsedFile {
     pub comments: Vec<CommentText>,
     /// Qualified name of the file's own `code_file` fact.
     pub file_qualified_name: String,
+    /// Local bindings, for the FR-008 type environment.
+    pub bindings: Vec<RawBinding>,
+    /// Call sites awaiting resolution (FR-008).
+    pub calls: Vec<CallSite>,
+    /// Scope key -> the type enclosing it, for `self` / `this` receivers.
+    pub enclosing_types: BTreeMap<String, String>,
+    /// Declared return types: qualified callable name -> simple type name.
+    pub return_types: BTreeMap<String, String>,
+    /// Declared field types: (simple type name, field) -> simple type name.
+    pub field_types: BTreeMap<(String, String), String>,
+    /// Type relations: (child simple name, parent simple name, is_trait).
+    pub type_relations: Vec<(String, String, bool)>,
+}
+
+/// One call site, recorded during the walk and resolved later (FR-008).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallSite {
+    /// Qualified name of the callable the site sits in.
+    pub caller: String,
+    /// Scope key the receiver is resolved in.
+    pub scope: String,
+    /// The receiver expression's leading identifier, if the call has one.
+    pub receiver: Option<String>,
+    /// The called function or method's simple name.
+    pub callee: String,
+    pub line: u32,
 }
 
 /// One comment or attribute, with enough context to attribute a mention.
@@ -158,13 +185,47 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
         comments: Vec::new(),
         imports: Vec::new(),
         anon_counters: BTreeMap::new(),
+        bindings: Vec::new(),
+        calls: Vec::new(),
+        enclosing_types: BTreeMap::new(),
+        return_types: BTreeMap::new(),
+        field_types: BTreeMap::new(),
+        type_relations: Vec::new(),
     };
-    walker.walk(root, &file_qualified_name, &file_qualified_name, false);
+    let root_ctx = Context {
+        name_parent: file_qualified_name.clone(),
+        contain_parent: file_qualified_name.clone(),
+        scope: FILE_SCOPE.to_string(),
+        owning_type: None,
+        in_test: false,
+    };
+    walker.walk(root, &root_ctx);
 
     out.facts.extend(walker.facts);
     out.comments = walker.comments;
     out.imports = walker.imports;
+    out.bindings = walker.bindings;
+    out.calls = walker.calls;
+    out.enclosing_types = walker.enclosing_types;
+    out.return_types = walker.return_types;
+    out.field_types = walker.field_types;
+    out.type_relations = walker.type_relations;
     out
+}
+
+/// What the walker knows about where it currently is.
+#[derive(Debug, Clone)]
+struct Context {
+    /// Nearest enclosing declaration contributing a name segment.
+    name_parent: String,
+    /// Nearest enclosing fact, for containment.
+    contain_parent: String,
+    /// Scope key for binding lookup: `""` at file level, `name@line` inside a
+    /// callable.
+    scope: String,
+    /// Simple name of the type whose body we are inside, for `self`.
+    owning_type: Option<String>,
+    in_test: bool,
 }
 
 fn parse_tree(file: &SourceFile) -> Option<Tree> {
@@ -202,13 +263,18 @@ struct Walker<'a> {
     imports: Vec<(String, u32)>,
     /// (parent qualified name, kind) -> next ordinal, for anonymous segments.
     anon_counters: BTreeMap<(String, &'static str), usize>,
+    bindings: Vec<RawBinding>,
+    calls: Vec<CallSite>,
+    enclosing_types: BTreeMap<String, String>,
+    return_types: BTreeMap<String, String>,
+    field_types: BTreeMap<(String, String), String>,
+    type_relations: Vec<(String, String, bool)>,
 }
 
 impl<'a> Walker<'a> {
-    /// Walk `node`, attributing declarations to `name_parent` (the nearest
-    /// enclosing declaration that contributes a name segment) and containment
-    /// to `contain_parent` (the nearest enclosing fact).
-    fn walk(&mut self, node: Node<'a>, name_parent: &str, contain_parent: &str, in_test: bool) {
+    /// Walk `node` in `ctx`, emitting facts and collecting the inputs the
+    /// FR-008 solver needs.
+    fn walk(&mut self, node: Node<'a>, ctx: &Context) {
         let mut cursor = node.walk();
         let children: Vec<Node<'a>> = node.children(&mut cursor).collect();
 
@@ -216,7 +282,7 @@ impl<'a> Walker<'a> {
             let kind = child.kind();
 
             if self.config.is_comment(kind) || self.config.is_attribute(kind) {
-                self.record_comment(child, contain_parent, in_test);
+                self.record_comment(child, &ctx.contain_parent, ctx.in_test);
                 continue;
             }
 
@@ -230,47 +296,359 @@ impl<'a> Walker<'a> {
                 continue;
             }
 
+            if self.config.binding_nodes.contains(&kind) {
+                self.record_binding(child, ctx);
+            }
+
+            if self.config.call_nodes.contains(&kind) {
+                self.record_call(child, ctx);
+            }
+
+            if self.config.field_nodes.contains(&kind) {
+                self.record_field(child, ctx);
+            }
+
             match self.config.decl_for(kind) {
                 Some(decl) => {
-                    let (segment, simple_name) = self.segment_for(child, decl, name_parent);
-                    let qualified = child_name(name_parent, &segment);
+                    let (segment, simple_name) = self.segment_for(child, decl, &ctx.name_parent);
+                    let qualified = child_name(&ctx.name_parent, &segment);
                     let span = span_of(child);
-                    let is_test = in_test || self.looks_like_test(child, &simple_name);
+                    let is_test = ctx.in_test || self.looks_like_test(child, &simple_name);
 
                     self.facts.push(CodeFact {
                         object_type: decl.object_type,
                         kind: decl.kind,
                         qualified_name: qualified.clone(),
-                        simple_name,
+                        simple_name: simple_name.clone(),
                         path: self.path.to_string(),
                         span,
-                        parent: Some(contain_parent.to_string()),
+                        parent: Some(ctx.contain_parent.to_string()),
                     });
 
-                    let next_name_parent = if decl.names_children {
-                        qualified.as_str()
-                    } else {
-                        name_parent
+                    let mut next = Context {
+                        name_parent: if decl.names_children {
+                            qualified.clone()
+                        } else {
+                            ctx.name_parent.clone()
+                        },
+                        contain_parent: qualified.clone(),
+                        scope: ctx.scope.clone(),
+                        owning_type: ctx.owning_type.clone(),
+                        in_test: is_test,
                     };
-                    // A fresh borrow is needed because next_name_parent may
-                    // point into `qualified`.
-                    let next_name_parent = next_name_parent.to_string();
-                    self.walk(child, &next_name_parent, &qualified, is_test);
+
+                    if decl.object_type == ObjectType::Function {
+                        // A callable opens a scope. The key pairs its name with
+                        // its start line, so two same-named callables in one
+                        // file stay distinct.
+                        next.scope = format!("{simple_name}@{}", span.start);
+                        if let Some(owner) = &ctx.owning_type {
+                            self.enclosing_types
+                                .insert(next.scope.clone(), owner.clone());
+                        }
+                        self.record_signature(child, &qualified);
+                        self.record_parameters(child, &next.scope);
+                    }
+
+                    if decl.object_type == ObjectType::Type {
+                        next.owning_type = Some(simple_name.clone());
+                        self.record_type_relations(child, &simple_name);
+                    }
+
+                    self.walk(child, &next);
                 }
                 None => {
                     // Not a declaration in this language's config. Rust `impl`
                     // blocks land here deliberately: FR-002 names a method by
                     // its implementing type, so the impl contributes a name
                     // segment without becoming a fact of its own.
-                    if let Some(impl_type) = self.impl_type_segment(child) {
-                        let qualified = child_name(name_parent, &impl_type);
-                        self.walk(child, &qualified, contain_parent, in_test);
-                    } else {
-                        self.walk(child, name_parent, contain_parent, in_test);
+                    match self.impl_type_segment(child) {
+                        Some(impl_type) => {
+                            self.record_impl_trait(child, &impl_type);
+                            let next = Context {
+                                name_parent: child_name(&ctx.name_parent, &impl_type),
+                                contain_parent: ctx.contain_parent.clone(),
+                                scope: ctx.scope.clone(),
+                                owning_type: Some(impl_type),
+                                in_test: ctx.in_test,
+                            };
+                            self.walk(child, &next);
+                        }
+                        None => self.walk(child, ctx),
                     }
                 }
             }
         }
+    }
+
+    /// Record a local binding and where its type comes from (FR-008).
+    fn record_binding(&mut self, node: Node<'a>, ctx: &Context) {
+        let Some(name_node) = node
+            .child_by_field_name("pattern")
+            .or_else(|| node.child_by_field_name("name"))
+            .or_else(|| node.child_by_field_name("left"))
+        else {
+            return;
+        };
+        let Ok(name) = name_node.utf8_text(self.source) else {
+            return;
+        };
+        if name.is_empty() || !is_plain_identifier(name) {
+            return;
+        }
+
+        // An explicit annotation wins outright — it is what the source says,
+        // not what we inferred.
+        if let Some(type_node) = node.child_by_field_name("type") {
+            if let Some(type_name) = self.simple_type_name(type_node) {
+                self.bindings.push(RawBinding {
+                    scope: ctx.scope.clone(),
+                    name: name.to_string(),
+                    source: TypeSource::Annotation(type_name),
+                });
+                return;
+            }
+        }
+
+        let Some(value) = node
+            .child_by_field_name("value")
+            .or_else(|| node.child_by_field_name("right"))
+        else {
+            return;
+        };
+        if let Some(source) = self.source_of_value(value) {
+            self.bindings.push(RawBinding {
+                scope: ctx.scope.clone(),
+                name: name.to_string(),
+                source,
+            });
+        }
+    }
+
+    /// Classify the right-hand side of a binding into one of the pending forms.
+    fn source_of_value(&self, value: Node<'a>) -> Option<TypeSource> {
+        let kind = value.kind();
+
+        // `new Store()` names its type directly.
+        if kind == "new_expression" {
+            let ctor = value.child_by_field_name("constructor")?;
+            return Some(TypeSource::Constructor(
+                self.simple_type_name(ctor)?.to_string(),
+            ));
+        }
+
+        if self.config.call_nodes.contains(&kind) {
+            let function = value.child_by_field_name("function")?;
+            let text = function.utf8_text(self.source).ok()?;
+
+            // `Store::new(…)` / `Store()` — a constructor by convention when the
+            // callee's leading segment is type-cased.
+            if let Some((head, tail)) = split_call_path(text) {
+                if starts_uppercase(head) && (tail == "new" || tail.is_empty()) {
+                    return Some(TypeSource::Constructor(head.to_string()));
+                }
+                // `receiver.method(…)`
+                if !head.is_empty() && !starts_uppercase(head) && !tail.is_empty() {
+                    return Some(TypeSource::MethodCallResult {
+                        receiver: head.to_string(),
+                        method: tail.to_string(),
+                    });
+                }
+            }
+            if starts_uppercase(text) {
+                return Some(TypeSource::Constructor(text.to_string()));
+            }
+            if is_plain_identifier(text) {
+                return Some(TypeSource::CallResult(text.to_string()));
+            }
+            return None;
+        }
+
+        // `store.inner` — a typed field access.
+        if self.config.member_nodes.contains(&kind) {
+            let object = value.child_by_field_name("object")?;
+            let field = value
+                .child_by_field_name("field")
+                .or_else(|| value.child_by_field_name("attribute"))
+                .or_else(|| value.child_by_field_name("property"))?;
+            let object_text = object.utf8_text(self.source).ok()?;
+            let field_text = field.utf8_text(self.source).ok()?;
+            if is_plain_identifier(object_text) && is_plain_identifier(field_text) {
+                return Some(TypeSource::FieldAccess {
+                    receiver: object_text.to_string(),
+                    field: field_text.to_string(),
+                });
+            }
+            return None;
+        }
+
+        // `let b = a;`
+        let text = value.utf8_text(self.source).ok()?;
+        if is_plain_identifier(text) && !starts_uppercase(text) {
+            return Some(TypeSource::Copy(text.to_string()));
+        }
+        None
+    }
+
+    /// Record a call site for later resolution (FR-008).
+    fn record_call(&mut self, node: Node<'a>, ctx: &Context) {
+        let Some(function) = node.child_by_field_name("function") else {
+            return;
+        };
+        let Ok(text) = function.utf8_text(self.source) else {
+            return;
+        };
+        let line = node.start_position().row as u32 + 1;
+
+        match split_call_path(text) {
+            Some((receiver, method)) if !method.is_empty() => {
+                self.calls.push(CallSite {
+                    caller: ctx.contain_parent.clone(),
+                    scope: ctx.scope.clone(),
+                    receiver: Some(receiver.to_string()),
+                    callee: method.to_string(),
+                    line,
+                });
+            }
+            _ => {
+                if is_plain_identifier(text) {
+                    self.calls.push(CallSite {
+                        caller: ctx.contain_parent.clone(),
+                        scope: ctx.scope.clone(),
+                        receiver: None,
+                        callee: text.to_string(),
+                        line,
+                    });
+                }
+            }
+        }
+    }
+
+    /// Record a callable's declared return type.
+    fn record_signature(&mut self, node: Node<'a>, qualified: &str) {
+        let return_node = node
+            .child_by_field_name("return_type")
+            .or_else(|| node.child_by_field_name("return_type_annotation"));
+        if let Some(return_node) = return_node {
+            if let Some(type_name) = self.simple_type_name(return_node) {
+                self.return_types.insert(qualified.to_string(), type_name);
+            }
+        }
+    }
+
+    /// Record typed parameters as bindings in the callable's own scope.
+    fn record_parameters(&mut self, node: Node<'a>, scope: &str) {
+        let Some(params) = node.child_by_field_name("parameters") else {
+            return;
+        };
+        let mut cursor = params.walk();
+        for param in params.children(&mut cursor) {
+            if !self.config.parameter_nodes.contains(&param.kind()) {
+                continue;
+            }
+            let name_node = param
+                .child_by_field_name("pattern")
+                .or_else(|| param.child_by_field_name("name"));
+            let type_node = param.child_by_field_name("type");
+            if let (Some(name_node), Some(type_node)) = (name_node, type_node) {
+                if let (Ok(name), Some(type_name)) = (
+                    name_node.utf8_text(self.source),
+                    self.simple_type_name(type_node),
+                ) {
+                    if is_plain_identifier(name) {
+                        self.bindings.push(RawBinding {
+                            scope: scope.to_string(),
+                            name: name.to_string(),
+                            source: TypeSource::Annotation(type_name),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /// Record a field's declared type, so field-access chains can resolve.
+    fn record_field(&mut self, node: Node<'a>, ctx: &Context) {
+        let Some(owner) = &ctx.owning_type else {
+            return;
+        };
+        let name_node = node
+            .child_by_field_name("name")
+            .or_else(|| node.child_by_field_name("left"));
+        let Some(type_node) = node.child_by_field_name("type") else {
+            return;
+        };
+        if let (Some(name_node), Some(type_name)) = (name_node, self.simple_type_name(type_node)) {
+            if let Ok(name) = name_node.utf8_text(self.source) {
+                if is_plain_identifier(name) {
+                    self.field_types
+                        .insert((owner.clone(), name.to_string()), type_name);
+                }
+            }
+        }
+    }
+
+    /// TypeScript `class X extends Y implements Z`.
+    fn record_type_relations(&mut self, node: Node<'a>, simple_name: &str) {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() != "class_heritage" && child.kind() != "extends_type_clause" {
+                continue;
+            }
+            let mut inner = child.walk();
+            let mut is_trait = false;
+            for part in child.children(&mut inner) {
+                match part.kind() {
+                    "extends_clause" => {
+                        let mut deep = part.walk();
+                        for target in part.children(&mut deep) {
+                            if let Some(name) = self.simple_type_name(target) {
+                                if name != "extends" {
+                                    self.type_relations.push((
+                                        simple_name.to_string(),
+                                        name,
+                                        false,
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    "implements_clause" => {
+                        is_trait = true;
+                        let mut deep = part.walk();
+                        for target in part.children(&mut deep) {
+                            if let Some(name) = self.simple_type_name(target) {
+                                if name != "implements" {
+                                    self.type_relations
+                                        .push((simple_name.to_string(), name, true));
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        let _ = is_trait;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Rust `impl Trait for Type` — the trait relation FR-008 emits as
+    /// `implements_trait`.
+    fn record_impl_trait(&mut self, node: Node<'a>, impl_type: &str) {
+        if let Some(trait_node) = node.child_by_field_name("trait") {
+            if let Some(trait_name) = self.simple_type_name(trait_node) {
+                self.type_relations
+                    .push((impl_type.to_string(), trait_name, true));
+            }
+        }
+    }
+
+    /// The simple name of a type node: generics, references and wrappers
+    /// stripped, so `&Option<Store>` and `Store` name one type.
+    fn simple_type_name(&self, node: Node<'a>) -> Option<String> {
+        let text = node.utf8_text(self.source).ok()?;
+        simplify_type(text)
     }
 
     /// The name segment and simple name for a declaration.
@@ -391,6 +769,101 @@ fn span_of(node: Node<'_>) -> LineSpan {
         start: node.start_position().row as u32 + 1,
         end: node.end_position().row as u32 + 1,
     }
+}
+
+/// Whether `text` is a single bare identifier — no dots, no calls, no operators.
+fn is_plain_identifier(text: &str) -> bool {
+    !text.is_empty()
+        && text
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '$')
+}
+
+fn starts_uppercase(text: &str) -> bool {
+    text.chars().next().is_some_and(|c| c.is_uppercase())
+}
+
+/// Split `receiver.method` or `Type::method` into its head and tail.
+///
+/// Only the *last* separator matters: `a.b.c()` has receiver `b`, because that
+/// is the expression the receiver's type must be recovered for. A leading
+/// `self.` is kept, since `self` is a resolvable receiver.
+fn split_call_path(text: &str) -> Option<(&str, &str)> {
+    let (head, tail) = match text.rfind("::") {
+        Some(idx) => (&text[..idx], &text[idx + 2..]),
+        None => {
+            let idx = text.rfind('.')?;
+            (&text[..idx], &text[idx + 1..])
+        }
+    };
+    if !is_plain_identifier(tail) {
+        return None;
+    }
+    // Take the innermost segment of the receiver path.
+    let receiver = head
+        .rsplit(['.', ':'])
+        .find(|segment| !segment.is_empty())
+        .unwrap_or(head);
+    if !is_plain_identifier(receiver) {
+        return None;
+    }
+    Some((receiver, tail))
+}
+
+/// Reduce a type expression to the simple name resolution keys on.
+///
+/// `&mut Option<Store>` → `Store`; `Vec<Row>` → `Row`; `crate::store::Store` →
+/// `Store`. Wrappers are unwrapped rather than resolved, which is why
+/// `Vec<Row>` yields the element type: a call on an element is far more common
+/// than a call on the container, and a wrong container type would produce a
+/// wrong edge, which NFR-004 forbids outright.
+fn simplify_type(text: &str) -> Option<String> {
+    let mut current = text.trim();
+    current = current
+        .trim_start_matches("->")
+        .trim_start_matches(':')
+        .trim();
+    current = current.trim_start_matches(['&', '*']).trim();
+    for prefix in ["mut ", "dyn ", "impl ", "readonly "] {
+        current = current.trim_start_matches(prefix).trim();
+    }
+
+    // Unwrap a single generic layer at a time.
+    while let Some(open) = current.find('<') {
+        let close = current.rfind('>')?;
+        if close < open {
+            break;
+        }
+        let outer = current[..open].trim();
+        let inner = current[open + 1..close].trim();
+        // A multi-argument generic is ambiguous; refuse rather than pick one.
+        if inner.contains(',') {
+            return simplify_bare(outer);
+        }
+        if inner.is_empty() {
+            return simplify_bare(outer);
+        }
+        current = inner;
+        current = current.trim_start_matches(['&', '*']).trim();
+    }
+
+    simplify_bare(current)
+}
+
+fn simplify_bare(text: &str) -> Option<String> {
+    let last = text
+        .rsplit("::")
+        .next()
+        .unwrap_or(text)
+        .rsplit('.')
+        .next()
+        .unwrap_or(text)
+        .trim()
+        .trim_end_matches(['?', '!', '[', ']']);
+    if last.is_empty() || !is_plain_identifier(last) || !starts_uppercase(last) {
+        return None;
+    }
+    Some(last.to_string())
 }
 
 #[cfg(test)]

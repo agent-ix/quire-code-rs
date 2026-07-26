@@ -22,6 +22,8 @@ pub mod mentions;
 pub mod naming;
 pub mod parse;
 pub mod records;
+pub mod resolve;
+pub mod typeenv;
 
 pub use edges::{Edge, EdgeType, Evidence, Reason};
 pub use extract::{extract, ExtractionResult, ExtractionStats};
@@ -30,3 +32,5 @@ pub use lang::Language;
 pub use mentions::{Mention, MentionKind};
 pub use parse::SourceFile;
 pub use records::{EdgeRecord, NodeRecord};
+pub use resolve::{resolve_call, Resolution};
+pub use typeenv::{Corpus, RawBinding, TypeEnv, TypeSource};
