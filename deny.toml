@@ -14,7 +14,7 @@ allow = [
 # WITHOUT permitting AGPL in third-party dependencies — the allow-list above
 # stays permissive-only.
 exceptions = [
-    { allow = ["AGPL-3.0-or-later"], crate = "quire-rs" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-code-rs" },
 ]
 confidence-threshold = 0.9
 
