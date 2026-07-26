@@ -17,8 +17,15 @@ seam. License: AGPL-3.0-or-later.
 **Canonical record contract:** match quire-rs `extract_filament_core`
 conventions — ix:// refs (`ix://agent-ix/{repo}/{name}`, ≥3 segments,
 last-segment resolution), node identity `(object_type, container, name)` with
-qualified names `{repo}/{relative/path}::{Parent}::{symbol}`, edge dedupe on
-`(source_ref, edge_type, target_ref)`.
+org-qualified names `{org}/{repo}/{relative/path}::{Parent}::{symbol}` (FR-072
+requires the `{org}/` prefix so same-named repos in different orgs cannot
+collide), edge dedupe on `(source_ref, edge_type, target_ref)`.
+
+**Provenance vocabulary** (consumed by filament-ide-rs FR-072): every edge
+carries `confidence` ∈ [0.0, 1.0], `reason` ∈ {`syntactic`, `path-resolved`,
+`name-match`, `import-scoped`, `receiver-typed`, `explicit-mention`},
+`evidence: [{file, line}]` capped at 20 entries, and `count` — the total
+call-site count folded onto the single deduplicated edge.
 
 **Spec-first:** requirements live under `spec/` (flat quire-rs-style tree:
 `stakeholder/`, `usecase/`, `functional/`, `non-functional/`, `reviews/`,
@@ -29,7 +36,27 @@ its own linker conventions.
 ## Commands
 
 ```bash
-cargo fmt --check && cargo clippy --all-targets -- -D warnings
-cargo test
-cargo deny check
+make fmt            # format with rustfmt
+make fmt-check      # verify formatting (CI gate)
+make lint           # clippy with -D warnings
+make test           # cargo test
+make deny           # cargo deny check licenses
+make audit-unsafe   # every `unsafe {` needs a // SAFETY: comment
+make ci             # fmt-check + lint + test + deny + audit-unsafe
 ```
+
+Spec validation after any `spec/` edit:
+
+```bash
+quire validate --scope . "spec/**/*.md"
+```
+
+## Safety scaffolding
+
+House kit from `agent-ix/rust-lib-cookiecutter` (originally backported from
+`agent-ix/ecaz`): `clippy.toml` (MSRV pin + complexity caps), `deny.toml`
+(permissive-only allow-list; AGPL permitted for this crate alone),
+`rustfmt.toml` (100-char, `StdExternalCrate` grouping), `rust-toolchain.toml`
+(stable + rustfmt + clippy), `scripts/check_unsafe_comments.sh`, and
+`.github/workflows/ci.yml` (fmt / clippy / test / license / unsafe audit).
+Unlike filament-ide-rs, **CI runs here** — PRs gate themselves.
