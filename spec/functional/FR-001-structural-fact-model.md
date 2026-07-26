@@ -49,6 +49,14 @@ module, callable and type declaration the grammar exposes in that file.
   do, the library SHALL let that file's `code_file` fact stand as the module and
   SHALL NOT emit a second fact for the same construct, so that one source
   construct never yields two node identities.
+
+The distinction is that `code_module` denotes a namespace declared *within* a
+file — Rust's `mod x { … }`, TypeScript's `namespace` — and never a file that
+merely happens to be importable. Prior art agrees: gitnexus emits a distinct
+module node only for COBOL, where one file genuinely holds several programs,
+and treats the file node as the module for Python and TypeScript;
+Understand-Anything reserves its `module` type for Ruby's `module` keyword,
+Terraform modules, and packages.
 - Where a declaration is nested inside another declaration, the library SHALL
   record the enclosing declaration so that containment
   ([FR-003](./FR-003-structural-edges.md)) is derivable without re-parsing.
@@ -72,6 +80,7 @@ module, callable and type declaration the grammar exposes in that file.
 | FR-001-AC-1 | A Rust fixture yields `code_file`, `code_module`, `code_function` and `code_type` facts covering every declaration it contains | Test (TC-001) |
 | FR-001-AC-2 | A TypeScript and a TSX fixture yield facts for classes, interfaces, type aliases, methods and arrow-function consts | Test (TC-002) |
 | FR-001-AC-3 | A Python fixture yields facts for its classes, methods and free functions, with the file fact standing as the module | Test (TC-003) |
+| FR-001-AC-8 | A Python file yields no `code_module` fact, while a Rust `mod` block and a TypeScript `namespace` each do | Test (TC-076) |
 | FR-001-AC-4 | A file declaring nothing still yields exactly one `code_file` fact | Test (TC-004) |
 | FR-001-AC-5 | Every emitted fact carries a `kind` discriminator and one-based inclusive start and end lines | Test (TC-005) |
 | FR-001-AC-6 | Facts for one file are ordered by declaration start position across repeated runs | Test (TC-006) |
