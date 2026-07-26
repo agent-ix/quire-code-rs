@@ -68,12 +68,12 @@ is checkable by extracting this repository with the library it specifies.
 | FR-002-AC-2 | Method named with implementing type as parent | TC-009 | Unit | ⬜ |
 | FR-002-AC-3 | `code_file` name carries no `::` segment | TC-010 | Unit | ⬜ |
 | FR-002-AC-4 | Same repo under two orgs yields disjoint names | TC-011 | Unit | ⬜ |
-| FR-002-AC-5 | Anonymous declarations get distinct stable segments | TC-012 | Unit | ⬜ |
+| FR-002-AC-5 | Anonymous declarations get ordinal segments surviving a line shift | TC-012 | Unit | ⬜ |
 | FR-002-AC-6 | Windows-style paths normalize to forward slashes | TC-013 | Unit | ⬜ |
 | FR-002-AC-7 | Every `ix://` reference has at least three segments | TC-014 | Unit | ⬜ |
 | FR-003-AC-1 | Containment forms a tree rooted at the file | TC-015 | Unit | ⬜ |
 | FR-003-AC-2 | Relative import in batch yields `path-resolved` edge | TC-016 | Unit | ⬜ |
-| FR-003-AC-3 | Third-party import yields no edge, one diagnostic | TC-017 | Unit | ⬜ |
+| FR-003-AC-3 | Bare import: no edge, no diagnostic; broken relative import: one diagnostic | TC-017 | Unit | ⬜ |
 | FR-003-AC-4 | Extensionless import resolves via language conventions | TC-018 | Unit | ⬜ |
 | FR-003-AC-5 | Structural edges carry confidence 1.0 | TC-019 | Unit | ⬜ |
 | FR-004-AC-1 | Two sites, one triple, `count` 2 | TC-020 | Unit | ⬜ |
@@ -89,6 +89,7 @@ is checkable by extracting this repository with the library it specifies.
 | FR-005-AC-5 | Embedded token yields no mention | TC-030 | Unit | ⬜ |
 | FR-005-AC-6 | Unresolvable mention still reported | TC-031 | Unit | ⬜ |
 | FR-005-AC-7 | Self-extraction recovers this suite's own tags | TC-032 | Integration | ⬜ |
+| FR-005-AC-8 | Tag outside a test declaration is a citation, not a verification claim | TC-072 | Unit | ⬜ |
 | FR-006-AC-1 | Node records carry hex id, `ix://` ref, `kind` | TC-033 | Unit | ⬜ |
 | FR-006-AC-2 | Moving a declaration preserves its id | TC-034 | Unit | ⬜ |
 | FR-006-AC-3 | Records appear in stable order | TC-035 | Unit | ⬜ |
@@ -97,9 +98,10 @@ is checkable by extracting this repository with the library it specifies.
 | FR-006-AC-6 | Fixture output matches golden byte for byte | TC-038 | Integration | ⬜ |
 | FR-007-AC-1 | Invalid file yields diagnostic, batch continues | TC-039 | Unit | ⬜ |
 | FR-007-AC-2 | Diagnostic carries path and first error position | TC-040 | Unit | ⬜ |
-| FR-007-AC-3 | File with error nodes contributes no facts | TC-041 | Unit | ⬜ |
+| FR-007-AC-3 | Intact declarations survive a malformed sibling declaration | TC-041 | Unit | ⬜ |
 | FR-007-AC-4 | Healthy files unaffected by a malformed sibling | TC-042 | Unit | ⬜ |
 | FR-007-AC-5 | Arbitrary bytes yield a diagnostic, never a panic | TC-043 | Unit | ⬜ |
+| FR-007-AC-6 | Error-node root yields the `code_file` fact alone | TC-071 | Unit | ⬜ |
 | FR-008-AC-1 | Cross-file receiver-typed call resolves | TC-044 | Unit | ⬜ |
 | FR-008-AC-2 | Unrecoverable receiver with many candidates yields nothing | TC-045 | Unit | ⬜ |
 | FR-008-AC-3 | Copy binding resolves through fixpoint | TC-046 | Unit | ⬜ |
@@ -110,6 +112,7 @@ is checkable by extracting this repository with the library it specifies.
 | FR-008-AC-8 | Rust trait-object call yields no edge | TC-051 | Unit | ⬜ |
 | FR-008-AC-9 | Same-file resolution independent of batch composition | TC-052 | Unit | ⬜ |
 | FR-008-AC-10 | Resolution tiers stamp their own `reason` in rank order | TC-053 | Unit | ⬜ |
+| FR-008-AC-11 | Result reports batch file count and unresolved call-site count | TC-073 | Unit | ⬜ |
 
 ### Non-Functional Requirement Coverage
 
@@ -151,6 +154,9 @@ is checkable by extracting this repository with the library it specifies.
 | TC-059..TC-061 | NFR-002 no-network boundary | Structural extraction |
 | TC-062..TC-065 | NFR-003 extraction time budget | Receiver-typed resolution |
 | TC-066..TC-070 | NFR-004 conservative-resolution precision | Receiver-typed resolution |
+| TC-071 | FR-007 error-node root handling | Structural extraction |
+| TC-072 | FR-005 tag context restriction | Mention linker |
+| TC-073 | FR-008 batch-bound resolution reporting | Receiver-typed resolution |
 
 ## Coverage Notes
 

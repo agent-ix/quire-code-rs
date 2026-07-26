@@ -45,9 +45,10 @@ the consuming graph's `(object_type, container, name)` identity rule.
   a trait, the library SHALL record the trait separately rather than in the
   name, so that inherent and trait methods of one type share a naming scheme.
 - Where a declaration is anonymous, the library SHALL synthesize a segment from
-  the declaration kind and its one-based start line, so that the name stays
-  stable for unchanged input and no two anonymous declarations in one file
-  collide.
+  the declaration kind and its zero-based ordinal among the anonymous
+  declarations of that kind within the same parent, in source order, so that no
+  two anonymous declarations collide and the segment does not change when
+  surrounding lines shift.
 - The library SHALL produce the same qualified name for an unchanged declaration
   across runs, machines and rebuilds.
 
@@ -66,7 +67,7 @@ the consuming graph's `(object_type, container, name)` identity rule.
 | FR-002-AC-2 | A method on a type is named with the type as its parent segment, for both inherent and trait `impl` blocks | Test (TC-009) |
 | FR-002-AC-3 | A `code_file` fact's name carries the org, repo and path and no `::` segment | Test (TC-010) |
 | FR-002-AC-4 | The same repository extracted under two different orgs produces disjoint name sets | Test (TC-011) |
-| FR-002-AC-5 | Two anonymous declarations in one file receive distinct, line-derived, run-stable segments | Test (TC-012) |
+| FR-002-AC-5 | Two anonymous declarations under one parent receive distinct ordinal-derived segments that survive an edit shifting their lines | Test (TC-012) |
 | FR-002-AC-6 | A Windows-style path supplied by a consumer is normalized to forward slashes in emitted names | Test (TC-013) |
 | FR-002-AC-7 | Every emitted `ix://` reference has at least three segments | Test (TC-014) |
 

@@ -70,6 +70,10 @@ other case.
   library SHALL emit no `calls` edge.
 - The library SHALL configure per-language behavior through data rather than
   through separate resolution engines per language.
+- The library SHALL resolve only against the facts present in the supplied
+  batch, and SHALL report the batch's file count and the number of call sites
+  left unresolved, so that a consumer supplying a partial batch can see that
+  resolution was bounded by what it provided rather than by the source.
 
 ## Constraints
 
@@ -77,6 +81,7 @@ other case.
 |----|------------|------|------------|
 | FR-008-CON-1 | Resolution SHALL be conservative: an ambiguous call site SHALL yield no edge, never a highest-scoring guess | Reliability | Test |
 | FR-008-CON-2 | The fixpoint iteration SHALL carry an explicit bound, and reaching it SHALL degrade to fewer edges rather than to unbounded work | Performance | Test |
+| FR-008-CON-3 | Resolution quality SHALL be a function of the supplied batch; a consumer seeking whole-repository resolution SHALL supply the whole repository | Interface | Inspection |
 
 ## Acceptance Criteria
 
@@ -92,6 +97,7 @@ other case.
 | FR-008-AC-8 | A call through a Rust trait object yields no `calls` edge | Test (TC-051) |
 | FR-008-AC-9 | Same-file resolution produces identical edges whether or not unrelated files are present in the batch | Test (TC-052) |
 | FR-008-AC-10 | Each resolution tier stamps its own `reason`, and `receiver-typed` outranks `import-scoped`, which outranks `name-match` | Test (TC-053) |
+| FR-008-AC-11 | The result reports the batch file count and the unresolved call-site count | Test (TC-073) |
 
 ## Dependencies
 

@@ -44,6 +44,14 @@ enclosing code fact, and the file and one-based line where it appears.
 - The library SHALL report a mention whose target this library cannot see,
   because resolving an identifier to a specification artifact is the consumer's
   responsibility; the library SHALL NOT drop a mention for being unresolvable.
+- The library SHALL address a mention edge's target by the unqualified mentioned
+  identifier — `TC-001`, `FR-002`, `Task-150` — or, for an `ix://` mention, by
+  the reference exactly as written, so that the consumer resolves the target
+  against its own index by last-segment lookup without this library inventing a
+  node it cannot see.
+- The library SHALL restrict tracking-tag mentions to declarations recognized as
+  tests by the language's convention, so that a tag quoted in ordinary prose is
+  reported as a citation rather than as a verification claim.
 - The library SHALL harvest from comments and from language-level attributes,
   and SHALL NOT harvest from string literals, so that a message that happens to
   quote an identifier is not read as a citation.
@@ -68,7 +76,8 @@ enclosing code fact, and the file and one-based line where it appears.
 | FR-005-AC-3 | A comment carrying an `ix://` reference yields an `artifact_reference` mention | Test (TC-028) |
 | FR-005-AC-4 | An identifier appearing inside a string literal yields no mention | Test (TC-029) |
 | FR-005-AC-5 | An identifier embedded in a longer token yields no mention | Test (TC-030) |
-| FR-005-AC-6 | A mention naming an artifact absent from the batch is still reported | Test (TC-031) |
+| FR-005-AC-6 | A mention naming an artifact absent from the batch is still reported, addressed by the identifier as written | Test (TC-031) |
+| FR-005-AC-8 | A tracking tag outside a test declaration is reported as a citation, not as a verification claim | Test (TC-072) |
 | FR-005-AC-7 | Extracting this library's own test suite recovers the tracking tags its tests carry | Test (TC-032) |
 
 ## Dependencies
