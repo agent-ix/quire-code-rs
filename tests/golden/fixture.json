@@ -648,6 +648,8 @@
   "stats": {
     "files": 5,
     "files_with_errors": 0,
-    "unresolved_calls": 0
+    "unresolved_calls": 0,
+    "max_fixpoint_iterations": 1,
+    "files_hitting_iteration_bound": 0
   }
 }

@@ -38,6 +38,12 @@ pub struct ExtractionStats {
     pub files: u32,
     pub files_with_errors: u32,
     pub unresolved_calls: u32,
+    /// Highest fixpoint iteration count reached by any file's type environment
+    /// (NFR-003-AC-4). Measured, not the configured bound.
+    pub max_fixpoint_iterations: u32,
+    /// Files whose fixpoint hit the iteration bound with bindings still
+    /// pending. Non-zero means edges were lost to the bound, not to the source.
+    pub files_hitting_iteration_bound: u32,
 }
 
 /// Extract canonical records from a batch of source files.
@@ -78,6 +84,8 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
     let import_edges = resolve_import_edges(&parsed_files, &batch_paths);
     let types_by_file = types_by_file(&parsed_files);
     let mut unresolved_calls = 0u32;
+    let mut max_fixpoint_iterations = 0u32;
+    let mut files_hitting_iteration_bound = 0u32;
 
     for (file, path, parsed) in &parsed_files {
         let (file, path, parsed) = (*file, path.clone(), parsed);
@@ -149,6 +157,10 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
         let env = TypeEnv::build(&parsed.bindings, &parsed.enclosing_types, &corpus);
         let reachable = resolve::imported_types(&path, &import_edges, &types_by_file);
         let local = local_scope(parsed);
+        max_fixpoint_iterations = max_fixpoint_iterations.max(env.iterations as u32);
+        if env.hit_iteration_bound {
+            files_hitting_iteration_bound += 1;
+        }
 
         for call in &parsed.calls {
             match resolve::resolve_call(call, &env, &corpus, &reachable, &local) {
@@ -220,6 +232,8 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
             files: files.len() as u32,
             files_with_errors,
             unresolved_calls,
+            max_fixpoint_iterations,
+            files_hitting_iteration_bound,
         },
     }
 }

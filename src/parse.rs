@@ -4,10 +4,13 @@
 //! the error policy of
 //! [FR-007](../spec/functional/FR-007-parse-error-isolation.md).
 //!
-//! The error policy is per *declaration*, not per file. That came out of the
-//! spec review (SR-001 FND-002): suppressing a whole file because one function
-//! is mid-edit contradicts the reason ADR-001 chose tree-sitter in the first
-//! place — extraction has to work on trees that do not compile.
+//! The error policy keys on *identity recoverability*, not on error presence.
+//! A declaration whose name the grammar could read is emitted even when its
+//! body is mid-edit; only a construct the grammar could not resolve as a
+//! declaration at all contributes nothing. Suppressing more than that —
+//! the whole file, or a whole function because of a typo in its body —
+//! contradicts the reason ADR-001 chose tree-sitter: extraction has to work on
+//! trees that do not compile.
 
 use std::collections::BTreeMap;
 
@@ -999,6 +1002,44 @@ impl Persist for Store {
         assert!(names.contains(&"good"), "got {names:?}");
     }
 
+    // TC-041 — FR-007-AC-3: the unparseable declaration contributes nothing,
+    // while its intact siblings survive.
+    #[test]
+    fn an_unparseable_declaration_contributes_no_fact() {
+        let parsed = rust("fn good() {}\nfn broken( {\nfn also_good() {}\n");
+        let names: Vec<_> = parsed
+            .facts
+            .iter()
+            .map(|f| f.simple_name.as_str())
+            .collect();
+        assert!(names.contains(&"good"), "got {names:?}");
+        assert!(
+            !names.contains(&"broken"),
+            "a declaration the grammar could not resolve must yield no fact: {names:?}"
+        );
+    }
+
+    // TC-075 — FR-007-AC-7: an error inside a body does not cost the
+    // declaration its fact. Its signature is readable, so its identity is too.
+    #[test]
+    fn a_body_error_does_not_suppress_the_declaration() {
+        let parsed = rust("fn outer() {\n    let x = ;\n}\nfn after() {}\n");
+        let names: Vec<_> = parsed
+            .facts
+            .iter()
+            .map(|f| f.simple_name.as_str())
+            .collect();
+        assert!(
+            names.contains(&"outer"),
+            "a typo in the body must not cost the function its node: {names:?}"
+        );
+        assert!(names.contains(&"after"), "got {names:?}");
+        assert!(
+            parsed.diagnostics.iter().any(|d| d.code == "parse_error"),
+            "the error is still diagnosed"
+        );
+    }
+
     // TC-040 — FR-007-AC-2: the diagnostic carries path and first error position.
     #[test]
     fn parse_diagnostics_carry_a_position() {
@@ -1047,6 +1088,52 @@ impl Persist for Store {
         assert!(
             names.contains(&"agent-ix/tool/tool/main.py::helper"),
             "got {names:?}"
+        );
+    }
+
+    // TC-076 — FR-001-AC-8: `code_module` denotes a namespace declared *within*
+    // a file, never a file that merely happens to be importable.
+    #[test]
+    fn only_in_file_namespaces_yield_module_facts() {
+        let python = parse_file(&SourceFile::new(
+            "agent-ix",
+            "tool",
+            "tool/main.py",
+            Language::Python,
+            "class Store:\n    pass\n",
+        ));
+        assert!(
+            !python
+                .facts
+                .iter()
+                .any(|f| f.object_type == ObjectType::Module),
+            "a Python file is its own module; a second node would give one \
+             construct two identities"
+        );
+
+        let rust_mod = rust("pub mod inner {\n    pub fn f() {}\n}\n");
+        assert!(
+            rust_mod
+                .facts
+                .iter()
+                .any(|f| f.object_type == ObjectType::Module),
+            "a Rust `mod` block is a namespace within the file"
+        );
+
+        let ts_namespace = parse_file(&SourceFile::new(
+            "agent-ix",
+            "ui",
+            "src/app.ts",
+            Language::TypeScript,
+            "export namespace Inner {\n  export function f(): void {}\n}\n",
+        ));
+        assert!(
+            ts_namespace
+                .facts
+                .iter()
+                .any(|f| f.object_type == ObjectType::Module),
+            "a TypeScript namespace is a namespace within the file: {:?}",
+            ts_namespace.facts
         );
     }
 
