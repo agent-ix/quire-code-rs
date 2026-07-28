@@ -87,8 +87,36 @@ pub(crate) struct DeclKind {
     pub names_children: bool,
 }
 
+/// How a language spells visibility (FR-009-CON-2). Classification stays in
+/// this table so a new language is added by describing its grammar, never by
+/// branching the extraction engine on `Language`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum VisibilityStyle {
+    /// A `visibility_modifier` child whose text is `pub` or `pub(…)`.
+    RustModifier,
+    /// An enclosing `export_statement`, plus per-member accessibility
+    /// modifiers inside a class body.
+    TypeScriptExport,
+    /// No keyword: the underscore-prefix naming convention.
+    PythonUnderscore,
+}
+
 /// Per-language configuration. Adding a language means adding one of these.
 pub(crate) struct LanguageConfig {
+    /// How this language expresses visibility (FR-009).
+    pub visibility_style: VisibilityStyle,
+    /// Grammar node kind holding an explicit visibility/accessibility modifier,
+    /// if the language has one.
+    pub visibility_nodes: &'static [&'static str],
+    /// Grammar node kinds that declare a trait-like body whose associated items
+    /// inherit the declaration's own visibility rather than carrying their own
+    /// (FR-009-AC-4).
+    pub visibility_inheriting_nodes: &'static [&'static str],
+    /// Grammar node kind of a callable's parameter list, for signature
+    /// rendering (FR-009).
+    pub parameter_list_nodes: &'static [&'static str],
+    /// Field names holding a declaration's return type, tried in order.
+    pub return_type_fields: &'static [&'static str],
     pub decls: &'static [DeclKind],
     /// Node kinds holding a declaration's name, tried in order.
     pub name_fields: &'static [&'static str],
@@ -117,6 +145,11 @@ pub(crate) struct LanguageConfig {
 }
 
 static RUST: LanguageConfig = LanguageConfig {
+    visibility_style: VisibilityStyle::RustModifier,
+    visibility_nodes: &["visibility_modifier"],
+    visibility_inheriting_nodes: &["trait_item"],
+    parameter_list_nodes: &["parameters"],
+    return_type_fields: &["return_type"],
     decls: &[
         DeclKind {
             node: "mod_item",
@@ -179,6 +212,11 @@ static RUST: LanguageConfig = LanguageConfig {
 };
 
 static TYPESCRIPT: LanguageConfig = LanguageConfig {
+    visibility_style: VisibilityStyle::TypeScriptExport,
+    visibility_nodes: &["accessibility_modifier"],
+    visibility_inheriting_nodes: &["interface_declaration"],
+    parameter_list_nodes: &["formal_parameters"],
+    return_type_fields: &["return_type"],
     decls: &[
         DeclKind {
             node: "internal_module",
@@ -260,6 +298,11 @@ static TYPESCRIPT: LanguageConfig = LanguageConfig {
 };
 
 static PYTHON: LanguageConfig = LanguageConfig {
+    visibility_style: VisibilityStyle::PythonUnderscore,
+    visibility_nodes: &[],
+    visibility_inheriting_nodes: &[],
+    parameter_list_nodes: &["parameters"],
+    return_type_fields: &["return_type"],
     decls: &[
         DeclKind {
             node: "function_definition",

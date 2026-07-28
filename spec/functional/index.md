@@ -16,3 +16,4 @@ description: "Index of artifacts in this directory."
 * [FR-006: Canonical record emission at quire-rs parity](./FR-006-canonical-record-emission.md)
 * [FR-007: Per-file parse-error isolation](./FR-007-parse-error-isolation.md)
 * [FR-008: Type environments and receiver-typed fixpoint call resolution](./FR-008-type-environments-and-call-resolution.md)
+* [FR-009: Declaration visibility and normalized callable signature](./FR-009-declaration-visibility-and-signature.md)

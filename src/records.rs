@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::edges::{Edge, EdgeType, Reason};
-use crate::facts::{CodeFact, LineSpan, ObjectType};
+use crate::facts::{CodeFact, LineSpan, ObjectType, Visibility};
 use crate::naming::ix_ref;
 
 /// A canonical graph node record.
@@ -36,6 +36,16 @@ pub struct NodeData {
     pub span: LineSpan,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,
+    /// How widely the declaration is visible (FR-009). A consumer tiering an
+    /// export-set change reads this to tell a new private helper — which
+    /// invalidates nothing — from a new export.
+    #[serde(default)]
+    pub visibility: Visibility,
+    /// Normalized parameter/return summary for a callable (FR-009), absent for
+    /// every declaration with no parameter list. A change here is a change to
+    /// the calling contract even when the exported *name* set is unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<String>,
 }
 
 /// A canonical graph edge record with its provenance.
@@ -79,6 +89,8 @@ pub fn node_record(fact: &CodeFact) -> NodeRecord {
             path: fact.path.clone(),
             span: fact.span,
             parent: fact.parent.clone(),
+            visibility: fact.visibility,
+            signature: fact.signature.clone(),
         },
     }
 }
@@ -159,7 +171,41 @@ mod tests {
                 end: start + 2,
             },
             parent: None,
+            visibility: Visibility::Public,
+            signature: Some("() -> ()".to_string()),
         }
+    }
+
+    // TC-086 — FR-009-AC-9 / FR-009-CON-1: the two fields are additive. A
+    // record serialized before FR-009 carries neither, and must still read
+    // back — as `public` (the pre-FR-009 assumption that every declaration is
+    // an export) with no signature.
+    #[test]
+    fn records_without_visibility_or_signature_still_deserialize() {
+        let legacy = r#"{
+            "id": "abc",
+            "reference": "ix://agent-ix/repo/src/lib.rs::f",
+            "object_type": "code_function",
+            "name": "agent-ix/repo/src/lib.rs::f",
+            "data": {
+                "kind": "function",
+                "path": "src/lib.rs",
+                "span": { "start": 1, "end": 3 }
+            }
+        }"#;
+        let record: NodeRecord =
+            serde_json::from_str(legacy).expect("a pre-FR-009 record still deserializes");
+        assert_eq!(record.data.visibility, Visibility::Public);
+        assert_eq!(record.data.signature, None);
+
+        // And a record with no signature does not serialize the key at all,
+        // so a consumer reading the old shape sees the old shape.
+        let round_tripped = serde_json::to_string(&record).expect("serializes");
+        assert!(
+            !round_tripped.contains("signature"),
+            "an absent signature must not add a key: {round_tripped}"
+        );
+        assert!(round_tripped.contains("\"visibility\":\"public\""));
     }
 
     // TC-033 — FR-006-AC-1: records carry a hex id, an ix:// ref and a kind.

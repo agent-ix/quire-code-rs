@@ -11,7 +11,8 @@
         "span": {
           "start": 1,
           "end": 11
-        }
+        },
+        "visibility": "public"
       }
     },
     {
@@ -25,7 +26,8 @@
         "span": {
           "start": 1,
           "end": 22
-        }
+        },
+        "visibility": "public"
       }
     },
     {
@@ -39,7 +41,8 @@
         "span": {
           "start": 1,
           "end": 10
-        }
+        },
+        "visibility": "public"
       }
     },
     {
@@ -53,7 +56,8 @@
         "span": {
           "start": 1,
           "end": 3
-        }
+        },
+        "visibility": "public"
       }
     },
     {
@@ -67,7 +71,8 @@
         "span": {
           "start": 1,
           "end": 9
-        }
+        },
+        "visibility": "public"
       }
     },
     {
@@ -82,7 +87,9 @@
           "start": 8,
           "end": 11
         },
-        "parent": "agent-ix/demo/src/lib.rs"
+        "parent": "agent-ix/demo/src/lib.rs",
+        "visibility": "private",
+        "signature": "()"
       }
     },
     {
@@ -97,7 +104,9 @@
           "start": 4,
           "end": 4
         },
-        "parent": "agent-ix/demo/src/lib.rs::inner"
+        "parent": "agent-ix/demo/src/lib.rs::inner",
+        "visibility": "public",
+        "signature": "()"
       }
     },
     {
@@ -112,7 +121,9 @@
           "start": 16,
           "end": 16
         },
-        "parent": "agent-ix/demo/src/store.rs"
+        "parent": "agent-ix/demo/src/store.rs",
+        "visibility": "public",
+        "signature": "(self)"
       }
     },
     {
@@ -127,7 +138,9 @@
           "start": 12,
           "end": 12
         },
-        "parent": "agent-ix/demo/src/store.rs"
+        "parent": "agent-ix/demo/src/store.rs",
+        "visibility": "public",
+        "signature": "(self)"
       }
     },
     {
@@ -142,7 +155,9 @@
           "start": 5,
           "end": 6
         },
-        "parent": "agent-ix/demo/tool/main.py::Runner"
+        "parent": "agent-ix/demo/tool/main.py::Runner",
+        "visibility": "public",
+        "signature": "(self)"
       }
     },
     {
@@ -157,7 +172,9 @@
           "start": 9,
           "end": 10
         },
-        "parent": "agent-ix/demo/tool/main.py"
+        "parent": "agent-ix/demo/tool/main.py",
+        "visibility": "public",
+        "signature": "()"
       }
     },
     {
@@ -172,7 +189,9 @@
           "start": 3,
           "end": 3
         },
-        "parent": "agent-ix/demo/ui/app.ts"
+        "parent": "agent-ix/demo/ui/app.ts",
+        "visibility": "public",
+        "signature": "() -> void"
       }
     },
     {
@@ -187,7 +206,9 @@
           "start": 8,
           "end": 8
         },
-        "parent": "agent-ix/demo/ui/store.ts::Store"
+        "parent": "agent-ix/demo/ui/store.ts::Store",
+        "visibility": "public",
+        "signature": "() -> void"
       }
     },
     {
@@ -202,7 +223,8 @@
           "start": 3,
           "end": 5
         },
-        "parent": "agent-ix/demo/src/lib.rs"
+        "parent": "agent-ix/demo/src/lib.rs",
+        "visibility": "public"
       }
     },
     {
@@ -217,7 +239,8 @@
           "start": 19,
           "end": 22
         },
-        "parent": "agent-ix/demo/src/store.rs"
+        "parent": "agent-ix/demo/src/store.rs",
+        "visibility": "public"
       }
     },
     {
@@ -232,7 +255,8 @@
           "start": 7,
           "end": 9
         },
-        "parent": "agent-ix/demo/src/store.rs"
+        "parent": "agent-ix/demo/src/store.rs",
+        "visibility": "public"
       }
     },
     {
@@ -247,7 +271,8 @@
           "start": 3,
           "end": 5
         },
-        "parent": "agent-ix/demo/src/store.rs"
+        "parent": "agent-ix/demo/src/store.rs",
+        "visibility": "public"
       }
     },
     {
@@ -262,7 +287,8 @@
           "start": 4,
           "end": 6
         },
-        "parent": "agent-ix/demo/tool/main.py"
+        "parent": "agent-ix/demo/tool/main.py",
+        "visibility": "public"
       }
     },
     {
@@ -277,7 +303,8 @@
           "start": 5,
           "end": 5
         },
-        "parent": "agent-ix/demo/ui/store.ts"
+        "parent": "agent-ix/demo/ui/store.ts",
+        "visibility": "public"
       }
     },
     {
@@ -292,7 +319,8 @@
           "start": 1,
           "end": 3
         },
-        "parent": "agent-ix/demo/ui/store.ts"
+        "parent": "agent-ix/demo/ui/store.ts",
+        "visibility": "public"
       }
     },
     {
@@ -307,7 +335,8 @@
           "start": 7,
           "end": 9
         },
-        "parent": "agent-ix/demo/ui/store.ts"
+        "parent": "agent-ix/demo/ui/store.ts",
+        "visibility": "public"
       }
     }
   ],

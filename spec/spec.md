@@ -71,6 +71,9 @@ guess, and every relationship it does emit carries the evidence that produced it
   ([FR-007](./functional/FR-007-parse-error-isolation.md)).
 - Per-file type environments and receiver-typed fixpoint call resolution
   ([FR-008](./functional/FR-008-type-environments-and-call-resolution.md)).
+- Declaration visibility and normalized callable signatures, so a consumer can
+  separate an exported-surface change from a body-only change
+  ([FR-009](./functional/FR-009-declaration-visibility-and-signature.md)).
 
 ### 2.2 Out of Scope
 
@@ -141,7 +144,7 @@ library by git revision and call it in-process.
 |---|---|---|
 | Stakeholder requirements | StR-001..StR-002 | `stakeholder/` |
 | User stories | US-001..US-003 | `usecase/` |
-| Functional requirements | FR-001..FR-008 | `functional/` |
+| Functional requirements | FR-001..FR-009 | `functional/` |
 | Non-functional requirements | NFR-001..NFR-004 | `non-functional/` |
 | Test matrix | TM-001 | `tests.md` |
 | Spec reviews | SR-NNN | `reviews/` |
@@ -179,6 +182,7 @@ targets name the owning repository.
 | [FR-006](./functional/FR-006-canonical-record-emission.md) | Canonical record emission at `quire-rs` parity |
 | [FR-007](./functional/FR-007-parse-error-isolation.md) | Per-file parse-error isolation |
 | [FR-008](./functional/FR-008-type-environments-and-call-resolution.md) | Type environments and fixpoint call resolution |
+| [FR-009](./functional/FR-009-declaration-visibility-and-signature.md) | Declaration visibility and normalized callable signature |
 
 ### 5.4 Non-Functional Requirements
 

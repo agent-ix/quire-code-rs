@@ -49,7 +49,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | User Story | Trace to FR | Test/Validation | Coverage Status |
 |---|---|---|---|
-| US-001 Index a code layer | FR-001, FR-002, FR-003, FR-006, FR-007 | TC-001..TC-019, TC-033..TC-043 | ✅ Complete |
+| US-001 Index a code layer | FR-001, FR-002, FR-003, FR-006, FR-007, FR-009 | TC-001..TC-019, TC-033..TC-043, TC-078..TC-086 | ✅ Complete |
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 
@@ -116,6 +116,15 @@ is checkable by extracting this repository with the library it specifies.
 | FR-008-AC-10 | Resolution tiers stamp their own `reason` in rank order | TC-053 | Unit | ✅ |
 | FR-008-AC-11 | Result reports batch file count and unresolved call-site count | TC-073 | Unit | ✅ |
 | FR-008-AC-12 | A name declared in two files still resolves within each | TC-074 | Integration | ✅ |
+| FR-009-AC-1 | Rust `pub`, `pub(crate)`/`pub(super)`, and bare declarations classify public/crate/private | TC-078 | Unit | ✅ |
+| FR-009-AC-2 | TypeScript `export`, unexported, and class access modifiers classify correctly | TC-079 | Unit | ✅ |
+| FR-009-AC-3 | Python `__helper`, `_helper`, `helper` and `__init__` classify private/crate/public/public | TC-080 | Unit | ✅ |
+| FR-009-AC-4 | Rust trait and trait-`impl` items are public with no modifier; inherent-`impl` items are not | TC-081 | Unit | ✅ |
+| FR-009-AC-5 | Signature renders declared parameter types and return type, receiver as `self` | TC-082 | Unit | ✅ |
+| FR-009-AC-6 | Reformatting and an in-parameter comment leave the signature byte-identical | TC-083 | Unit | ✅ |
+| FR-009-AC-7 | Unannotated Python callable renders parameter names; no parameter list means no signature | TC-084 | Unit | ✅ |
+| FR-009-AC-8 | A parameter-type change alters the signature but not the node id; a new private helper leaves existing records unchanged | TC-085 | Unit | ✅ |
+| FR-009-AC-9 | Records without the new fields deserialize unchanged | TC-086 | Unit | ✅ |
 
 ### Non-Functional Requirement Coverage
 
@@ -165,6 +174,7 @@ is checkable by extracting this repository with the library it specifies.
 | TC-075 | FR-007 body-error tolerance | Structural extraction |
 | TC-076 | FR-001 module vs file discrimination | Structural extraction |
 | TC-077 | NFR-003 caller-supplied parse reuse | Incremental re-extraction |
+| TC-078..TC-086 | FR-009 declaration visibility and normalized signature | Export-set change tiering |
 
 ## Coverage Notes
 

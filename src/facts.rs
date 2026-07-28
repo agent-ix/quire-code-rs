@@ -28,6 +28,55 @@ impl ObjectType {
     }
 }
 
+/// How widely a declaration is visible, as its own language expresses it
+/// (FR-009).
+///
+/// Three values rather than a boolean because the middle tier is real in every
+/// language this library parses — Rust's `pub(crate)`, TypeScript's
+/// `protected`, Python's single-underscore convention — and a consumer tiering
+/// an export-set change needs to tell "visible to my dependents" from "visible
+/// within this unit only".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Visibility {
+    /// Visible outside the defining module: Rust `pub`, TS `export`, a Python
+    /// name with no underscore prefix.
+    Public,
+    /// Visible within the defining unit only: Rust `pub(crate)`/`pub(super)`,
+    /// TS `protected`, a Python `_name`.
+    Crate,
+    /// Not visible outside its declaration: a bare Rust item, an unexported TS
+    /// declaration, a Python `__name`.
+    Private,
+}
+
+impl Visibility {
+    /// The wire name.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Visibility::Public => "public",
+            Visibility::Crate => "crate",
+            Visibility::Private => "private",
+        }
+    }
+
+    /// Whether a consumer outside the defining module can refer to this
+    /// declaration — the question export-set change tiering actually asks.
+    pub fn is_exported(self) -> bool {
+        matches!(self, Visibility::Public)
+    }
+}
+
+impl Default for Visibility {
+    /// Records written before FR-009 carried no visibility. Reading them back
+    /// as `public` keeps the pre-FR-009 behavior — every declaration counts as
+    /// an export — so an old record never silently *loses* a dependent
+    /// (FR-009-AC-9).
+    fn default() -> Self {
+        Visibility::Public
+    }
+}
+
 /// A one-based, inclusive line span (FR-001).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LineSpan {
@@ -53,6 +102,13 @@ pub struct CodeFact {
     /// Qualified name of the immediately enclosing fact, if any. Drives
     /// `contains` edges (FR-003) without a re-parse.
     pub parent: Option<String>,
+    /// How widely this declaration is visible (FR-009).
+    #[serde(default)]
+    pub visibility: Visibility,
+    /// Normalized parameter/return summary for a callable, absent for every
+    /// declaration whose grammar exposes no parameter list (FR-009).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<String>,
 }
 
 /// Severity of an extraction diagnostic.
