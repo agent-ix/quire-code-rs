@@ -16,8 +16,8 @@ use std::collections::BTreeMap;
 
 use tree_sitter::{Node, Parser, Tree};
 
-use crate::facts::{CodeFact, Diagnostic, LineSpan, ObjectType};
-use crate::lang::{Language, LanguageConfig};
+use crate::facts::{CodeFact, Diagnostic, LineSpan, ObjectType, Visibility};
+use crate::lang::{Language, LanguageConfig, VisibilityStyle};
 use crate::naming::{anonymous_segment, child_name, file_name, normalize_path};
 use crate::typeenv::{RawBinding, TypeSource, FILE_SCOPE};
 
@@ -139,6 +139,9 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
             end: line_count,
         },
         parent: None,
+        // A file is the unit a consumer addresses from outside (FR-009).
+        visibility: Visibility::Public,
+        signature: None,
     });
 
     if file.content.len() > MAX_FILE_BYTES {
@@ -318,6 +321,13 @@ impl<'a> Walker<'a> {
                     let span = span_of(child);
                     let is_test = ctx.in_test || self.looks_like_test(child, &simple_name);
 
+                    let visibility = self.visibility_of(child, &simple_name);
+                    let signature = if decl.object_type == ObjectType::Function {
+                        self.signature_of(child)
+                    } else {
+                        None
+                    };
+
                     self.facts.push(CodeFact {
                         object_type: decl.object_type,
                         kind: decl.kind,
@@ -326,6 +336,8 @@ impl<'a> Walker<'a> {
                         path: self.path.to_string(),
                         span,
                         parent: Some(ctx.contain_parent.to_string()),
+                        visibility,
+                        signature,
                     });
 
                     let mut next = Context {
@@ -649,6 +661,240 @@ impl<'a> Walker<'a> {
 
     /// The simple name of a type node: generics, references and wrappers
     /// stripped, so `&Option<Store>` and `Store` name one type.
+    /// Classify a declaration's visibility (FR-009).
+    ///
+    /// Every branch is keyed off the language's `VisibilityStyle` rather than
+    /// off `Language`, so a new language declares how it spells visibility in
+    /// `lang.rs` and this stays untouched (FR-009-CON-2).
+    fn visibility_of(&self, node: Node<'a>, simple_name: &str) -> Visibility {
+        match self.config.visibility_style {
+            VisibilityStyle::RustModifier => self.rust_visibility(node),
+            VisibilityStyle::TypeScriptExport => self.typescript_visibility(node),
+            VisibilityStyle::PythonUnderscore => python_visibility(simple_name),
+        }
+    }
+
+    /// Rust: an explicit `pub`/`pub(…)` modifier, else the enclosing trait's
+    /// visibility, else private.
+    fn rust_visibility(&self, node: Node<'a>) -> Visibility {
+        if let Some(text) = self.visibility_modifier_text(node) {
+            // `pub` alone is unrestricted; every parenthesized form —
+            // `pub(crate)`, `pub(super)`, `pub(in path)` — restricts to the
+            // defining unit.
+            return if text == "pub" {
+                Visibility::Public
+            } else {
+                Visibility::Crate
+            };
+        }
+        // A trait's associated items carry the trait's visibility, not their
+        // own: they are reachable wherever the trait is (FR-009-AC-4). The
+        // same holds for the items of a trait `impl` — a caller reaches them
+        // through the trait, so treating them as private would under-report a
+        // change that dependents really do see.
+        if self.has_visibility_inheriting_ancestor(node) || self.in_trait_impl(node) {
+            return Visibility::Public;
+        }
+        Visibility::Private
+    }
+
+    /// Whether the node sits inside an `impl Trait for Type` block, as opposed
+    /// to an inherent `impl Type` block.
+    fn in_trait_impl(&self, node: Node<'a>) -> bool {
+        let mut current = node.parent();
+        while let Some(ancestor) = current {
+            if ancestor.kind() == "impl_item" {
+                return ancestor.child_by_field_name("trait").is_some();
+            }
+            if self.config.decl_for(ancestor.kind()).is_some() {
+                return false;
+            }
+            current = ancestor.parent();
+        }
+        false
+    }
+
+    /// TypeScript/TSX: a class member's accessibility modifier, else `export`
+    /// on the declaration, else private.
+    fn typescript_visibility(&self, node: Node<'a>) -> Visibility {
+        // `#name` is hard-private regardless of position.
+        if let Some(name) = node.child_by_field_name("name") {
+            if name.kind() == "private_property_identifier" {
+                return Visibility::Private;
+            }
+        }
+        if let Some(text) = self.visibility_modifier_text(node) {
+            return match text {
+                "private" => Visibility::Private,
+                "protected" => Visibility::Crate,
+                _ => Visibility::Public,
+            };
+        }
+        // A member of a class or interface body with no modifier is public;
+        // the body's own declaration governs whether the type escapes.
+        if self.is_type_member(node) || self.has_visibility_inheriting_ancestor(node) {
+            return Visibility::Public;
+        }
+        if is_exported(node) {
+            return Visibility::Public;
+        }
+        Visibility::Private
+    }
+
+    /// The text of a declaration's own visibility/accessibility modifier.
+    fn visibility_modifier_text(&self, node: Node<'a>) -> Option<&'a str> {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if self.config.visibility_nodes.contains(&child.kind()) {
+                if let Ok(text) = child.utf8_text(self.source) {
+                    return Some(text.trim());
+                }
+            }
+        }
+        None
+    }
+
+    /// Whether the declaration sits inside a body whose items inherit the
+    /// enclosing declaration's visibility (a Rust trait, a TS interface).
+    fn has_visibility_inheriting_ancestor(&self, node: Node<'a>) -> bool {
+        let mut current = node.parent();
+        while let Some(ancestor) = current {
+            if self
+                .config
+                .visibility_inheriting_nodes
+                .contains(&ancestor.kind())
+            {
+                return true;
+            }
+            if self.config.decl_for(ancestor.kind()).is_some() {
+                // A nearer declaration governs; stop before crossing it.
+                return false;
+            }
+            current = ancestor.parent();
+        }
+        false
+    }
+
+    /// Whether the node is declared directly in a class or interface body.
+    fn is_type_member(&self, node: Node<'a>) -> bool {
+        node.parent()
+            .map(|p| matches!(p.kind(), "class_body" | "interface_body" | "object_type"))
+            .unwrap_or(false)
+    }
+
+    /// Render a callable's normalized signature (FR-009).
+    ///
+    /// Only the parameter list's own child nodes are read, so a comment or a
+    /// line break inside the parentheses contributes nothing — that is what
+    /// makes the rendering stable across reformatting (FR-009-AC-6).
+    fn signature_of(&self, node: Node<'a>) -> Option<String> {
+        let params = self.parameter_list(node)?;
+        let mut rendered: Vec<String> = Vec::new();
+        let mut cursor = params.walk();
+        for param in params.named_children(&mut cursor) {
+            if self.config.is_comment(param.kind()) {
+                continue;
+            }
+            if let Some(text) = self.render_parameter(param) {
+                rendered.push(text);
+            }
+        }
+
+        let mut signature = format!("({})", rendered.join(", "));
+        if let Some(return_type) = self.return_type_text(node) {
+            signature.push_str(" -> ");
+            signature.push_str(&return_type);
+        }
+        Some(signature)
+    }
+
+    /// The callable's parameter-list node, by field name or by node kind.
+    fn parameter_list(&self, node: Node<'a>) -> Option<Node<'a>> {
+        if let Some(params) = node.child_by_field_name("parameters") {
+            return Some(params);
+        }
+        let mut cursor = node.walk();
+        let found = node
+            .children(&mut cursor)
+            .find(|child| self.config.parameter_list_nodes.contains(&child.kind()));
+        found
+    }
+
+    /// One parameter, rendered as its declared type when it has one and as its
+    /// binding name when it does not.
+    fn render_parameter(&self, param: Node<'a>) -> Option<String> {
+        // A receiver is rendered uniformly, so `self`, `&self`, `&mut self`,
+        // `this` and `cls` are not mistaken for signature changes.
+        if param.kind() == "self_parameter" {
+            return Some("self".to_string());
+        }
+        let name = param
+            .child_by_field_name("pattern")
+            .or_else(|| param.child_by_field_name("name"))
+            .or(if param.kind() == "identifier" {
+                Some(param)
+            } else {
+                None
+            })
+            .and_then(|n| n.utf8_text(self.source).ok())
+            .map(str::trim);
+
+        if matches!(name, Some("self" | "cls" | "this")) {
+            return Some("self".to_string());
+        }
+
+        if let Some(type_node) = param.child_by_field_name("type") {
+            if let Some(text) = self.normalized_type_text(type_node) {
+                return Some(text);
+            }
+        }
+
+        // Unannotated: the name still carries the arity (FR-009-AC-7). A
+        // pattern the grammar exposes no name field for — Python's `*rest`,
+        // `**kwargs` — falls back to its own source text so the parameter is
+        // never silently dropped from the arity.
+        name.filter(|n| !n.is_empty())
+            .map(collapse_whitespace)
+            .or_else(|| {
+                param
+                    .utf8_text(self.source)
+                    .ok()
+                    .map(str::trim)
+                    .filter(|text| !text.is_empty())
+                    .map(collapse_whitespace)
+            })
+    }
+
+    /// The declared return type, normalized, when the declaration states one.
+    fn return_type_text(&self, node: Node<'a>) -> Option<String> {
+        for field in self.config.return_type_fields {
+            if let Some(return_node) = node.child_by_field_name(field) {
+                if let Some(text) = self.normalized_type_text(return_node) {
+                    return Some(text);
+                }
+            }
+        }
+        None
+    }
+
+    /// A declared type's source text with its annotation punctuation stripped
+    /// and every whitespace run collapsed (FR-009-AC-6).
+    fn normalized_type_text(&self, node: Node<'a>) -> Option<String> {
+        let text = node.utf8_text(self.source).ok()?;
+        let text = text.trim();
+        let text = text
+            .strip_prefix("->")
+            .or_else(|| text.strip_prefix(':'))
+            .unwrap_or(text)
+            .trim();
+        let collapsed = collapse_whitespace(text);
+        if collapsed.is_empty() {
+            None
+        } else {
+            Some(collapsed)
+        }
+    }
+
     fn simple_type_name(&self, node: Node<'a>) -> Option<String> {
         let text = node.utf8_text(self.source).ok()?;
         simplify_type(text)
@@ -820,6 +1066,31 @@ fn split_call_path(text: &str) -> Option<(&str, &str)> {
 /// `Vec<Row>` yields the element type: a call on an element is far more common
 /// than a call on the container, and a wrong container type would produce a
 /// wrong edge, which NFR-004 forbids outright.
+/// Collapse every whitespace run to a single space (FR-009-AC-6).
+fn collapse_whitespace(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Python has no visibility keyword; the underscore prefix is the convention
+/// the language's own tooling honors (FR-009).
+fn python_visibility(simple_name: &str) -> Visibility {
+    // A dunder (`__init__`) is a protocol hook, not a private helper.
+    if simple_name.starts_with("__") && !simple_name.ends_with("__") {
+        return Visibility::Private;
+    }
+    if simple_name.starts_with('_') && !simple_name.starts_with("__") {
+        return Visibility::Crate;
+    }
+    Visibility::Public
+}
+
+/// Whether a TypeScript declaration is wrapped in an `export` statement.
+fn is_exported(node: Node<'_>) -> bool {
+    node.parent()
+        .map(|parent| parent.kind() == "export_statement")
+        .unwrap_or(false)
+}
+
 fn simplify_type(text: &str) -> Option<String> {
     let mut current = text.trim();
     current = current
@@ -881,6 +1152,265 @@ mod tests {
             Language::Rust,
             content,
         ))
+    }
+
+    // TC-078 — FR-009-AC-1: Rust visibility modifiers classify three ways.
+    #[test]
+    fn rust_visibility_modifiers_classify_public_crate_and_private() {
+        let parsed = rust(
+            "pub fn exported() {}\n\
+             pub(crate) fn unit_wide() {}\n\
+             pub(super) fn parent_wide() {}\n\
+             fn hidden() {}\n",
+        );
+        let vis = |name: &str| {
+            parsed
+                .facts
+                .iter()
+                .find(|f| f.simple_name == name)
+                .unwrap_or_else(|| panic!("no fact for {name}: {:?}", parsed.facts))
+                .visibility
+        };
+        assert_eq!(vis("exported"), Visibility::Public);
+        assert_eq!(vis("unit_wide"), Visibility::Crate);
+        assert_eq!(vis("parent_wide"), Visibility::Crate);
+        assert_eq!(vis("hidden"), Visibility::Private);
+        assert!(
+            Visibility::Public.is_exported() && !Visibility::Crate.is_exported(),
+            "only `public` counts as an export for change tiering"
+        );
+    }
+
+    // TC-079 — FR-009-AC-2: TypeScript `export` and class access modifiers.
+    #[test]
+    fn typescript_export_and_access_modifiers_classify() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "ui",
+            "src/store.ts",
+            Language::TypeScript,
+            "export function shipped(): void {}\n\
+             function internal(): void {}\n\
+             export class Store {\n\
+            \x20 private secret(): void {}\n\
+            \x20 protected shared(): void {}\n\
+            \x20 open(): void {}\n\
+            \x20 #hard(): void {}\n\
+             }\n",
+        ));
+        let vis = |name: &str| {
+            parsed
+                .facts
+                .iter()
+                .find(|f| f.simple_name == name)
+                .unwrap_or_else(|| panic!("no fact for {name}: {:?}", parsed.facts))
+                .visibility
+        };
+        assert_eq!(vis("shipped"), Visibility::Public);
+        assert_eq!(vis("internal"), Visibility::Private);
+        assert_eq!(vis("Store"), Visibility::Public);
+        assert_eq!(vis("secret"), Visibility::Private);
+        assert_eq!(vis("shared"), Visibility::Crate);
+        assert_eq!(vis("open"), Visibility::Public);
+        assert_eq!(vis("#hard"), Visibility::Private);
+    }
+
+    // TC-080 — FR-009-AC-3: Python's underscore convention is the visibility.
+    #[test]
+    fn python_underscore_convention_classifies_visibility() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "tool",
+            "tool/main.py",
+            Language::Python,
+            "def helper():\n    pass\n\
+             def _internal():\n    pass\n\
+             def __hidden():\n    pass\n\
+             class Store:\n\
+            \x20   def __init__(self):\n        pass\n",
+        ));
+        let vis = |name: &str| {
+            parsed
+                .facts
+                .iter()
+                .find(|f| f.simple_name == name)
+                .unwrap_or_else(|| panic!("no fact for {name}: {:?}", parsed.facts))
+                .visibility
+        };
+        assert_eq!(vis("helper"), Visibility::Public);
+        assert_eq!(vis("_internal"), Visibility::Crate);
+        assert_eq!(vis("__hidden"), Visibility::Private);
+        // A dunder is a protocol hook, not a private helper.
+        assert_eq!(vis("__init__"), Visibility::Public);
+    }
+
+    // TC-081 — FR-009-AC-4: trait and trait-impl items inherit the trait's
+    // reach; an inherent-impl item keeps its own modifier.
+    #[test]
+    fn rust_trait_items_are_public_and_inherent_impl_items_are_not() {
+        let parsed = rust(
+            "pub trait Persist {\n\
+            \x20   fn save(&self) {}\n\
+             }\n\
+             pub struct Store;\n\
+             impl Persist for Store {\n\
+            \x20   fn save(&self) {}\n\
+             }\n\
+             impl Store {\n\
+            \x20   fn helper(&self) {}\n\
+             }\n",
+        );
+        let by_name: Vec<_> = parsed
+            .facts
+            .iter()
+            .filter(|f| f.simple_name == "save")
+            .map(|f| f.visibility)
+            .collect();
+        assert_eq!(
+            by_name,
+            vec![Visibility::Public, Visibility::Public],
+            "trait default body and trait impl both reach through the trait"
+        );
+        let helper = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "helper")
+            .expect("inherent impl method");
+        assert_eq!(helper.visibility, Visibility::Private);
+    }
+
+    // TC-082 — FR-009-AC-5: parameter types and return type, receiver as self.
+    #[test]
+    fn signature_renders_parameter_types_and_return_type() {
+        let parsed = rust(
+            "impl Store {\n\
+            \x20   pub fn parse(&self, input: &str, limit: u32) -> Result<Doc, Error> {}\n\
+             }\n",
+        );
+        let parse_fn = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "parse")
+            .expect("method fact");
+        assert_eq!(
+            parse_fn.signature.as_deref(),
+            Some("(self, &str, u32) -> Result<Doc, Error>")
+        );
+
+        let ts = parse_file(&SourceFile::new(
+            "agent-ix",
+            "ui",
+            "src/store.ts",
+            Language::TypeScript,
+            "export function render(node: Node, depth: number): string { return ''; }\n",
+        ));
+        let render = ts
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "render")
+            .expect("function fact");
+        assert_eq!(
+            render.signature.as_deref(),
+            Some("(Node, number) -> string")
+        );
+    }
+
+    // TC-083 — FR-009-AC-6: reformatting and in-list comments change nothing.
+    #[test]
+    fn signature_is_stable_across_reformatting_and_comments() {
+        let compact = rust("pub fn parse(input: &str, limit: u32) -> Doc {}\n");
+        let sprawling = rust(
+            "pub fn parse(\n\
+            \x20   // the source text\n\
+            \x20   input:   &str,\n\
+            \x20   /* how many */ limit:\n\
+            \x20       u32,\n\
+             ) -> Doc\n\
+             {}\n",
+        );
+        let signature = |parsed: &ParsedFile| {
+            parsed
+                .facts
+                .iter()
+                .find(|f| f.simple_name == "parse")
+                .expect("function fact")
+                .signature
+                .clone()
+        };
+        assert_eq!(signature(&compact), signature(&sprawling));
+        assert_eq!(signature(&compact).as_deref(), Some("(&str, u32) -> Doc"));
+    }
+
+    // TC-084 — FR-009-AC-7: unannotated params fall back to names; a
+    // declaration with no parameter list carries no signature.
+    #[test]
+    fn unannotated_parameters_render_names_and_non_callables_have_no_signature() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "tool",
+            "tool/main.py",
+            Language::Python,
+            "def merge(left, right, *rest):\n    pass\nclass Store:\n    pass\n",
+        ));
+        let merge = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "merge")
+            .expect("function fact");
+        assert_eq!(merge.signature.as_deref(), Some("(left, right, *rest)"));
+
+        let store = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "Store")
+            .expect("class fact");
+        assert_eq!(store.signature, None, "a type has no parameter list");
+        let file = parsed
+            .facts
+            .iter()
+            .find(|f| f.object_type == ObjectType::CodeFile)
+            .expect("file fact");
+        assert_eq!(file.signature, None);
+        assert_eq!(file.visibility, Visibility::Public);
+    }
+
+    // TC-085 — FR-009-AC-8: a parameter-type change is visible in the
+    // signature and invisible to identity; a new private helper disturbs no
+    // existing record.
+    #[test]
+    fn parameter_type_change_moves_the_signature_not_the_identity() {
+        let before = rust("pub fn parse(input: &str) -> Doc {}\n");
+        let after = rust("pub fn parse(input: &[u8]) -> Doc {}\n");
+        let fact_of = |parsed: &ParsedFile| {
+            parsed
+                .facts
+                .iter()
+                .find(|f| f.simple_name == "parse")
+                .expect("function fact")
+                .clone()
+        };
+        let (a, b) = (fact_of(&before), fact_of(&after));
+        assert_eq!(a.qualified_name, b.qualified_name, "identity is name-keyed");
+        assert_ne!(
+            a.signature, b.signature,
+            "a parameter-type change must not read as a body-only edit"
+        );
+
+        let with_helper = rust("pub fn parse(input: &str) -> Doc {}\nfn helper() {}\n");
+        let helper = with_helper
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "helper")
+            .expect("helper fact");
+        assert!(
+            !helper.visibility.is_exported(),
+            "a private helper is not part of the export set"
+        );
+        assert_eq!(
+            fact_of(&with_helper),
+            a,
+            "adding a private helper leaves the existing declaration untouched"
+        );
     }
 
     // TC-001 — FR-001-AC-1: a Rust fixture yields all four fact types.

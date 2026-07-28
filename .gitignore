@@ -17,3 +17,6 @@ fuzz/Cargo.lock
 __pycache__/
 .pytest_cache/
 *.so
+
+# Test-run byproduct: the actual extraction written for golden-file diffs.
+tests/golden/fixture.actual.json

@@ -19,7 +19,10 @@ conventions — ix:// refs (`ix://agent-ix/{repo}/{name}`, ≥3 segments,
 last-segment resolution), node identity `(object_type, container, name)` with
 org-qualified names `{org}/{repo}/{relative/path}::{Parent}::{symbol}` (FR-072
 requires the `{org}/` prefix so same-named repos in different orgs cannot
-collide), edge dedupe on `(source_ref, edge_type, target_ref)`.
+collide), edge dedupe on `(source_ref, edge_type, target_ref)`. Node data also
+carries `visibility` (`public`/`crate`/`private`) and, for callables, a normalized
+`signature` (FR-009) — neither is hashed into node identity, so a visibility or
+signature change is a modification, never a delete plus an add.
 
 **Provenance vocabulary** (consumed by filament-ide-rs FR-072): every edge
 carries `confidence` ∈ [0.0, 1.0], `reason` ∈ {`syntactic`, `path-resolved`,

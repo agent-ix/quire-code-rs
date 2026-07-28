@@ -18,6 +18,10 @@ with `{confidence, reason, evidence[], count}` provenance metadata.
   (test → TC artifact) and `implements` (code → FR/NFR artifact).
 - **Identity**: `{repo}/{relative/path}::{Parent}::{symbol}`, stable across
   re-scans, compatible with `ix://agent-ix/{repo}/{name}` resolution.
+- **Export surface**: every node carries a `visibility` (`public`/`crate`/
+  `private`) and every callable a normalized `signature`, so a consumer can
+  tell an exported-surface change from a body-only edit and re-resolve only the
+  dependents that a change can actually reach.
 
 ## Design principles
 
