@@ -36,6 +36,13 @@ matters more day to day, because it bounds what happens on save — the cost of
 re-extracting one edited file must stay under the threshold at which an editor
 feels laggy.
 
+The single-file figure is also the one a consumer cannot reach on its own.
+Resolution is whole-corpus, so re-extracting after one edit means supplying the
+whole batch, and a batch entry point that always parses what it is given makes
+the cost of a save scale with repository size no matter how little changed. The
+library therefore has to let a consumer supply parses it already holds; without
+that seam the 50 ms figure describes work no caller can actually ask for.
+
 The fixpoint resolution of
 [FR-008](../functional/FR-008-type-environments-and-call-resolution.md) is the
 component most able to violate this budget, since iteration count interacts with
@@ -74,6 +81,7 @@ gate so that shared-runner variance cannot make the ordinary suite flaky.
 | NFR-003-AC-2 | Single-file re-extraction stays within 50 milliseconds at p95 | Test (TC-063) |
 | NFR-003-AC-3 | Peak resident memory during full extraction stays within 2.0 GB | Test (TC-064) |
 | NFR-003-AC-4 | Fixpoint resolution converges within 10 iterations on the benchmark corpus | Test (TC-065) |
+| NFR-003-AC-5 | A consumer holding a batch's parses re-extracts it without the library re-parsing any unchanged file, and gets records identical to a full extraction | Test (TC-077) |
 
 ## Dependencies
 

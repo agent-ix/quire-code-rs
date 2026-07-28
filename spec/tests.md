@@ -133,6 +133,7 @@ is checkable by extracting this repository with the library it specifies.
 | NFR-003-AC-2 | Single-file re-extraction p95 within 50 ms | TC-063 | Benchmark | ✅ |
 | NFR-003-AC-3 | Peak resident memory within 2.0 GB | TC-064 | Benchmark | ✅ |
 | NFR-003-AC-4 | Fixpoint converges within ten iterations | TC-065 | Benchmark | ✅ |
+| NFR-003-AC-5 | Caller-supplied parses are reused, and change nothing about the records | TC-077 | Integration | ✅ |
 | NFR-004-AC-1 | Zero wrong edges, Rust precision corpus | TC-066 | Integration | ✅ |
 | NFR-004-AC-2 | Zero wrong edges, TypeScript precision corpus | TC-067 | Integration | ✅ |
 | NFR-004-AC-3 | Zero wrong edges, Python precision corpus | TC-068 | Integration | ✅ |
@@ -163,6 +164,7 @@ is checkable by extracting this repository with the library it specifies.
 | TC-074 | FR-008 same-file preference over batch ambiguity | Receiver-typed resolution |
 | TC-075 | FR-007 body-error tolerance | Structural extraction |
 | TC-076 | FR-001 module vs file discrimination | Structural extraction |
+| TC-077 | NFR-003 caller-supplied parse reuse | Incremental re-extraction |
 
 ## Coverage Notes
 

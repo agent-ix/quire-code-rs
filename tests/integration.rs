@@ -7,7 +7,7 @@
 
 use std::collections::BTreeSet;
 
-use quire_code_rs::{extract, Language, MentionKind, SourceFile};
+use quire_code_rs::{extract, extract_with, parse_file, Language, MentionKind, SourceFile};
 
 /// A small mixed-language fixture repository.
 fn fixture() -> Vec<SourceFile> {
@@ -348,4 +348,65 @@ fn strip_comments(source: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Desc: a consumer that already holds a batch's parses can hand them back
+/// instead of having the library parse the corpus again, and the records it
+/// gets are the ones a full extraction produces. This is the seam that makes
+/// the single-file re-extraction budget reachable from outside: resolution
+/// still needs the whole batch, but parsing it is the part a caller who
+/// changed one file need not repeat.
+/// Assumptions: the fixture is the same mixed-language repository the rest of
+/// this suite uses, so the comparison covers every record kind it emits.
+/// ACs: NFR-003-AC-5.
+/// Tracing: TC-077.
+#[test]
+fn tc_077_caller_supplied_parses_are_reused_and_change_nothing() {
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    let files = fixture();
+    let expected = extract(&files);
+
+    // First pass: every file is a miss, and the memo fills.
+    let mut memo: BTreeMap<String, Arc<quire_code_rs::ParsedFile>> = BTreeMap::new();
+    let mut parses = 0usize;
+    let first = extract_with(&files, &mut |file| {
+        let key = file.normalized_path();
+        memo.entry(key)
+            .or_insert_with(|| {
+                parses += 1;
+                Arc::new(parse_file(file))
+            })
+            .clone()
+    });
+    assert_eq!(
+        parses,
+        files.len(),
+        "the first pass parses each file exactly once"
+    );
+
+    // Second pass: nothing changed, so the library must ask for parses and
+    // accept every one of them without parsing anything itself.
+    let mut reparses = 0usize;
+    let second = extract_with(&files, &mut |file| {
+        let key = file.normalized_path();
+        memo.get(&key).cloned().unwrap_or_else(|| {
+            reparses += 1;
+            Arc::new(parse_file(file))
+        })
+    });
+    assert_eq!(reparses, 0, "an unchanged batch re-parses nothing");
+
+    assert_eq!(
+        first.nodes, expected.nodes,
+        "supplying parses changes no node record"
+    );
+    assert_eq!(
+        first.edges, expected.edges,
+        "supplying parses changes no edge record"
+    );
+    assert_eq!(second.nodes, expected.nodes, "and is stable across runs");
+    assert_eq!(second.edges, expected.edges, "and is stable across runs");
+    assert_eq!(second.stats, expected.stats, "including the batch stats");
 }
