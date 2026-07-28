@@ -9,6 +9,7 @@
 //! dropped with it (ADR-002).
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -51,6 +52,28 @@ pub struct ExtractionStats {
 /// Pure: no filesystem, no network, no clock, no randomness (NFR-002). Two
 /// calls with equal input return equal output (NFR-001).
 pub fn extract(files: &[SourceFile]) -> ExtractionResult {
+    extract_with(files, &mut |file| Arc::new(parse::parse_file(file)))
+}
+
+/// [`extract`] over a batch whose parses the caller may already hold.
+///
+/// Resolution is whole-corpus — a call cannot be resolved without the batch
+/// that declares its callee — so a consumer re-extracting after a single edit
+/// must still supply every file. Parsing that batch again is the part it need
+/// not repeat: `parse` is asked for each file in turn and a consumer that
+/// remembers a file's parse against its content can return it instead. This is
+/// what makes NFR-003's single-file re-extraction budget reachable from
+/// outside the library, where [`extract`] alone leaves the caller re-parsing
+/// the corpus on every save.
+///
+/// Determinism (NFR-001) becomes a shared obligation: the library still does
+/// nothing order- or clock-dependent, but `parse` must be a pure function of
+/// the file it is given. Returning a parse that does not match the supplied
+/// content produces records describing content that was never extracted.
+pub fn extract_with(
+    files: &[SourceFile],
+    parse: &mut dyn FnMut(&SourceFile) -> Arc<ParsedFile>,
+) -> ExtractionResult {
     let batch_paths: BTreeSet<String> = files.iter().map(|f| f.normalized_path()).collect();
 
     let mut all_facts: Vec<CodeFact> = Vec::new();
@@ -73,10 +96,10 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
     // Resolution needs the whole batch before any call can be resolved, so the
     // first pass parses and the second resolves (ADR-002: the corpus lives for
     // the call and is dropped with it).
-    let mut parsed_files: Vec<(&SourceFile, String, ParsedFile)> = Vec::new();
+    let mut parsed_files: Vec<(&SourceFile, String, Arc<ParsedFile>)> = Vec::new();
     for file in &ordered {
         let path = file.normalized_path();
-        let parsed = parse::parse_file(file);
+        let parsed = parse(file);
         parsed_files.push((file, path, parsed));
     }
 
@@ -88,7 +111,7 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
     let mut files_hitting_iteration_bound = 0u32;
 
     for (file, path, parsed) in &parsed_files {
-        let (file, path, parsed) = (*file, path.clone(), parsed);
+        let (file, path, parsed) = (*file, path.clone(), parsed.as_ref());
 
         if parsed.diagnostics.iter().any(|d| d.code == "parse_error") {
             files_with_errors += 1;
@@ -239,7 +262,7 @@ pub fn extract(files: &[SourceFile]) -> ExtractionResult {
 }
 
 /// Build the batch-wide declaration index the solver resolves against.
-fn build_corpus(parsed_files: &[(&SourceFile, String, ParsedFile)]) -> Corpus {
+fn build_corpus(parsed_files: &[(&SourceFile, String, Arc<ParsedFile>)]) -> Corpus {
     let mut corpus = Corpus::default();
 
     for (_, _, parsed) in parsed_files {
@@ -342,7 +365,7 @@ fn local_scope(parsed: &ParsedFile) -> resolve::LocalScope {
 
 /// The import graph, keyed by file path, for tier-2 candidate narrowing.
 fn resolve_import_edges(
-    parsed_files: &[(&SourceFile, String, ParsedFile)],
+    parsed_files: &[(&SourceFile, String, Arc<ParsedFile>)],
     batch_paths: &BTreeSet<String>,
 ) -> BTreeMap<String, BTreeSet<String>> {
     let mut out: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
@@ -358,7 +381,7 @@ fn resolve_import_edges(
 
 /// Simple type names declared per file, for tier-2 candidate narrowing.
 fn types_by_file(
-    parsed_files: &[(&SourceFile, String, ParsedFile)],
+    parsed_files: &[(&SourceFile, String, Arc<ParsedFile>)],
 ) -> BTreeMap<String, BTreeSet<String>> {
     let mut out: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for (_, path, parsed) in parsed_files {
