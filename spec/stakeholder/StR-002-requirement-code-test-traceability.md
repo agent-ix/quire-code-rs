@@ -46,6 +46,13 @@ receiver type cannot be determined — yields no relationship at all rather than
 plausible-looking wrong one. Satisfaction is judged against fixture corpora
 whose correct relationships are known in advance.
 
+| ID | Criteria | Validation |
+|----|----------|------------|
+| StR-002-VC-1 | A tracking tag on a test function surfaces as a relationship carrying its file and line | Test (TC-026) |
+| StR-002-VC-2 | A requirement citation and an `ix://` reference each surface as a relationship | Test (TC-028) |
+| StR-002-VC-3 | An ambiguous call site yields no relationship rather than a plausible wrong one | Test (TC-045) |
+| StR-002-VC-4 | The precision corpora emit zero wrong edges in every supported language | Test (TC-066) |
+
 ## Stakeholders
 
 The primary stakeholders are engineers and reviewers navigating a

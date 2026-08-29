@@ -84,9 +84,9 @@ other case.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-008-CON-1 | Resolution SHALL be conservative: an ambiguous call site SHALL yield no edge, never a highest-scoring guess | Reliability | Test |
-| FR-008-CON-2 | The fixpoint iteration SHALL carry an explicit bound, and reaching it SHALL degrade to fewer edges rather than to unbounded work | Performance | Test |
-| FR-008-CON-3 | Resolution quality SHALL be a function of the supplied batch; a consumer seeking whole-repository resolution SHALL supply the whole repository | Interface | Inspection |
+| FR-008-CON-1 | Resolution SHALL be conservative: an ambiguous call site SHALL yield no edge, never a highest-scoring guess | Reliability | Test (TC-045) |
+| FR-008-CON-2 | The fixpoint iteration SHALL carry an explicit bound, and reaching it SHALL degrade to fewer edges rather than to unbounded work | Performance | Test (TC-049) |
+| FR-008-CON-3 | Resolution quality SHALL be a function of the supplied batch; a consumer seeking whole-repository resolution SHALL supply the whole repository | Interface | Test (TC-052) |
 
 ## Acceptance Criteria
 

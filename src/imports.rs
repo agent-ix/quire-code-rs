@@ -173,7 +173,7 @@ mod tests {
         entries.iter().map(|s| s.to_string()).collect()
     }
 
-    // TC-016 — FR-003-AC-2: a relative import naming a batch file resolves.
+    // TC-016, FR-003-AC-2: a relative import naming a batch file resolves.
     #[test]
     fn relative_typescript_import_resolves_to_a_batch_path() {
         let batch = paths(&["src/store.ts", "src/app.ts"]);
@@ -183,7 +183,7 @@ mod tests {
         );
     }
 
-    // TC-018 — FR-003-AC-4: extensionless specifiers use the language's
+    // TC-018, FR-003-AC-4: extensionless specifiers use the language's
     // extension and index conventions.
     #[test]
     fn extensionless_specifiers_try_extensions_then_index_stems() {
@@ -241,7 +241,7 @@ mod tests {
         );
     }
 
-    // TC-017 — FR-003-AC-3: bare specifiers are not relative, so they resolve
+    // TC-017, FR-003-AC-3: bare specifiers are not relative, so they resolve
     // to nothing and (in the caller) produce no diagnostic.
     #[test]
     fn bare_specifiers_are_not_relative() {

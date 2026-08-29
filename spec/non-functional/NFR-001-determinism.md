@@ -41,8 +41,8 @@ stays honest as languages are added.
 | Serialized output equality across 100 repeated extractions of one fixture tree | all equal | all equal | Test |
 | Serialized output equality across extractions driven from 8 concurrent threads | all equal | all equal | Test |
 | Serialized output equality under shuffled input batch ordering | all equal | all equal | Test |
-| Occurrences of order-observable `HashMap`/`HashSet` iteration in extraction paths | 0 | 0 | Static Analysis |
-| Occurrences of clock, randomness, process or environment reads in extraction paths | 0 | 0 | Static Analysis |
+| Occurrences of order-observable `HashMap`/`HashSet` iteration in extraction paths | 0 | 0 | architecture-conformance |
+| Occurrences of clock, randomness, process or environment reads in extraction paths | 0 | 0 | architecture-conformance |
 
 ## Verification
 

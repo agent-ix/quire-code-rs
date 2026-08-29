@@ -56,7 +56,7 @@ any input.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-007-CON-1 | No extraction entry point SHALL panic on arbitrary byte input | Reliability | Test |
+| FR-007-CON-1 | No extraction entry point SHALL panic on arbitrary byte input | Reliability | Test (TC-043) |
 
 ## Acceptance Criteria
 

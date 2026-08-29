@@ -253,7 +253,7 @@ mod tests {
         )
     }
 
-    // TC-044 — FR-008-AC-1: a typed receiver resolves, marked receiver-typed.
+    // TC-044, FR-008-AC-1: a typed receiver resolves, marked receiver-typed.
     #[test]
     fn a_typed_receiver_resolves_to_its_types_method() {
         let corpus = corpus_with(&[
@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(resolved.reason, Reason::ReceiverTyped);
     }
 
-    // TC-045 — FR-008-AC-2: an unrecoverable receiver with several candidates
+    // TC-045, FR-008-AC-2, FR-008-CON-1, StR-002-VC-3: an unrecoverable receiver with several candidates
     // yields nothing.
     #[test]
     fn an_ambiguous_receiver_yields_no_edge() {

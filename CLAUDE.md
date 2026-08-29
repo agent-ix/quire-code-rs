@@ -30,6 +30,14 @@ carries `confidence` ∈ [0.0, 1.0], `reason` ∈ {`syntactic`, `path-resolved`,
 `evidence: [{file, line}]` capped at 20 entries, and `count` — the total
 call-site count folded onto the single deduplicated edge.
 
+**Traceability is gated:** `make coverage` reconciles `spec/tests.md` against
+the suite with `quire coverage`. Every row is backed by a tagged test or its
+declared verification method says why no symbol can exist. A tag binds every id
+in its comma list — `// TC-013, FR-002-AC-6, FR-002-CON-1: …` backs three
+targets, while `// TC-013 — FR-002-AC-6: …` backs only the first, because the
+em dash terminates the id run. `#[ignore]` must precede `#[test]`, or the
+scanner does not see the symbol at all.
+
 **Spec-first:** requirements live under `spec/` (flat quire-rs-style tree:
 `stakeholder/`, `usecase/`, `functional/`, `non-functional/`, `reviews/`,
 `spec.md`, `tests.md`). IDs are sequential within this repo. Tests carry

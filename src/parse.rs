@@ -115,6 +115,8 @@ const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
 ///
 /// Never panics: malformed input, oversized input and grammar failures all come
 /// back as diagnostics (FR-007-CON-1).
+///
+/// Implements: FR-001-AC-4, FR-007-AC-1, FR-007-AC-6
 pub fn parse_file(file: &SourceFile) -> ParsedFile {
     let path = file.normalized_path();
     let file_qualified_name = file_name(&file.org, &file.repo, &path);
@@ -125,8 +127,9 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
     };
 
     // The code_file fact is emitted for every accepted file, including one that
-    // declares nothing and one whose root is an error node (FR-001-AC-4,
-    // FR-007-AC-6).
+    // declares nothing and one whose root is an error node. Both cases are
+    // named in the `Implements:` line above; a bare id written here binds no
+    // channel and reads as a dead trace tag (agent-ix/quire-code-rs#8).
     let line_count = file.content.lines().count().max(1) as u32;
     out.facts.push(CodeFact {
         object_type: ObjectType::CodeFile,
@@ -178,7 +181,13 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
     }
 
     // An error-node root means nothing in the file is trustworthy: emit the
-    // code_file fact alone (FR-007-AC-6).
+    // code_file fact alone.
+    //
+    // Defensive rather than exercised: all three grammars this crate loads
+    // return a `source_file` root and push their failures into ERROR *children*
+    // instead, so `is_error()` on the root is false even for input the parser
+    // cannot make sense of. FR-007-AC-6 is stated against the reachable
+    // condition — no declaration fact survives — and TC-071 tests that.
     if root.is_error() {
         return out;
     }
@@ -1154,7 +1163,7 @@ mod tests {
         ))
     }
 
-    // TC-078 — FR-009-AC-1: Rust visibility modifiers classify three ways.
+    // TC-078, FR-009-AC-1: Rust visibility modifiers classify three ways.
     #[test]
     fn rust_visibility_modifiers_classify_public_crate_and_private() {
         let parsed = rust(
@@ -1181,7 +1190,7 @@ mod tests {
         );
     }
 
-    // TC-079 — FR-009-AC-2: TypeScript `export` and class access modifiers.
+    // TC-079, FR-009-AC-2: TypeScript `export` and class access modifiers.
     #[test]
     fn typescript_export_and_access_modifiers_classify() {
         let parsed = parse_file(&SourceFile::new(
@@ -1215,7 +1224,7 @@ mod tests {
         assert_eq!(vis("#hard"), Visibility::Private);
     }
 
-    // TC-080 — FR-009-AC-3: Python's underscore convention is the visibility.
+    // TC-080, FR-009-AC-3: Python's underscore convention is the visibility.
     #[test]
     fn python_underscore_convention_classifies_visibility() {
         let parsed = parse_file(&SourceFile::new(
@@ -1244,7 +1253,7 @@ mod tests {
         assert_eq!(vis("__init__"), Visibility::Public);
     }
 
-    // TC-081 — FR-009-AC-4: trait and trait-impl items inherit the trait's
+    // TC-081, FR-009-AC-4: trait and trait-impl items inherit the trait's
     // reach; an inherent-impl item keeps its own modifier.
     #[test]
     fn rust_trait_items_are_public_and_inherent_impl_items_are_not() {
@@ -1279,7 +1288,7 @@ mod tests {
         assert_eq!(helper.visibility, Visibility::Private);
     }
 
-    // TC-082 — FR-009-AC-5: parameter types and return type, receiver as self.
+    // TC-082, FR-009-AC-5: parameter types and return type, receiver as self.
     #[test]
     fn signature_renders_parameter_types_and_return_type() {
         let parsed = rust(
@@ -1315,7 +1324,7 @@ mod tests {
         );
     }
 
-    // TC-083 — FR-009-AC-6: reformatting and in-list comments change nothing.
+    // TC-083, FR-009-AC-6: reformatting and in-list comments change nothing.
     #[test]
     fn signature_is_stable_across_reformatting_and_comments() {
         let compact = rust("pub fn parse(input: &str, limit: u32) -> Doc {}\n");
@@ -1341,7 +1350,7 @@ mod tests {
         assert_eq!(signature(&compact).as_deref(), Some("(&str, u32) -> Doc"));
     }
 
-    // TC-084 — FR-009-AC-7: unannotated params fall back to names; a
+    // TC-084, FR-009-AC-7: unannotated params fall back to names; a
     // declaration with no parameter list carries no signature.
     #[test]
     fn unannotated_parameters_render_names_and_non_callables_have_no_signature() {
@@ -1374,7 +1383,7 @@ mod tests {
         assert_eq!(file.visibility, Visibility::Public);
     }
 
-    // TC-085 — FR-009-AC-8: a parameter-type change is visible in the
+    // TC-085, FR-009-AC-8: a parameter-type change is visible in the
     // signature and invisible to identity; a new private helper disturbs no
     // existing record.
     #[test]
@@ -1413,7 +1422,7 @@ mod tests {
         );
     }
 
-    // TC-001 — FR-001-AC-1: a Rust fixture yields all four fact types.
+    // TC-001, FR-001-AC-1: a Rust fixture yields all four fact types.
     #[test]
     fn rust_fixture_yields_every_fact_type() {
         let parsed = rust(
@@ -1447,7 +1456,7 @@ mod store {
         );
     }
 
-    // TC-009 — FR-002-AC-2: a method is named with its implementing type.
+    // TC-009, FR-002-AC-2: a method is named with its implementing type.
     #[test]
     fn methods_are_named_by_their_implementing_type() {
         let parsed = rust(
@@ -1479,7 +1488,7 @@ impl Persist for Store {
         );
     }
 
-    // TC-004 — FR-001-AC-4: an empty file still yields one code_file fact.
+    // TC-004, FR-001-AC-4: an empty file still yields one code_file fact.
     #[test]
     fn an_empty_file_still_yields_its_file_fact() {
         let parsed = rust("");
@@ -1487,7 +1496,7 @@ impl Persist for Store {
         assert_eq!(parsed.facts[0].object_type, ObjectType::CodeFile);
     }
 
-    // TC-005 — FR-001-AC-5: facts carry a kind and one-based inclusive spans.
+    // TC-005, FR-001-AC-5: facts carry a kind and one-based inclusive spans.
     #[test]
     fn facts_carry_kind_and_one_based_spans() {
         let parsed = rust("pub fn first() {}\n");
@@ -1501,7 +1510,7 @@ impl Persist for Store {
         assert!(func.span.end >= func.span.start);
     }
 
-    // TC-006 — FR-001-AC-6: facts are ordered by declaration start position.
+    // TC-006, FR-001-AC-6: facts are ordered by declaration start position.
     #[test]
     fn facts_are_ordered_by_start_position() {
         let parsed = rust("fn a() {}\nfn b() {}\nfn c() {}\n");
@@ -1516,7 +1525,7 @@ impl Persist for Store {
         assert_eq!(lines, sorted);
     }
 
-    // TC-041 — FR-007-AC-3: intact declarations survive a malformed sibling.
+    // TC-041, FR-007-AC-3: intact declarations survive a malformed sibling.
     #[test]
     fn a_malformed_declaration_does_not_sink_its_siblings() {
         let parsed = rust("fn good() {}\nfn broken( {\nfn also_good() {}\n");
@@ -1532,7 +1541,7 @@ impl Persist for Store {
         assert!(names.contains(&"good"), "got {names:?}");
     }
 
-    // TC-041 — FR-007-AC-3: the unparseable declaration contributes nothing,
+    // TC-041, FR-007-AC-3: the unparseable declaration contributes nothing,
     // while its intact siblings survive.
     #[test]
     fn an_unparseable_declaration_contributes_no_fact() {
@@ -1549,7 +1558,7 @@ impl Persist for Store {
         );
     }
 
-    // TC-075 — FR-007-AC-7: an error inside a body does not cost the
+    // TC-075, FR-007-AC-7: an error inside a body does not cost the
     // declaration its fact. Its signature is readable, so its identity is too.
     #[test]
     fn a_body_error_does_not_suppress_the_declaration() {
@@ -1570,7 +1579,34 @@ impl Persist for Store {
         );
     }
 
-    // TC-040 — FR-007-AC-2: the diagnostic carries path and first error position.
+    // TC-071, FR-007-AC-6: a file the grammar cannot resolve contributes its
+    // `code_file` fact and nothing else.
+    #[test]
+    fn an_error_root_yields_the_file_fact_alone() {
+        // A lifetime token where an item must begin defeats the grammar's
+        // recovery for the whole file: the `fn` that follows is textually a
+        // declaration and yields no fact. Distinct from TC-075, where the error
+        // is *inside* an otherwise readable declaration and the fact survives.
+        let parsed = rust("'x fn never_reached() {}\n");
+        let kinds: Vec<_> = parsed.facts.iter().map(|f| f.kind).collect();
+        assert_eq!(
+            kinds,
+            vec!["file"],
+            "an unresolvable root contributes the code_file fact and nothing else: {:?}",
+            parsed
+                .facts
+                .iter()
+                .map(|f| f.simple_name.as_str())
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            parsed.diagnostics.iter().any(|d| d.code == "parse_error"),
+            "the unreadable root is still diagnosed: {:?}",
+            parsed.diagnostics
+        );
+    }
+
+    // TC-040, FR-007-AC-2: the diagnostic carries path and first error position.
     #[test]
     fn parse_diagnostics_carry_a_position() {
         let parsed = rust("fn good() {}\nfn broken( {\n");
@@ -1583,7 +1619,7 @@ impl Persist for Store {
         assert!(diag.line.is_some());
     }
 
-    // TC-043 — FR-007-AC-5: arbitrary input yields a diagnostic, never a panic.
+    // TC-043, FR-007-AC-5, FR-007-CON-1: arbitrary input yields a diagnostic, never a panic.
     #[test]
     fn arbitrary_input_never_panics() {
         for content in ["", "\0\0\0", "((((((", "🙂🙂🙂", "fn"] {
@@ -1592,7 +1628,7 @@ impl Persist for Store {
         }
     }
 
-    // TC-003 — FR-001-AC-3: Python yields class, method and function facts.
+    // TC-003, FR-001-AC-3: Python yields class, method and function facts.
     #[test]
     fn python_fixture_yields_classes_and_functions() {
         let parsed = parse_file(&SourceFile::new(
@@ -1621,7 +1657,7 @@ impl Persist for Store {
         );
     }
 
-    // TC-076 — FR-001-AC-8: `code_module` denotes a namespace declared *within*
+    // TC-076, FR-001-AC-8: `code_module` denotes a namespace declared *within*
     // a file, never a file that merely happens to be importable.
     #[test]
     fn only_in_file_namespaces_yield_module_facts() {
@@ -1667,7 +1703,7 @@ impl Persist for Store {
         );
     }
 
-    // TC-002 — FR-001-AC-2: TypeScript and TSX yield their declaration forms.
+    // TC-002, FR-001-AC-2: TypeScript and TSX yield their declaration forms.
     #[test]
     fn typescript_fixture_yields_classes_interfaces_and_aliases() {
         let parsed = parse_file(&SourceFile::new(

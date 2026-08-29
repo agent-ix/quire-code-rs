@@ -12,9 +12,15 @@
 //! pure function of the requested size, with no randomness — so successive runs
 //! measure the same work, which is what makes the numbers comparable at all.
 //!
-//! Run with `make bench`. Ordinary `cargo test` does not build this target, so
-//! shared-runner variance cannot make the normal suite flaky (NFR-003's
+//! Run with `make bench`, which is `cargo test --test perf_lane -- --ignored`.
+//! The measurement is `#[ignore]`d, so an ordinary `cargo test` does not execute
+//! it and shared-runner variance cannot make the normal suite flaky (NFR-003's
 //! Verification section).
+//!
+//! A test target rather than a `harness = false` bench because a benchmark that
+//! discharges a matrix row has to be a symbol a trace tag can bind: a bare `fn`
+//! in a custom harness carries the tag and backs nothing
+//! (agent-ix/quire-code-rs#8).
 
 use std::collections::BTreeSet;
 use std::time::Instant;
@@ -30,7 +36,19 @@ const SINGLE_FILE_P95_THRESHOLD_MS: f64 = 50.0;
 const PEAK_MEMORY_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_FIXPOINT_ITERATIONS: usize = 10;
 
-fn main() {
+// TC-062, NFR-003-AC-1: the full benchmark corpus extracts within 60 s.
+// TC-063, NFR-003-AC-2: single-file re-extraction p95 is within 50 ms.
+// TC-064, NFR-003-AC-3: peak resident memory stays within 2.0 GB.
+// TC-065, NFR-003-AC-4: the fixpoint converges within its ten-iteration bound.
+// TC-070, NFR-004-AC-5: per-language recall is computed and reported.
+//
+// `#[ignore]` precedes `#[test]` deliberately: the ecosystem's Rust symbol
+// scanner reads the attribute immediately above the `fn`, so the conventional
+// order hides the symbol and every row above goes silently unbacked
+// (agent-ix/quire-rs#387).
+#[ignore = "benchmark lane: wall-clock budgets measure the host as much as the code, so they run under `make bench`, never in the PR gate"]
+#[test]
+fn extraction_meets_its_budgets_and_reports_its_recall() {
     let corpus = generate_corpus(TARGET_FILES);
     let total_lines: usize = corpus.iter().map(|f| f.content.lines().count()).sum();
     println!("corpus: {} files, {total_lines} lines\n", corpus.len());
@@ -79,15 +97,26 @@ fn main() {
         recall.2, recall.0, recall.1
     );
 
-    let failed = full > FULL_EXTRACTION_THRESHOLD_SECS
-        || p95 > SINGLE_FILE_P95_THRESHOLD_MS
-        || peak.is_some_and(|b| b > PEAK_MEMORY_THRESHOLD_BYTES)
-        || iterations as usize > MAX_FIXPOINT_ITERATIONS
-        || hit_bound > 0;
-    if failed {
-        eprintln!("\nFAIL: an NFR-003 threshold was exceeded");
-        std::process::exit(1);
+    assert!(
+        full <= FULL_EXTRACTION_THRESHOLD_SECS,
+        "TC-062: full extraction took {full:.1} s, budget {FULL_EXTRACTION_THRESHOLD_SECS:.0} s"
+    );
+    assert!(
+        p95 <= SINGLE_FILE_P95_THRESHOLD_MS,
+        "TC-063: single-file p95 was {p95:.1} ms, budget {SINGLE_FILE_P95_THRESHOLD_MS:.0} ms"
+    );
+    // An unavailable measurement is not a passing one; TC-064 reports the
+    // platform gap rather than counting it as within budget.
+    if let Some(bytes) = peak {
+        assert!(
+            bytes <= PEAK_MEMORY_THRESHOLD_BYTES,
+            "TC-064: peak RSS was {bytes} B, budget {PEAK_MEMORY_THRESHOLD_BYTES} B"
+        );
     }
+    assert!(
+        iterations as usize <= MAX_FIXPOINT_ITERATIONS && hit_bound == 0,
+        "TC-065: fixpoint took {iterations} iteration(s) with {hit_bound} file(s) still pending at the bound of {MAX_FIXPOINT_ITERATIONS}"
+    );
     println!("\nAll NFR-003 thresholds met.");
 }
 

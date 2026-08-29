@@ -271,7 +271,7 @@ mod tests {
         assert_eq!(env.lookup("", "s"), Some("Store"));
     }
 
-    // TC-046 — FR-008-AC-3: a copy binding resolves through the fixpoint, even
+    // TC-046, FR-008-AC-3, StR-001-VC-1: a copy binding resolves through the fixpoint, even
     // when written before the binding it copies.
     #[test]
     fn copy_chains_resolve_in_either_order() {
@@ -286,7 +286,7 @@ mod tests {
         assert_eq!(env.lookup("", "c"), Some("Store"));
     }
 
-    // TC-047 — FR-008-AC-4: a call-result binding resolves through the fixpoint.
+    // TC-047, FR-008-AC-4: a call-result binding resolves through the fixpoint.
     #[test]
     fn call_result_bindings_resolve_from_declared_return_types() {
         let env = TypeEnv::build(
@@ -327,7 +327,7 @@ mod tests {
         assert_eq!(env.lookup("", "r"), Some("Row"));
     }
 
-    // TC-048 — FR-008-AC-5: a local rebinding does not leak to file level.
+    // TC-048, FR-008-AC-5: a local rebinding does not leak to file level.
     #[test]
     fn local_bindings_do_not_leak_to_file_scope() {
         let bindings = [
@@ -341,7 +341,7 @@ mod tests {
         assert_eq!(env.lookup("g@20", "s"), Some("Store"));
     }
 
-    // TC-049 — FR-008-AC-6: a cycle terminates at the bound and emits only what
+    // TC-049, FR-008-AC-6, FR-008-CON-2: a cycle terminates at the bound and emits only what
     // resolved, rather than looping or guessing.
     #[test]
     fn cyclic_bindings_terminate_without_guessing() {

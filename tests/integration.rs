@@ -105,7 +105,7 @@ def main():
     ]
 }
 
-// TC-046 (structural slice) — FR-001-AC-1/2/3: a mixed-language batch yields
+// TC-046, FR-001-AC-1, FR-001-AC-2, FR-001-AC-3: a mixed-language batch yields  (structural slice)
 // the four node types and structural edges across every language.
 #[test]
 fn mixed_language_batch_yields_every_node_type() {
@@ -126,7 +126,7 @@ fn mixed_language_batch_yields_every_node_type() {
     assert!(edge_types.contains("imports"), "got {edge_types:?}");
 }
 
-// TC-038 — FR-006-AC-6: extraction of the fixture matches its golden file.
+// TC-038, FR-006-AC-6: extraction of the fixture matches its golden file.
 #[test]
 fn fixture_extraction_matches_the_golden_file() {
     let result = extract(&fixture());
@@ -151,7 +151,7 @@ fn fixture_extraction_matches_the_golden_file() {
     }
 }
 
-// TC-054 — NFR-001-AC-1: one hundred repeated extractions are byte-identical.
+// TC-054, NFR-001-AC-1: one hundred repeated extractions are byte-identical.
 #[test]
 fn a_hundred_extractions_are_byte_identical() {
     let files = fixture();
@@ -162,7 +162,7 @@ fn a_hundred_extractions_are_byte_identical() {
     }
 }
 
-// TC-055 — NFR-001-AC-2: concurrent extractions are byte-identical.
+// TC-055, NFR-001-AC-2, StR-001-VC-4: concurrent extractions are byte-identical.
 #[test]
 fn concurrent_extractions_are_byte_identical() {
     let files = fixture();
@@ -180,7 +180,7 @@ fn concurrent_extractions_are_byte_identical() {
     }
 }
 
-// TC-056 — NFR-001-AC-3: shuffling the batch order changes nothing.
+// TC-056, NFR-001-AC-3: shuffling the batch order changes nothing.
 #[test]
 fn shuffled_batch_order_produces_identical_output() {
     let forward = extract(&fixture());
@@ -190,7 +190,7 @@ fn shuffled_batch_order_produces_identical_output() {
     assert_eq!(extract(&shuffled), forward);
 }
 
-// TC-032 / FR-005-AC-7 — the dogfooding check: extracting this repository's own
+// TC-032, FR-005-AC-7 — the dogfooding check: extracting this repository's own
 // sources recovers the TC tags its tests carry, using the library the tags
 // document.
 #[test]
@@ -252,13 +252,10 @@ fn self_extraction_recovers_this_repositorys_own_tracking_tags() {
     assert_eq!(result.stats.files_with_errors, 0, "our own sources parse");
 }
 
-// TC-059 — NFR-002-AC-1: no HTTP, RPC or socket client crate in the closure.
-// TC-060 — NFR-002-AC-2: no filesystem, environment or process access in the
-// extraction path.
+// TC-059, NFR-002-AC-1: no HTTP, RPC or socket client crate in the closure.
 #[test]
-fn the_crate_reaches_nothing_outside_its_inputs() {
+fn the_dependency_closure_holds_no_network_client() {
     let root = env!("CARGO_MANIFEST_DIR");
-
     let lock = std::fs::read_to_string(format!("{root}/Cargo.lock")).expect("Cargo.lock");
     for banned in [
         "reqwest",
@@ -276,9 +273,101 @@ fn the_crate_reaches_nothing_outside_its_inputs() {
             "{banned} is in the dependency closure; NFR-002 forbids network clients"
         );
     }
+}
 
-    // The extraction path itself touches no ambient state. Tests are exempt —
-    // this very test reads files — so only `src/` is audited.
+// TC-007, FR-001-AC-7, StR-001-VC-2: a dependency audit confirms no filesystem or network
+// crate is reachable from the extraction path.
+//
+// An allowlist rather than a denylist: a denylist only rejects the crates
+// somebody thought to name, and the criterion is about what the extraction path
+// *may* reach, not about which of today's crates it happens not to.
+#[test]
+fn the_declared_dependencies_are_the_audited_set() {
+    let root = env!("CARGO_MANIFEST_DIR");
+    let manifest = std::fs::read_to_string(format!("{root}/Cargo.toml")).expect("Cargo.toml");
+    let section = manifest
+        .split("[dependencies]")
+        .nth(1)
+        .expect("a [dependencies] section")
+        .split("\n[")
+        .next()
+        .expect("the section ends at the next table");
+
+    let declared: BTreeSet<&str> = section
+        .lines()
+        .filter(|l| !l.trim_start().starts_with('#') && l.contains('='))
+        .filter_map(|l| l.split('=').next())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .collect();
+
+    // Parsing, serialization and hashing. Nothing here opens a file, a socket
+    // or a process; adding a dependency that could is what this test is for.
+    let audited: BTreeSet<&str> = [
+        "regex",
+        "serde",
+        "serde_json",
+        "sha2",
+        "thiserror",
+        "tree-sitter",
+        "tree-sitter-python",
+        "tree-sitter-rust",
+        "tree-sitter-typescript",
+    ]
+    .into_iter()
+    .collect();
+
+    assert_eq!(
+        declared, audited,
+        "the dependency set changed; re-audit it against FR-001-AC-7 before widening this list"
+    );
+}
+
+// TC-060, NFR-002-AC-2, FR-003-CON-1: no filesystem, environment or process access in the
+// extraction path.
+#[test]
+fn extraction_touches_no_ambient_state() {
+    // Tests are exempt — this very test reads files — so only `src/` is
+    // audited, with its own test modules stripped.
+    for_each_extraction_source(|path, code| {
+        for banned in ["std::fs", "std::net", "std::env", "std::process"] {
+            assert!(
+                !code.contains(banned),
+                "{path} uses {banned} outside its test module"
+            );
+        }
+    });
+}
+
+// TC-058, NFR-001-AC-5: a static audit finds no clock, randomness, process or
+// environment read in extraction paths.
+//
+// Separate from TC-060 because the two criteria fail for different reasons: an
+// ambient *read* breaks the filesystem boundary, while a clock or a random
+// source breaks determinism even where no boundary is crossed.
+#[test]
+fn extraction_reads_no_clock_and_no_randomness() {
+    for_each_extraction_source(|path, code| {
+        for banned in [
+            "SystemTime",
+            "Instant::now",
+            "thread_rng",
+            "rand::",
+            "RandomState",
+        ] {
+            assert!(
+                !code.contains(banned),
+                "{path} uses {banned} outside its test module; NFR-001 requires \
+                 extraction to be a pure function of its input"
+            );
+        }
+    });
+}
+
+/// Run `check` over every `src/*.rs` file with comments and test modules
+/// stripped — the code that actually runs during extraction.
+fn for_each_extraction_source(check: impl Fn(String, &str)) {
+    let root = env!("CARGO_MANIFEST_DIR");
     for entry in std::fs::read_dir(format!("{root}/src")).expect("src is readable") {
         let path = entry.expect("dir entry").path();
         if path.extension().and_then(|e| e.to_str()) != Some("rs") {
@@ -286,24 +375,11 @@ fn the_crate_reaches_nothing_outside_its_inputs() {
         }
         let source = std::fs::read_to_string(&path).expect("source is readable");
         let code = strip_comments(&strip_test_modules(&source));
-        for banned in [
-            "std::fs",
-            "std::net",
-            "std::env",
-            "std::process",
-            "SystemTime",
-            "Instant::now",
-        ] {
-            assert!(
-                !code.contains(banned),
-                "{} uses {banned} outside its test module",
-                path.display()
-            );
-        }
+        check(path.display().to_string(), &code);
     }
 }
 
-// TC-057 — NFR-001-AC-4: no order-observable hash iteration in extraction.
+// TC-057, NFR-001-AC-4: no order-observable hash iteration in extraction.
 #[test]
 fn extraction_paths_use_ordered_collections_only() {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -359,7 +435,7 @@ fn strip_comments(source: &str) -> String {
 /// Assumptions: the fixture is the same mixed-language repository the rest of
 /// this suite uses, so the comparison covers every record kind it emits.
 /// ACs: NFR-003-AC-5.
-/// Tracing: TC-077.
+/// Trace: TC-077, NFR-003-AC-5
 #[test]
 fn tc_077_caller_supplied_parses_are_reused_and_change_nothing() {
     use std::collections::BTreeMap;

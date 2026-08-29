@@ -55,131 +55,142 @@ is checkable by extracting this repository with the library it specifies.
 
 ### Functional Requirement Coverage
 
-| AC | Criteria summary | TC | Type | Status |
-|---|---|---|---|---|
-| FR-001-AC-1 | Rust fixture yields all four fact types | TC-001 | Unit | ✅ |
-| FR-001-AC-2 | TS/TSX fixture yields class, interface, alias, method, arrow facts | TC-002 | Unit | ✅ |
-| FR-001-AC-3 | Python fixture yields class, method, function facts; file fact is the module | TC-003 | Unit | ✅ |
-| FR-001-AC-8 | Python file yields no `code_module`; Rust `mod` and TS `namespace` do | TC-076 | Unit | ✅ |
-| FR-001-AC-4 | Empty file still yields one `code_file` fact | TC-004 | Unit | ✅ |
-| FR-001-AC-5 | Facts carry `kind` and one-based inclusive line spans | TC-005 | Unit | ✅ |
-| FR-001-AC-6 | Facts ordered by start position across runs | TC-006 | Unit | ✅ |
-| FR-001-AC-7 | No filesystem or network crate reachable from extraction | TC-007 | Unit | ✅ |
-| FR-002-AC-1 | Free function qualified name shape | TC-008 | Unit | ✅ |
-| FR-002-AC-2 | Method named with implementing type as parent | TC-009 | Unit | ✅ |
-| FR-002-AC-3 | `code_file` name carries no `::` segment | TC-010 | Unit | ✅ |
-| FR-002-AC-4 | Same repo under two orgs yields disjoint names | TC-011 | Unit | ✅ |
-| FR-002-AC-5 | Anonymous declarations get ordinal segments surviving a line shift | TC-012 | Unit | ✅ |
-| FR-002-AC-6 | Windows-style paths normalize to forward slashes | TC-013 | Unit | ✅ |
-| FR-002-AC-7 | Every `ix://` reference has at least three segments | TC-014 | Unit | ✅ |
-| FR-003-AC-1 | Containment forms a tree rooted at the file | TC-015 | Unit | ✅ |
-| FR-003-AC-2 | Relative import in batch yields `path-resolved` edge | TC-016 | Unit | ✅ |
-| FR-003-AC-3 | Bare import: no edge, no diagnostic; broken relative import: one diagnostic | TC-017 | Unit | ✅ |
-| FR-003-AC-4 | Extensionless import resolves via language conventions | TC-018 | Unit | ✅ |
-| FR-003-AC-5 | Structural edges carry confidence 1.0 | TC-019 | Unit | ✅ |
-| FR-004-AC-1 | Two sites, one triple, `count` 2 | TC-020 | Unit | ✅ |
-| FR-004-AC-2 | Thirty sites yield `count` 30 and 20 evidence entries | TC-021 | Unit | ✅ |
-| FR-004-AC-3 | Highest confidence and its `reason` win | TC-022 | Unit | ✅ |
-| FR-004-AC-4 | `reason` in enum, confidence within [0,1] | TC-023 | Unit | ✅ |
-| FR-004-AC-5 | Evidence ordered by file then line | TC-024 | Unit | ✅ |
-| FR-004-AC-6 | Syntactic reasons carry confidence 1.0 | TC-025 | Unit | ✅ |
-| FR-005-AC-1 | Tracking tag attributed to its test function | TC-026 | Unit | ✅ |
-| FR-005-AC-2 | Requirement citation attributed to file's code fact | TC-027 | Unit | ✅ |
-| FR-005-AC-3 | `ix://` reference harvested | TC-028 | Unit | ✅ |
-| FR-005-AC-4 | String literal yields no mention | TC-029 | Unit | ✅ |
-| FR-005-AC-5 | Embedded token yields no mention | TC-030 | Unit | ✅ |
-| FR-005-AC-6 | Unresolvable mention still reported | TC-031 | Unit | ✅ |
-| FR-005-AC-7 | Self-extraction recovers this suite's own tags | TC-032 | Integration | ✅ |
-| FR-005-AC-8 | Tag outside a test declaration is a citation, not a verification claim | TC-072 | Unit | ✅ |
-| FR-006-AC-1 | Node records carry hex id, `ix://` ref, `kind` | TC-033 | Unit | ✅ |
-| FR-006-AC-2 | Moving a declaration preserves its id | TC-034 | Unit | ✅ |
-| FR-006-AC-3 | Records appear in stable order | TC-035 | Unit | ✅ |
-| FR-006-AC-4 | Edge types drawn from the six-value set | TC-036 | Unit | ✅ |
-| FR-006-AC-5 | No timestamp, absolute path, hostname or process id | TC-037 | Unit | ✅ |
-| FR-006-AC-6 | Fixture output matches golden byte for byte | TC-038 | Integration | ✅ |
-| FR-007-AC-1 | Invalid file yields diagnostic, batch continues | TC-039 | Unit | ✅ |
-| FR-007-AC-2 | Diagnostic carries path and first error position | TC-040 | Unit | ✅ |
-| FR-007-AC-3 | Intact declarations survive a malformed sibling declaration | TC-041 | Unit | ✅ |
-| FR-007-AC-4 | Healthy files unaffected by a malformed sibling | TC-042 | Unit | ✅ |
-| FR-007-AC-5 | Arbitrary bytes yield a diagnostic, never a panic | TC-043 | Unit | ✅ |
-| FR-007-AC-6 | Error-node root yields the `code_file` fact alone | TC-071 | Unit | ✅ |
-| FR-007-AC-7 | A body error does not cost the declaration its fact | TC-075 | Unit | ✅ |
-| FR-008-AC-1 | Cross-file receiver-typed call resolves | TC-044 | Unit | ✅ |
-| FR-008-AC-2 | Unrecoverable receiver with many candidates yields nothing | TC-045 | Unit | ✅ |
-| FR-008-AC-3 | Copy binding resolves through fixpoint | TC-046 | Unit | ✅ |
-| FR-008-AC-4 | Call-result binding resolves through fixpoint | TC-047 | Unit | ✅ |
-| FR-008-AC-5 | Local rebinding does not leak to file level | TC-048 | Unit | ✅ |
-| FR-008-AC-6 | Cyclic bindings terminate at the iteration bound | TC-049 | Unit | ✅ |
-| FR-008-AC-7 | `implements_trait` and `extends` edges emitted | TC-050 | Unit | ✅ |
-| FR-008-AC-8 | Rust trait-object call yields no edge | TC-051 | Unit | ✅ |
-| FR-008-AC-9 | Same-file resolution independent of batch composition | TC-052 | Unit | ✅ |
-| FR-008-AC-10 | Resolution tiers stamp their own `reason` in rank order | TC-053 | Unit | ✅ |
-| FR-008-AC-11 | Result reports batch file count and unresolved call-site count | TC-073 | Unit | ✅ |
-| FR-008-AC-12 | A name declared in two files still resolves within each | TC-074 | Integration | ✅ |
-| FR-009-AC-1 | Rust `pub`, `pub(crate)`/`pub(super)`, and bare declarations classify public/crate/private | TC-078 | Unit | ✅ |
-| FR-009-AC-2 | TypeScript `export`, unexported, and class access modifiers classify correctly | TC-079 | Unit | ✅ |
-| FR-009-AC-3 | Python `__helper`, `_helper`, `helper` and `__init__` classify private/crate/public/public | TC-080 | Unit | ✅ |
-| FR-009-AC-4 | Rust trait and trait-`impl` items are public with no modifier; inherent-`impl` items are not | TC-081 | Unit | ✅ |
-| FR-009-AC-5 | Signature renders declared parameter types and return type, receiver as `self` | TC-082 | Unit | ✅ |
-| FR-009-AC-6 | Reformatting and an in-parameter comment leave the signature byte-identical | TC-083 | Unit | ✅ |
-| FR-009-AC-7 | Unannotated Python callable renders parameter names; no parameter list means no signature | TC-084 | Unit | ✅ |
-| FR-009-AC-8 | A parameter-type change alters the signature but not the node id; a new private helper leaves existing records unchanged | TC-085 | Unit | ✅ |
-| FR-009-AC-9 | Records without the new fields deserialize unchanged | TC-086 | Unit | ✅ |
+Every requirement, its acceptance criteria, and the test cases that discharge
+them. `Coverage Status` is ✅ only while `quire coverage` reports the row's
+targets backed; a row whose test is unwritten carries ⬜ and says so.
 
-### Non-Functional Requirement Coverage
-
-| AC | Criteria summary | TC | Type | Status |
-|---|---|---|---|---|
-| NFR-001-AC-1 | One hundred repeated extractions byte-identical | TC-054 | Integration | ✅ |
-| NFR-001-AC-2 | Eight concurrent extractions byte-identical | TC-055 | Integration | ✅ |
-| NFR-001-AC-3 | Shuffled batch order changes nothing | TC-056 | Integration | ✅ |
-| NFR-001-AC-4 | No order-observable hash iteration | TC-057 | Unit | ✅ |
-| NFR-001-AC-5 | No clock, randomness, process or environment read | TC-058 | Unit | ✅ |
-| NFR-002-AC-1 | No HTTP, RPC or socket crate in the closure | TC-059 | Unit | ✅ |
-| NFR-002-AC-2 | No filesystem, environment or spawn call in extraction | TC-060 | Unit | ✅ |
-| NFR-002-AC-3 | Network-isolated run matches online run | TC-061 | Integration | ✅ |
-| NFR-003-AC-1 | Full benchmark corpus within 60 s, single core | TC-062 | Benchmark | ✅ |
-| NFR-003-AC-2 | Single-file re-extraction p95 within 50 ms | TC-063 | Benchmark | ✅ |
-| NFR-003-AC-3 | Peak resident memory within 2.0 GB | TC-064 | Benchmark | ✅ |
-| NFR-003-AC-4 | Fixpoint converges within ten iterations | TC-065 | Benchmark | ✅ |
-| NFR-003-AC-5 | Caller-supplied parses are reused, and change nothing about the records | TC-077 | Integration | ✅ |
-| NFR-004-AC-1 | Zero wrong edges, Rust precision corpus | TC-066 | Integration | ✅ |
-| NFR-004-AC-2 | Zero wrong edges, TypeScript precision corpus | TC-067 | Integration | ✅ |
-| NFR-004-AC-3 | Zero wrong edges, Python precision corpus | TC-068 | Integration | ✅ |
-| NFR-004-AC-4 | No edge for any ambiguity-corpus call site | TC-069 | Integration | ✅ |
-| NFR-004-AC-5 | Per-language recall computed and reported | TC-070 | Benchmark | ✅ |
+| Functional Req | Acceptance Criteria | Test Cases | Coverage Status |
+|---|---|---|---|
+| FR-001 | FR-001-AC-1, FR-001-AC-2, FR-001-AC-3, FR-001-AC-8, FR-001-AC-4, FR-001-AC-5, FR-001-AC-6, FR-001-AC-7 | TC-001, TC-002, TC-003, TC-004, TC-005, TC-006, TC-007, TC-076 | ✅ |
+| FR-002 | FR-002-AC-1, FR-002-AC-2, FR-002-AC-3, FR-002-AC-4, FR-002-AC-5, FR-002-AC-6, FR-002-AC-7 | TC-008, TC-009, TC-010, TC-011, TC-012, TC-013, TC-014 | ✅ |
+| FR-003 | FR-003-AC-1, FR-003-AC-2, FR-003-AC-3, FR-003-AC-4, FR-003-AC-5 | TC-015, TC-016, TC-017, TC-018, TC-019 | ✅ |
+| FR-004 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-3, FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-CON-1 | TC-020, TC-021, TC-022, TC-023, TC-024, TC-025, TC-088 | ✅ |
+| FR-005 | FR-005-AC-1, FR-005-AC-2, FR-005-AC-3, FR-005-AC-4, FR-005-AC-5, FR-005-AC-6, FR-005-AC-7, FR-005-AC-8 | TC-026, TC-027, TC-028, TC-029, TC-030, TC-031, TC-032, TC-072 | ✅ |
+| FR-006 | FR-006-AC-1, FR-006-AC-2, FR-006-AC-3, FR-006-AC-4, FR-006-AC-5, FR-006-AC-6, FR-006-CON-1 | TC-033, TC-034, TC-035, TC-036, TC-037, TC-038, TC-087 | ✅ |
+| FR-007 | FR-007-AC-1, FR-007-AC-2, FR-007-AC-3, FR-007-AC-4, FR-007-AC-5, FR-007-AC-6, FR-007-AC-7 | TC-039, TC-040, TC-041, TC-042, TC-043, TC-071, TC-075 | ✅ |
+| FR-008 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-3, FR-008-AC-4, FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-044, TC-045, TC-046, TC-047, TC-048, TC-049, TC-050, TC-051, TC-052, TC-053, TC-073, TC-074 | ✅ |
+| FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5, FR-009-AC-6, FR-009-AC-7, FR-009-AC-8, FR-009-AC-9 | TC-078, TC-079, TC-080, TC-081, TC-082, TC-083, TC-084, TC-085, TC-086 | ✅ |
+| NFR-001 | NFR-001-AC-1, NFR-001-AC-2, NFR-001-AC-3, NFR-001-AC-4, NFR-001-AC-5 | TC-054, TC-055, TC-056, TC-057, TC-058 | ✅ |
+| NFR-002 | NFR-002-AC-1, NFR-002-AC-2, NFR-002-AC-3 | TC-059, TC-060, TC-061 | ✅ |
+| NFR-003 | NFR-003-AC-1, NFR-003-AC-2, NFR-003-AC-3, NFR-003-AC-4, NFR-003-AC-5 | TC-062, TC-063, TC-064, TC-065, TC-077 | ✅ |
+| NFR-004 | NFR-004-AC-1, NFR-004-AC-2, NFR-004-AC-3, NFR-004-AC-4, NFR-004-AC-5 | TC-066, TC-067, TC-068, TC-069, TC-070 | ✅ |
 
 ---
 
 ## Test Case Summary
 
-| Range | Owning requirement | Delivery slice |
-|---|---|---|
-| TC-001..TC-007 | FR-001 structural fact model | Structural extraction |
-| TC-008..TC-014 | FR-002 symbol identity | Structural extraction |
-| TC-015..TC-019 | FR-003 structural edges | Structural extraction |
-| TC-020..TC-025 | FR-004 provenance and deduplication | Structural extraction |
-| TC-026..TC-032 | FR-005 mention harvesting | Mention linker |
-| TC-033..TC-038 | FR-006 canonical emission | Canonical emission |
-| TC-039..TC-043 | FR-007 parse-error isolation | Structural extraction |
-| TC-044..TC-053 | FR-008 type environments and call resolution | Receiver-typed resolution |
-| TC-054..TC-058 | NFR-001 determinism | Canonical emission |
-| TC-059..TC-061 | NFR-002 no-network boundary | Structural extraction |
-| TC-062..TC-065 | NFR-003 extraction time budget | Receiver-typed resolution |
-| TC-066..TC-070 | NFR-004 conservative-resolution precision | Receiver-typed resolution |
-| TC-071 | FR-007 error-node root handling | Structural extraction |
-| TC-072 | FR-005 tag context restriction | Mention linker |
-| TC-073 | FR-008 batch-bound resolution reporting | Receiver-typed resolution |
-| TC-074 | FR-008 same-file preference over batch ambiguity | Receiver-typed resolution |
-| TC-075 | FR-007 body-error tolerance | Structural extraction |
-| TC-076 | FR-001 module vs file discrimination | Structural extraction |
-| TC-077 | NFR-003 caller-supplied parse reuse | Incremental re-extraction |
-| TC-078..TC-086 | FR-009 declaration visibility and normalized signature | Export-set change tiering |
+| Test ID | Title | Type | Traces To | Status |
+|---|---|---|---|---|
+| TC-001 | Rust fixture yields all four fact types | Unit | FR-001-AC-1 | ✅ |
+| TC-002 | TS/TSX fixture yields class, interface, alias, method, arrow facts | Unit | FR-001-AC-2 | ✅ |
+| TC-003 | Python fixture yields class, method, function facts; file fact is the module | Unit | FR-001-AC-3 | ✅ |
+| TC-004 | Empty file still yields one `code_file` fact | Unit | FR-001-AC-4 | ✅ |
+| TC-005 | Facts carry `kind` and one-based inclusive line spans | Unit | FR-001-AC-5 | ✅ |
+| TC-006 | Facts ordered by start position across runs | Unit | FR-001-AC-6 | ✅ |
+| TC-007 | No filesystem or network crate reachable from extraction | Unit | FR-001-AC-7 | ✅ |
+| TC-008 | Free function qualified name shape | Unit | FR-002-AC-1 | ✅ |
+| TC-009 | Method named with implementing type as parent | Unit | FR-002-AC-2 | ✅ |
+| TC-010 | `code_file` name carries no `::` segment | Unit | FR-002-AC-3 | ✅ |
+| TC-011 | Same repo under two orgs yields disjoint names | Unit | FR-002-AC-4 | ✅ |
+| TC-012 | Anonymous declarations get ordinal segments surviving a line shift | Unit | FR-002-AC-5 | ✅ |
+| TC-013 | Windows-style paths normalize to forward slashes | Unit | FR-002-AC-6 | ✅ |
+| TC-014 | Every `ix://` reference has at least three segments | Unit | FR-002-AC-7 | ✅ |
+| TC-015 | Containment forms a tree rooted at the file | Unit | FR-003-AC-1 | ✅ |
+| TC-016 | Relative import in batch yields `path-resolved` edge | Unit | FR-003-AC-2 | ✅ |
+| TC-017 | Bare import: no edge, no diagnostic; broken relative import: one diagnostic | Unit | FR-003-AC-3 | ✅ |
+| TC-018 | Extensionless import resolves via language conventions | Unit | FR-003-AC-4 | ✅ |
+| TC-019 | Structural edges carry confidence 1.0 | Unit | FR-003-AC-5 | ✅ |
+| TC-020 | Two sites, one triple, `count` 2 | Unit | FR-004-AC-1 | ✅ |
+| TC-021 | Thirty sites yield `count` 30 and 20 evidence entries | Unit | FR-004-AC-2 | ✅ |
+| TC-022 | Highest confidence and its `reason` win | Unit | FR-004-AC-3 | ✅ |
+| TC-023 | `reason` in enum, confidence within [0,1] | Unit | FR-004-AC-4 | ✅ |
+| TC-024 | Evidence ordered by file then line | Unit | FR-004-AC-5 | ✅ |
+| TC-025 | Syntactic reasons carry confidence 1.0 | Unit | FR-004-AC-6 | ✅ |
+| TC-026 | Tracking tag attributed to its test function | Unit | FR-005-AC-1 | ✅ |
+| TC-027 | Requirement citation attributed to file's code fact | Unit | FR-005-AC-2 | ✅ |
+| TC-028 | `ix://` reference harvested | Unit | FR-005-AC-3 | ✅ |
+| TC-029 | String literal yields no mention | Unit | FR-005-AC-4 | ✅ |
+| TC-030 | Embedded token yields no mention | Unit | FR-005-AC-5 | ✅ |
+| TC-031 | Unresolvable mention still reported | Unit | FR-005-AC-6 | ✅ |
+| TC-032 | Self-extraction recovers this suite's own tags | Integration | FR-005-AC-7 | ✅ |
+| TC-033 | Node records carry hex id, `ix://` ref, `kind` | Unit | FR-006-AC-1 | ✅ |
+| TC-034 | Moving a declaration preserves its id | Unit | FR-006-AC-2 | ✅ |
+| TC-035 | Records appear in stable order | Unit | FR-006-AC-3 | ✅ |
+| TC-036 | Edge types drawn from the six-value set | Unit | FR-006-AC-4 | ✅ |
+| TC-037 | No timestamp, absolute path, hostname or process id | Unit | FR-006-AC-5 | ✅ |
+| TC-038 | Fixture output matches golden byte for byte | Integration | FR-006-AC-6 | ✅ |
+| TC-039 | Invalid file yields diagnostic, batch continues | Unit | FR-007-AC-1 | ✅ |
+| TC-040 | Diagnostic carries path and first error position | Unit | FR-007-AC-2 | ✅ |
+| TC-041 | Intact declarations survive a malformed sibling declaration | Unit | FR-007-AC-3 | ✅ |
+| TC-042 | Healthy files unaffected by a malformed sibling | Unit | FR-007-AC-4 | ✅ |
+| TC-043 | Arbitrary bytes yield a diagnostic, never a panic | Unit | FR-007-AC-5 | ✅ |
+| TC-044 | Cross-file receiver-typed call resolves | Unit | FR-008-AC-1 | ✅ |
+| TC-045 | Unrecoverable receiver with many candidates yields nothing | Unit | FR-008-AC-2 | ✅ |
+| TC-046 | Copy binding resolves through fixpoint | Unit | FR-008-AC-3 | ✅ |
+| TC-047 | Call-result binding resolves through fixpoint | Unit | FR-008-AC-4 | ✅ |
+| TC-048 | Local rebinding does not leak to file level | Unit | FR-008-AC-5 | ✅ |
+| TC-049 | Cyclic bindings terminate at the iteration bound | Unit | FR-008-AC-6 | ✅ |
+| TC-050 | `implements_trait` and `extends` edges emitted | Unit | FR-008-AC-7 | ✅ |
+| TC-051 | Rust trait-object call yields no edge | Unit | FR-008-AC-8 | ✅ |
+| TC-052 | Same-file resolution independent of batch composition | Unit | FR-008-AC-9 | ✅ |
+| TC-053 | Resolution tiers stamp their own `reason` in rank order | Unit | FR-008-AC-10 | ✅ |
+| TC-054 | One hundred repeated extractions byte-identical | Integration | NFR-001-AC-1 | ✅ |
+| TC-055 | Eight concurrent extractions byte-identical | Integration | NFR-001-AC-2 | ✅ |
+| TC-056 | Shuffled batch order changes nothing | Integration | NFR-001-AC-3 | ✅ |
+| TC-057 | No order-observable hash iteration | Unit | NFR-001-AC-4 | ✅ |
+| TC-058 | No clock, randomness, process or environment read | Unit | NFR-001-AC-5 | ✅ |
+| TC-059 | No HTTP, RPC or socket crate in the closure | Unit | NFR-002-AC-1 | ✅ |
+| TC-060 | No filesystem, environment or spawn call in extraction | Unit | NFR-002-AC-2 | ✅ |
+| TC-061 | Network-isolated run matches online run | Analysis | NFR-002-AC-3 | ✅ |
+| TC-062 | Full benchmark corpus within 60 s, single core | Benchmark | NFR-003-AC-1 | ✅ |
+| TC-063 | Single-file re-extraction p95 within 50 ms | Benchmark | NFR-003-AC-2 | ✅ |
+| TC-064 | Peak resident memory within 2.0 GB | Benchmark | NFR-003-AC-3 | ✅ |
+| TC-065 | Fixpoint converges within ten iterations | Benchmark | NFR-003-AC-4 | ✅ |
+| TC-066 | Zero wrong edges, Rust precision corpus | Integration | NFR-004-AC-1 | ✅ |
+| TC-067 | Zero wrong edges, TypeScript precision corpus | Integration | NFR-004-AC-2 | ✅ |
+| TC-068 | Zero wrong edges, Python precision corpus | Integration | NFR-004-AC-3 | ✅ |
+| TC-069 | No edge for any ambiguity-corpus call site | Integration | NFR-004-AC-4 | ✅ |
+| TC-070 | Per-language recall computed and reported | Benchmark | NFR-004-AC-5 | ✅ |
+| TC-071 | Error-node root yields the `code_file` fact alone | Unit | FR-007-AC-6 | ✅ |
+| TC-072 | Tag outside a test declaration is a citation, not a verification claim | Unit | FR-005-AC-8 | ✅ |
+| TC-073 | Result reports batch file count and unresolved call-site count | Unit | FR-008-AC-11 | ✅ |
+| TC-074 | A name declared in two files still resolves within each | Integration | FR-008-AC-12 | ✅ |
+| TC-075 | A body error does not cost the declaration its fact | Unit | FR-007-AC-7 | ✅ |
+| TC-076 | Python file yields no `code_module`; Rust `mod` and TS `namespace` do | Unit | FR-001-AC-8 | ✅ |
+| TC-077 | Caller-supplied parses are reused, and change nothing about the records | Integration | NFR-003-AC-5 | ✅ |
+| TC-078 | Rust `pub`, `pub(crate)`/`pub(super)`, and bare declarations classify public/crate/private | Unit | FR-009-AC-1 | ✅ |
+| TC-079 | TypeScript `export`, unexported, and class access modifiers classify correctly | Unit | FR-009-AC-2 | ✅ |
+| TC-080 | Python `__helper`, `_helper`, `helper` and `__init__` classify private/crate/public/public | Unit | FR-009-AC-3 | ✅ |
+| TC-081 | Rust trait and trait-`impl` items are public with no modifier; inherent-`impl` items are not | Unit | FR-009-AC-4 | ✅ |
+| TC-082 | Signature renders declared parameter types and return type, receiver as `self` | Unit | FR-009-AC-5 | ✅ |
+| TC-083 | Reformatting and an in-parameter comment leave the signature byte-identical | Unit | FR-009-AC-6 | ✅ |
+| TC-084 | Unannotated Python callable renders parameter names; no parameter list means no signature | Unit | FR-009-AC-7 | ✅ |
+| TC-085 | A parameter-type change alters the signature but not the node id; a new private helper leaves existing records unchanged | Unit | FR-009-AC-8 | ✅ |
+| TC-086 | Records without the new fields deserialize unchanged | Unit | FR-009-AC-9 | ✅ |
+| TC-087 | Node identity separates object type from qualified name | Unit | FR-006-CON-1 | ✅ |
+| TC-088 | The `reason` vocabulary matches the consumer contract value for value | Unit | FR-004-CON-1 | ✅ |
+
+---
 
 ## Coverage Notes
 
 - **Status legend**: ⬜ Planned (matrix row authored, test not yet written),
   ✅ Complete (test written, tagged and green).
+- **The matrix is gated, not asserted.** `make coverage` runs
+  `quire coverage` over this repository and fails when a row claims a passing
+  status it cannot back, when an unbacked row's declared verification method
+  does not explain the absence, or when a declaration matches nothing and
+  reports a confident zero. The last case is why the gate exists: this table
+  claimed ✅ on all 102 of its rows for as long as its Test Case Summary minted
+  no `TC-NNN` id at all, and 95.8% line coverage said nothing about it
+  (agent-ix/quire-code-rs#8).
+- **Rows no symbol can back.** TC-061 and the four `Inspection` constraints
+  (FR-001-CON-1, FR-001-CON-2, FR-005-CON-1, FR-009-CON-2) carry a verification
+  method that mints no test symbol, so they are reported unbacked by
+  construction rather than as an overclaim. TC-061 is an `Analysis`: the
+  dependency closure holds no network client (TC-059) and extraction reads no
+  ambient state (TC-060), so an offline run and an online run are the same run
+  — there is no second condition to compare against.
 - Benchmark-verified criteria (TC-062..TC-065, TC-070) report measurements on
   every run and gate on threshold only in the performance lane, so that
   shared-runner variance does not make ordinary CI flaky.
@@ -187,8 +198,11 @@ is checkable by extracting this repository with the library it specifies.
   check that the tracking tags this matrix claims are really present in the
   tests.
 - The benchmark rows (TC-062..TC-065, TC-070) run in the performance lane —
-  `make bench`, plus nightly and on-demand CI — not in the ordinary gate, since
-  benchmark timings on a shared runner would make the normal suite flaky. Their
+  `make bench`, which is `cargo test --test perf_lane -- --ignored` — not in the
+  ordinary gate, since benchmark timings on a shared runner would make the
+  normal suite flaky. The lane is an `#[ignore]`d test rather than a
+  `harness = false` bench so that each row binds a real symbol; a bare `fn` in a
+  custom harness carries the tag and backs nothing. Their
   corpus is generated deterministically rather than committed: a 500,000-line
   fixture would dominate the repository, would still not resemble a real
   codebase, and could not be regenerated at a different size when the budget

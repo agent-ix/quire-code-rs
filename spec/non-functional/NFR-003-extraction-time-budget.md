@@ -53,10 +53,10 @@ satisfiable.
 
 | Metric | Target | Threshold | Method |
 |--------|--------|-----------|--------|
-| Full extraction of a 5,000-file / 500,000-line batch, single core | 40 s | 60 s | Benchmark |
-| Single-file re-extraction, p95 | 20 ms | 50 ms | Benchmark |
-| Peak resident memory during full extraction | 1.0 GB | 2.0 GB | Benchmark |
-| Fixpoint iterations to convergence on the benchmark corpus | ≤ 5 | ≤ 10 | Benchmark |
+| Full extraction of a 5,000-file / 500,000-line batch, single core | 40 s | 60 s | performance-benchmarking |
+| Single-file re-extraction, p95 | 20 ms | 50 ms | performance-benchmarking |
+| Peak resident memory during full extraction | 1.0 GB | 2.0 GB | performance-benchmarking |
+| Fixpoint iterations to convergence on the benchmark corpus | ≤ 5 | ≤ 10 | performance-benchmarking |
 
 ## Verification
 

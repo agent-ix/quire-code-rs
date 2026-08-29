@@ -42,8 +42,8 @@ clock, the environment or the network has far fewer ways to vary.
 
 | Metric | Target | Threshold | Method |
 |--------|--------|-----------|--------|
-| HTTP, RPC or socket client crates in the resolved dependency closure | 0 | 0 | Static Analysis |
-| Filesystem, environment or process-spawn calls in extraction paths | 0 | 0 | Static Analysis |
+| HTTP, RPC or socket client crates in the resolved dependency closure | 0 | 0 | architecture-conformance |
+| Filesystem, environment or process-spawn calls in extraction paths | 0 | 0 | architecture-conformance |
 | Extraction output difference between an online and a network-isolated run | none | none | Test |
 
 ## Verification
@@ -60,7 +60,7 @@ the output matches the online run.
 |----|----------|--------------|
 | NFR-002-AC-1 | The resolved dependency closure contains no HTTP, RPC or socket client crate | Test (TC-059) |
 | NFR-002-AC-2 | Extraction paths contain no filesystem read, environment read or process spawn | Test (TC-060) |
-| NFR-002-AC-3 | Extraction with the network unavailable produces output identical to the online run | Test (TC-061) |
+| NFR-002-AC-3 | Extraction with the network unavailable produces output identical to the online run | Analysis (TC-061) |
 
 ## Dependencies
 

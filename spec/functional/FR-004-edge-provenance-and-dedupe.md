@@ -57,8 +57,8 @@ contributing site into that single edge's evidence and count.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-004-CON-1 | The `reason` vocabulary SHALL match the set consumed by `ix://agent-ix/filament-ide-rs/FR-072` exactly; adding a value is a coordinated contract change | Interface | Inspection |
-| FR-004-CON-2 | The evidence array SHALL never exceed 20 entries regardless of contributing site count | Performance | Test |
+| FR-004-CON-1 | The `reason` vocabulary SHALL match the set consumed by `ix://agent-ix/filament-ide-rs/FR-072` exactly; adding a value is a coordinated contract change | Interface | Test (TC-088) |
+| FR-004-CON-2 | The evidence array SHALL never exceed 20 entries regardless of contributing site count | Performance | Test (TC-021) |
 
 ## Acceptance Criteria
 

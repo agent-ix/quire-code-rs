@@ -58,8 +58,8 @@ that a consumer writes code records and specification records through one path.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-006-CON-1 | Node identity SHALL be a pure function of `(object_type, qualified_name)` | Interface | Test |
-| FR-006-CON-2 | The emitted edge-type set SHALL match the set consumed by `ix://agent-ix/filament-ide-rs/FR-072` exactly | Interface | Inspection |
+| FR-006-CON-1 | Node identity SHALL be a pure function of `(object_type, qualified_name)` | Interface | Test (TC-087) |
+| FR-006-CON-2 | The emitted edge-type set SHALL match the set consumed by `ix://agent-ix/filament-ide-rs/FR-072` exactly | Interface | Test (TC-036) |
 
 ## Acceptance Criteria
 

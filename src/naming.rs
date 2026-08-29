@@ -62,7 +62,7 @@ pub fn ix_ref(qualified_name: &str) -> String {
 mod tests {
     use super::*;
 
-    // TC-013 — FR-002-AC-6: Windows-style paths normalize to forward slashes.
+    // TC-013, FR-002-AC-6, FR-002-CON-1: Windows-style paths normalize to forward slashes.
     #[test]
     fn windows_paths_normalize_to_forward_slashes() {
         assert_eq!(normalize_path("src\\core\\lib.rs"), "src/core/lib.rs");
@@ -74,7 +74,7 @@ mod tests {
         );
     }
 
-    // TC-010 — FR-002-AC-3: a code_file name carries no `::` segment.
+    // TC-010, FR-002-AC-3: a code_file name carries no `::` segment.
     #[test]
     fn file_names_carry_no_segment_separator() {
         let name = file_name("agent-ix", "quire-code-rs", "src/lib.rs");
@@ -82,7 +82,7 @@ mod tests {
         assert!(!name.contains("::"));
     }
 
-    // TC-008 — FR-002-AC-1: a free function's qualified name shape.
+    // TC-008, FR-002-AC-1: a free function's qualified name shape.
     #[test]
     fn free_function_name_has_the_documented_shape() {
         let file = file_name("agent-ix", "quire-code-rs", "src/lib.rs");
@@ -92,7 +92,7 @@ mod tests {
         );
     }
 
-    // TC-011 — FR-002-AC-4: the same repo under two orgs yields disjoint names.
+    // TC-011, FR-002-AC-4: the same repo under two orgs yields disjoint names.
     #[test]
     fn org_prefix_keeps_same_named_repos_disjoint() {
         let a = file_name("agent-ix", "widgets", "src/lib.rs");
@@ -100,7 +100,7 @@ mod tests {
         assert_ne!(a, b);
     }
 
-    // TC-012 — FR-002-AC-5: anonymous segments are ordinal-derived, so they
+    // TC-012, FR-002-AC-5: anonymous segments are ordinal-derived, so they
     // survive an edit that shifts the declaration's lines.
     #[test]
     fn anonymous_segments_are_ordinal_not_positional() {
@@ -111,7 +111,7 @@ mod tests {
         );
     }
 
-    // TC-014 — FR-002-AC-7: every ix:// reference has at least three segments.
+    // TC-014, FR-002-AC-7, FR-002-CON-2: every ix:// reference has at least three segments.
     #[test]
     fn ix_refs_carry_at_least_three_segments() {
         let name = file_name("agent-ix", "quire-code-rs", "src/lib.rs");
