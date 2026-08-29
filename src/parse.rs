@@ -115,6 +115,8 @@ const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
 ///
 /// Never panics: malformed input, oversized input and grammar failures all come
 /// back as diagnostics (FR-007-CON-1).
+///
+/// Implements: FR-001-AC-4, FR-007-AC-1, FR-007-AC-6
 pub fn parse_file(file: &SourceFile) -> ParsedFile {
     let path = file.normalized_path();
     let file_qualified_name = file_name(&file.org, &file.repo, &path);
@@ -125,8 +127,9 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
     };
 
     // The code_file fact is emitted for every accepted file, including one that
-    // declares nothing and one whose root is an error node (FR-001-AC-4,
-    // FR-007-AC-6).
+    // declares nothing and one whose root is an error node. Both cases are
+    // named in the `Implements:` line above; a bare id written here binds no
+    // channel and reads as a dead trace tag (agent-ix/quire-code-rs#8).
     let line_count = file.content.lines().count().max(1) as u32;
     out.facts.push(CodeFact {
         object_type: ObjectType::CodeFile,
@@ -178,7 +181,13 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
     }
 
     // An error-node root means nothing in the file is trustworthy: emit the
-    // code_file fact alone (FR-007-AC-6).
+    // code_file fact alone.
+    //
+    // Defensive rather than exercised: all three grammars this crate loads
+    // return a `source_file` root and push their failures into ERROR *children*
+    // instead, so `is_error()` on the root is false even for input the parser
+    // cannot make sense of. FR-007-AC-6 is stated against the reachable
+    // condition — no declaration fact survives — and TC-071 tests that.
     if root.is_error() {
         return out;
     }
@@ -1567,6 +1576,33 @@ impl Persist for Store {
         assert!(
             parsed.diagnostics.iter().any(|d| d.code == "parse_error"),
             "the error is still diagnosed"
+        );
+    }
+
+    // TC-071 — FR-007-AC-6: a file the grammar cannot resolve contributes its
+    // `code_file` fact and nothing else.
+    #[test]
+    fn an_error_root_yields_the_file_fact_alone() {
+        // A lifetime token where an item must begin defeats the grammar's
+        // recovery for the whole file: the `fn` that follows is textually a
+        // declaration and yields no fact. Distinct from TC-075, where the error
+        // is *inside* an otherwise readable declaration and the fact survives.
+        let parsed = rust("'x fn never_reached() {}\n");
+        let kinds: Vec<_> = parsed.facts.iter().map(|f| f.kind).collect();
+        assert_eq!(
+            kinds,
+            vec!["file"],
+            "an unresolvable root contributes the code_file fact and nothing else: {:?}",
+            parsed
+                .facts
+                .iter()
+                .map(|f| f.simple_name.as_str())
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            parsed.diagnostics.iter().any(|d| d.code == "parse_error"),
+            "the unreadable root is still diagnosed: {:?}",
+            parsed.diagnostics
         );
     }
 

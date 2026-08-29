@@ -56,8 +56,8 @@ the consuming graph's `(object_type, container, name)` identity rule.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-002-CON-1 | Path segments SHALL be forward-slash separated regardless of host platform | Portability | Test |
-| FR-002-CON-2 | `ix://` references SHALL carry at least three segments, matching the ecosystem's last-segment resolution rule | Interface | Test |
+| FR-002-CON-1 | Path segments SHALL be forward-slash separated regardless of host platform | Portability | Test (TC-013) |
+| FR-002-CON-2 | `ix://` references SHALL carry at least three segments, matching the ecosystem's last-segment resolution rule | Interface | Test (TC-014) |
 
 ## Acceptance Criteria
 

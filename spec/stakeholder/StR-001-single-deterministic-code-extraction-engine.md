@@ -45,9 +45,14 @@ This need is considered satisfied when a consumer obtains code nodes and edges
 for a mixed-language repository through this library's API alone, with no
 source-parsing crate appearing anywhere else in that consumer's dependency tree,
 and when two extractions of an unchanged tree — performed in separate processes
-on separate machines — produce byte-identical output. Satisfaction is judged by
-inspecting the consumer's resolved dependency graph and by comparing serialized
-extraction output across repeated runs.
+on separate machines — produce byte-identical output.
+
+| ID | Criteria | Validation |
+|----|----------|------------|
+| StR-001-VC-1 | A consumer obtains code nodes and edges for a mixed-language repository through this library's API alone | Test (TC-046) |
+| StR-001-VC-2 | No source-parsing crate appears in the consumer's resolved dependency tree outside this library | Test (TC-007) |
+| StR-001-VC-3 | Repeated extractions of an unchanged tree produce byte-identical output | Test (TC-054) |
+| StR-001-VC-4 | Extractions driven from separate processes produce byte-identical output | Test (TC-055) |
 
 ## Stakeholders
 

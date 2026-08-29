@@ -31,7 +31,3 @@ serde_json = "^1"
 [profile.release]
 lto = "thin"
 codegen-units = 1
-
-[[bench]]
-name = "extraction"
-harness = false

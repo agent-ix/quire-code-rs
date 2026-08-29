@@ -513,6 +513,66 @@ mod tests {
         assert_eq!(mention_edge.confidence, 1.0);
     }
 
+    // TC-039 — FR-007-AC-1: one syntactically invalid file in a batch is
+    // diagnosed, and every other file still yields complete records.
+    #[test]
+    fn one_invalid_file_does_not_cost_the_batch_its_records() {
+        let mut with_broken = batch();
+        with_broken.push(SourceFile::new(
+            "agent-ix",
+            "demo",
+            "src/broken.rs",
+            Language::Rust,
+            "pub fn open( {\n",
+        ));
+        let result = extract(&with_broken);
+
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|d| d.path == "src/broken.rs" && d.code == "parse_error"),
+            "the invalid file is diagnosed: {:?}",
+            result.diagnostics
+        );
+
+        let intact = extract(&batch());
+        let names_with_broken: Vec<_> = result
+            .nodes
+            .iter()
+            .filter(|n| n.data.path != "src/broken.rs")
+            .map(|n| n.name.as_str())
+            .collect();
+        let names_alone: Vec<_> = intact.nodes.iter().map(|n| n.name.as_str()).collect();
+        assert_eq!(
+            names_with_broken, names_alone,
+            "a malformed sibling changed the records of the healthy files"
+        );
+    }
+
+    // TC-029 — FR-005-AC-4: an identifier inside a string literal yields no
+    // mention. The harvester reads comments only, so the criterion is about
+    // what reaches it — a literal never does.
+    #[test]
+    fn an_identifier_in_a_string_literal_is_not_a_mention() {
+        let result = extract(&[SourceFile::new(
+            "agent-ix",
+            "demo",
+            "src/lit.rs",
+            Language::Rust,
+            "pub fn label() -> &\'static str {\n    \"TC-001 and FR-002\"\n}\n",
+        )]);
+        assert!(
+            result.edges.iter().all(|e| e.reason != "explicit-mention"),
+            "a string literal produced a mention edge: {:?}",
+            result
+                .edges
+                .iter()
+                .filter(|e| e.reason == "explicit-mention")
+                .collect::<Vec<_>>()
+        );
+    }
+
     // TC-037 — FR-006-AC-5: no timestamp, absolute path, hostname or pid.
     #[test]
     fn serialized_output_carries_nothing_environmental() {

@@ -231,6 +231,8 @@ mod tests {
         assert_ne!(before.data.span, after.data.span);
     }
 
+    // TC-087 — FR-006-CON-1: node identity is a pure function of
+    // `(object_type, qualified_name)`, so the two components cannot alias.
     #[test]
     fn identity_separates_type_from_name() {
         // Without a separator, ("code_type", "x") and ("code", "typex") would
@@ -292,6 +294,8 @@ mod tests {
         );
     }
 
+    // TC-088 — FR-004-CON-1: the `reason` vocabulary matches the set the
+    // consumer contract in filament-ide-rs FR-072 reads, value for value.
     #[test]
     fn the_reason_vocabulary_matches_the_consumer_contract() {
         let names: Vec<_> = REASONS.iter().map(|r| r.as_str()).collect();

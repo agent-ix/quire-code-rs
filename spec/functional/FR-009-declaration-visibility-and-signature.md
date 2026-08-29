@@ -100,7 +100,7 @@ body-only edit and under-invalidates.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-009-CON-1 | Both fields SHALL be additive to the existing serialized record shape, so a consumer that ignores them is unaffected | Interface | Test |
+| FR-009-CON-1 | Both fields SHALL be additive to the existing serialized record shape, so a consumer that ignores them is unaffected | Interface | Test (TC-086) |
 | FR-009-CON-2 | Visibility classification SHALL be driven by per-language configuration rather than by forking the extraction engine, per FR-001-CON-2 | Maintainability | Inspection |
 
 ## Acceptance Criteria

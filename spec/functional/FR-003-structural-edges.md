@@ -56,7 +56,7 @@ resolves to a file present in the same extraction batch.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-003-CON-1 | Import resolution SHALL consult only the batch's path set and SHALL NOT stat the filesystem or read package manifests | Security | Test |
+| FR-003-CON-1 | Import resolution SHALL consult only the batch's path set and SHALL NOT stat the filesystem or read package manifests | Security | Test (TC-060) |
 
 ## Acceptance Criteria
 

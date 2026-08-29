@@ -450,6 +450,8 @@ fn recall_is_reported_for_every_language() {
 // the edges *inside* each file. The batch ambiguity is real, but it is not the
 // ambiguity the call site has — FR-008 requires same-file resolution to succeed
 // without consulting other files.
+// TC-074 — FR-008-AC-12: a simple type name declared in two files still
+// resolves within each file that declares it.
 #[test]
 fn a_name_shared_across_languages_does_not_suppress_same_file_edges() {
     let files = vec![

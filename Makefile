@@ -69,9 +69,11 @@ audit-unsafe:
 # Gates on the NFR-003 thresholds and reports NFR-004 recall at corpus scale.
 # Deliberately outside `make ci`: benchmark timings on a shared runner would
 # make the ordinary suite flaky, which NFR-003's Verification section calls out.
+# The lane is `#[ignore]`d test functions rather than a custom bench harness so
+# that each measurement is a symbol its matrix row's trace tag can bind (#8).
 .PHONY: bench
 bench:
-	$(CARGO) bench --bench extraction
+	$(CARGO) test --test perf_lane -- --ignored --nocapture
 
 # =============================================================================
 # Composite
