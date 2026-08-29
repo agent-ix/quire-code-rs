@@ -451,8 +451,12 @@ impl<'a> Walker<'a> {
                     // Anonymous nodes are the grammar's keywords and
                     // punctuation — the `export` token itself among them. They
                     // end no annotation run, or `export class C {}` would lose
-                    // the comment above it to its own keyword.
-                    if child.is_named() && !self.config.is_import(kind) {
+                    // the comment above it to its own keyword. They also hold no
+                    // declarations, so there is nothing below them to walk.
+                    if !child.is_named() {
+                        continue;
+                    }
+                    if !self.config.is_import(kind) {
                         self.pending_comments.clear();
                     }
                     // Not a declaration in this language's config. Rust `impl`
@@ -476,6 +480,13 @@ impl<'a> Walker<'a> {
                 }
             }
         }
+
+        // An annotation run introduces the next declaration *in this frame*. A
+        // comment left over when the frame ends introduced nothing, and letting
+        // it survive handed the trailing comment inside one function to the next
+        // function declared after it — a verification claim attributed to a test
+        // that does not carry it.
+        self.pending_comments.clear();
     }
 
     /// Record a local binding and where its type comes from (FR-008).
@@ -805,7 +816,7 @@ impl<'a> Walker<'a> {
             if ancestor.kind() == "impl_item" {
                 return ancestor.child_by_field_name("trait").is_some();
             }
-            if self.config.decl_for(ancestor.kind()).is_some() {
+            if self.config.decl_for_node(ancestor).is_some() {
                 return false;
             }
             current = ancestor.parent();
@@ -865,7 +876,7 @@ impl<'a> Walker<'a> {
             {
                 return true;
             }
-            if self.config.decl_for(ancestor.kind()).is_some() {
+            if self.config.decl_for_node(ancestor).is_some() {
                 // A nearer declaration governs; stop before crossing it.
                 return false;
             }
@@ -1719,6 +1730,30 @@ impl Persist for Store {
         );
     }
 
+    // TC-100, FR-001-AC-9: an abstract method is a declaration too. Its own
+    // grammar node, and the half of an abstract class's surface that has no
+    // body — the part a subclass is obliged to provide.
+    #[test]
+    fn an_abstract_method_is_a_declaration_of_its_class() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "demo",
+            "src/index.ts",
+            Language::TypeScript,
+            "export abstract class Base {\n  abstract run(): void;\n}\n",
+        ));
+        let run = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "run")
+            .expect("the abstract method is a fact");
+        assert_eq!(run.object_type, ObjectType::Function);
+        assert_eq!(
+            run.parent.as_deref(),
+            Some("agent-ix/demo/src/index.ts::Base")
+        );
+    }
+
     // TC-091, FR-001-AC-10: a const initialized with a function is a callable
     // declaration; a const initialized with anything else is not.
     #[test]
@@ -1741,6 +1776,27 @@ impl Persist for Store {
             vec!["handler", "legacy"],
             "the node kind is the same for all four; only the value says which \
              two declare a callable"
+        );
+    }
+
+    // TC-099, FR-005-AC-9: an annotation run does not escape the block that
+    // opened it. A comment trailing inside one declaration introduced nothing,
+    // and must not become a claim about the next one.
+    #[test]
+    fn a_trailing_comment_does_not_attach_to_the_next_declaration() {
+        let parsed = rust(
+            "pub fn alpha() {\n    // TC-001 describes something inside alpha.\n}\n\npub fn beta() {}\n",
+        );
+        let comment = parsed
+            .comments
+            .iter()
+            .find(|c| c.text.contains("TC-001"))
+            .expect("the comment is recorded");
+        assert_eq!(
+            comment.owner, "agent-ix/quire-code-rs/src/lib.rs::alpha",
+            "a comment inside alpha's body belongs to alpha, and giving it to \
+             beta would attribute a verification claim to a test that does not \
+             carry it"
         );
     }
 

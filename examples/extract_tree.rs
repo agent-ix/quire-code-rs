@@ -49,7 +49,8 @@ fn main() -> ExitCode {
     };
 
     let mut files = Vec::new();
-    if let Err(err) = collect(&root, &root, &org, &repo, &mut files) {
+    let mut unreadable = Vec::new();
+    if let Err(err) = collect(&root, &org, &repo, &mut files, &mut unreadable) {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
@@ -70,50 +71,79 @@ fn main() -> ExitCode {
     if writeln!(stdout, "{json}").is_err() {
         return ExitCode::FAILURE;
     }
+
+    // A file that could not be read is named and the run fails, after the
+    // records are written. Skipping it silently would let a partial tree be
+    // scored as a whole one, which is the difference between a measured zero
+    // and an absence.
+    if !unreadable.is_empty() {
+        for (path, why) in &unreadable {
+            eprintln!("unreadable: {path}: {why}");
+        }
+        eprintln!("{} file(s) could not be read", unreadable.len());
+        return ExitCode::FAILURE;
+    }
     ExitCode::SUCCESS
 }
 
-/// Walk `dir`, adding every file whose extension names a supported language.
+/// Walk `root`, adding every file whose extension names a supported language.
 ///
 /// A file in an unsupported language is skipped rather than reported: the tree
-/// is somebody's repository, and a README is not an extraction failure.
+/// is somebody's repository, and a README is not an extraction failure. A file
+/// that *is* a supported language and cannot be read lands in `unreadable`, so
+/// the caller can fail rather than score a partial tree.
+///
+/// Iterative rather than recursive, and symlinked directories are not followed.
+/// A repository is somebody else's tree: a deep one overflows the stack and a
+/// symlink cycle never terminates, and neither should take out a measurement
+/// run.
 fn collect(
     root: &Path,
-    dir: &Path,
     org: &str,
     repo: &str,
     out: &mut Vec<SourceFile>,
+    unreadable: &mut Vec<(String, String)>,
 ) -> Result<(), String> {
-    let mut entries: Vec<_> = std::fs::read_dir(dir)
-        .map_err(|e| format!("{}: {e}", dir.display()))?
-        .collect::<Result<_, _>>()
-        .map_err(|e| format!("{}: {e}", dir.display()))?;
-    entries.sort_by_key(|e| e.path());
+    let mut stack = vec![root.to_path_buf()];
 
-    for entry in entries {
-        let path = entry.path();
-        let name = entry.file_name();
-        let name = name.to_string_lossy();
-        if name.starts_with('.') || name == "target" || name == "node_modules" {
-            continue;
+    while let Some(dir) = stack.pop() {
+        let mut entries: Vec<_> = std::fs::read_dir(&dir)
+            .map_err(|e| format!("{}: {e}", dir.display()))?
+            .collect::<Result<_, _>>()
+            .map_err(|e| format!("{}: {e}", dir.display()))?;
+        entries.sort_by_key(|e| e.path());
+
+        for entry in entries {
+            let path = entry.path();
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.starts_with('.') || name == "target" || name == "node_modules" {
+                continue;
+            }
+            // `symlink_metadata` does not follow the link, so a directory
+            // pointing at an ancestor is skipped rather than walked forever.
+            let meta =
+                std::fs::symlink_metadata(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+            if meta.file_type().is_symlink() {
+                continue;
+            }
+            if meta.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            let relative = path
+                .strip_prefix(root)
+                .map_err(|e| format!("{}: {e}", path.display()))?
+                .to_string_lossy()
+                .replace('\\', "/");
+            let Some(language) = Language::from_path(&relative) else {
+                continue;
+            };
+            match std::fs::read_to_string(&path) {
+                Ok(content) => out.push(SourceFile::new(org, repo, relative, language, content)),
+                Err(err) => unreadable.push((relative, err.to_string())),
+            }
         }
-        if path.is_dir() {
-            collect(root, &path, org, repo, out)?;
-            continue;
-        }
-        let relative = path
-            .strip_prefix(root)
-            .map_err(|e| format!("{}: {e}", path.display()))?
-            .to_string_lossy()
-            .replace('\\', "/");
-        let Some(language) = Language::from_path(&relative) else {
-            continue;
-        };
-        // Unreadable bytes are reported, never silently dropped: a skipped file
-        // and an empty one are different populations.
-        let content =
-            std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        out.push(SourceFile::new(org, repo, relative, language, content));
     }
     Ok(())
 }

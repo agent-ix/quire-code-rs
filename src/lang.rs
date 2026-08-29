@@ -296,6 +296,18 @@ static TYPESCRIPT: LanguageConfig = LanguageConfig {
             names_children: true,
             value_kinds: &[],
         },
+        // `abstract run(): void;` inside an abstract class. A separate grammar
+        // node from `method_signature`, and the same declaration: it is the
+        // half of an abstract class's surface that has no body, so a producer
+        // that misses it reports an abstract base as declaring nothing a
+        // subclass must provide.
+        DeclKind {
+            node: "abstract_method_signature",
+            object_type: ObjectType::Function,
+            kind: "method",
+            names_children: true,
+            value_kinds: &[],
+        },
         // `const f = () => {}` and `const f = function () {}`. The dominant
         // declaration form in modern TypeScript — components, hooks, handlers,
         // most module-scope helpers — and the one whose node kind says nothing
@@ -401,14 +413,15 @@ static PYTHON: LanguageConfig = LanguageConfig {
 
 impl LanguageConfig {
     /// The declaration configuration for a grammar node kind, if it is one.
-    pub(crate) fn decl_for(&self, node_kind: &str) -> Option<&DeclKind> {
-        self.decls
-            .iter()
-            .find(|d| d.node == node_kind && d.value_kinds.is_empty())
-    }
-
-    /// The declaration this node is, including the guarded forms whose node
-    /// kind alone does not say (`value_kinds`).
+    /// The declaration this node is.
+    ///
+    /// Node-aware rather than kind-aware, and there is deliberately no
+    /// kind-only sibling: a `variable_declarator` is a declaration of a
+    /// callable or an ordinary constant depending only on its value, so a
+    /// lookup that cannot see the node answers a different question than its
+    /// callers are asking. Two ancestor guards used the narrow set for a
+    /// release and stopped at a different set of declarations than the walker
+    /// did.
     pub(crate) fn decl_for_node(&self, node: tree_sitter::Node<'_>) -> Option<&DeclKind> {
         self.decls.iter().find(|d| {
             d.node == node.kind()

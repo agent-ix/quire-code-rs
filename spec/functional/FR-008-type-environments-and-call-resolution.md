@@ -70,9 +70,13 @@ other case.
   candidate, so that a simple name occurring in more than one file — including
   the same name in two languages — SHALL NOT suppress the relationships within
   each file that declares it.
-- Where a Rust method is invoked through a trait object or a generic parameter,
-  and the concrete implementation is therefore not determined by the source, the
-  library SHALL emit no `calls` edge.
+- Where a Rust method is invoked through a trait object, the library SHALL emit
+  the `calls` edge to the trait's own method and SHALL NOT emit one to any
+  implementor: the source names the interface, and naming the interface is not
+  guessing which implementation runs.
+- Where a method is invoked through a generic parameter, and the concrete type
+  is therefore not determined by the source, the library SHALL emit no `calls`
+  edge.
 - The library SHALL configure per-language behavior through data rather than
   through separate resolution engines per language.
 - The library SHALL resolve only against the facts present in the supplied
