@@ -110,6 +110,23 @@
       }
     },
     {
+      "id": "7b85e9c548cad7874c0284360ec5d82b58fdaff78922f09dab6f61d46f269187",
+      "reference": "ix://agent-ix/demo/src/store.rs::Persist::save",
+      "object_type": "code_function",
+      "name": "agent-ix/demo/src/store.rs::Persist::save",
+      "data": {
+        "kind": "function",
+        "path": "src/store.rs",
+        "span": {
+          "start": 8,
+          "end": 8
+        },
+        "parent": "agent-ix/demo/src/store.rs::Persist",
+        "visibility": "public",
+        "signature": "(self)"
+      }
+    },
+    {
       "id": "c0561db7f68899d9766e7ce28585cc5fd6d8ffa38d6032e131142f82ca60ae42",
       "reference": "ix://agent-ix/demo/src/store.rs::Store::save",
       "object_type": "code_function",
@@ -121,7 +138,7 @@
           "start": 16,
           "end": 16
         },
-        "parent": "agent-ix/demo/src/store.rs",
+        "parent": "agent-ix/demo/src/store.rs::Store",
         "visibility": "public",
         "signature": "(self)"
       }
@@ -138,7 +155,7 @@
           "start": 12,
           "end": 12
         },
-        "parent": "agent-ix/demo/src/store.rs",
+        "parent": "agent-ix/demo/src/store.rs::Store",
         "visibility": "public",
         "signature": "(self)"
       }
@@ -455,34 +472,6 @@
     },
     {
       "source_ref": "agent-ix/demo/src/store.rs",
-      "edge_type": "contains",
-      "target_ref": "agent-ix/demo/src/store.rs::Store::save",
-      "confidence": 1.0,
-      "reason": "syntactic",
-      "evidence": [
-        {
-          "file": "src/store.rs",
-          "line": 16
-        }
-      ],
-      "count": 1
-    },
-    {
-      "source_ref": "agent-ix/demo/src/store.rs",
-      "edge_type": "contains",
-      "target_ref": "agent-ix/demo/src/store.rs::Store::upsert",
-      "confidence": 1.0,
-      "reason": "syntactic",
-      "evidence": [
-        {
-          "file": "src/store.rs",
-          "line": 12
-        }
-      ],
-      "count": 1
-    },
-    {
-      "source_ref": "agent-ix/demo/src/store.rs",
       "edge_type": "references",
       "target_ref": "FR-002",
       "confidence": 1.0,
@@ -505,6 +494,48 @@
         {
           "file": "src/store.rs",
           "line": 1
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs::Persist",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Persist::save",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 8
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs::Store",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Store::save",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 16
+        }
+      ],
+      "count": 1
+    },
+    {
+      "source_ref": "agent-ix/demo/src/store.rs::Store",
+      "edge_type": "contains",
+      "target_ref": "agent-ix/demo/src/store.rs::Store::upsert",
+      "confidence": 1.0,
+      "reason": "syntactic",
+      "evidence": [
+        {
+          "file": "src/store.rs",
+          "line": 12
         }
       ],
       "count": 1

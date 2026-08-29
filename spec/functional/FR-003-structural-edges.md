@@ -66,6 +66,7 @@ resolves to a file present in the same extraction batch.
 | FR-003-AC-2 | A relative import naming a file in the batch yields an `imports` edge with `reason` `path-resolved` | Test (TC-016) |
 | FR-003-AC-3 | An import of a third-party package yields no edge and no diagnostic, while an unresolvable relative import yields no edge and one diagnostic | Test (TC-017) |
 | FR-003-AC-4 | A relative import written without an extension resolves through the language's extension and index conventions | Test (TC-018) |
+| FR-003-AC-6 | A declaration's containment parent is the declaration its qualified name names, in every language | Test (TC-092) |
 | FR-003-AC-5 | Every `contains` and `imports` edge carries confidence 1.0 | Test (TC-019) |
 
 ## Dependencies

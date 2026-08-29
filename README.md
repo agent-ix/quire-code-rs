@@ -34,6 +34,24 @@ with `{confidence, reason, evidence[], count}` provenance metadata.
   `ix://` mentions from comments and attributes, closing the requirement →
   code → test loop against a spec-derived graph.
 
+## Grading it
+
+The library takes source *text* and never opens a file, so something outside the
+boundary has to read a tree before its output can be graded. That something is
+an example, not part of the crate:
+
+```bash
+cargo run --release --bin extract_tree -- --org agent-ix --repo demo path/to/tree
+```
+
+`agent-ix/quire-corpus` pins that invocation as `producer_contract.version: 1`
+and scores the output against hand-authored truth:
+
+```bash
+cd ../quire-corpus
+make score PRODUCER='.../extract_tree --org {org} --repo {repo} {input}'
+```
+
 ## Status
 
 Spec-first repo — requirements are being authored under `spec/` before

@@ -61,19 +61,20 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 
 | Functional Req | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
-| FR-001 | FR-001-AC-1, FR-001-AC-2, FR-001-AC-3, FR-001-AC-8, FR-001-AC-4, FR-001-AC-5, FR-001-AC-6, FR-001-AC-7 | TC-001, TC-002, TC-003, TC-004, TC-005, TC-006, TC-007, TC-076 | ✅ |
+| FR-001 | FR-001-AC-1, FR-001-AC-2, FR-001-AC-3, FR-001-AC-8, FR-001-AC-4, FR-001-AC-5, FR-001-AC-6, FR-001-AC-7, FR-001-AC-9, FR-001-AC-10 | TC-001, TC-002, TC-003, TC-004, TC-005, TC-006, TC-007, TC-076, TC-089, TC-090, TC-091, TC-100 | ✅ |
 | FR-002 | FR-002-AC-1, FR-002-AC-2, FR-002-AC-3, FR-002-AC-4, FR-002-AC-5, FR-002-AC-6, FR-002-AC-7 | TC-008, TC-009, TC-010, TC-011, TC-012, TC-013, TC-014 | ✅ |
-| FR-003 | FR-003-AC-1, FR-003-AC-2, FR-003-AC-3, FR-003-AC-4, FR-003-AC-5 | TC-015, TC-016, TC-017, TC-018, TC-019 | ✅ |
+| FR-003 | FR-003-AC-1, FR-003-AC-2, FR-003-AC-3, FR-003-AC-4, FR-003-AC-5, FR-003-AC-6 | TC-015, TC-016, TC-017, TC-018, TC-019, TC-092 | ✅ |
 | FR-004 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-3, FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-CON-1 | TC-020, TC-021, TC-022, TC-023, TC-024, TC-025, TC-088 | ✅ |
-| FR-005 | FR-005-AC-1, FR-005-AC-2, FR-005-AC-3, FR-005-AC-4, FR-005-AC-5, FR-005-AC-6, FR-005-AC-7, FR-005-AC-8 | TC-026, TC-027, TC-028, TC-029, TC-030, TC-031, TC-032, TC-072 | ✅ |
-| FR-006 | FR-006-AC-1, FR-006-AC-2, FR-006-AC-3, FR-006-AC-4, FR-006-AC-5, FR-006-AC-6, FR-006-CON-1 | TC-033, TC-034, TC-035, TC-036, TC-037, TC-038, TC-087 | ✅ |
+| FR-005 | FR-005-AC-1, FR-005-AC-2, FR-005-AC-3, FR-005-AC-4, FR-005-AC-5, FR-005-AC-6, FR-005-AC-7, FR-005-AC-8, FR-005-AC-9, FR-005-AC-10 | TC-026, TC-027, TC-028, TC-029, TC-030, TC-031, TC-032, TC-072, TC-093, TC-094, TC-095, TC-096, TC-098, TC-099 | ✅ |
+| FR-006 | FR-006-AC-1, FR-006-AC-2, FR-006-AC-3, FR-006-AC-4, FR-006-AC-5, FR-006-AC-6, FR-006-CON-1, FR-006-AC-7 | TC-033, TC-034, TC-035, TC-036, TC-037, TC-038, TC-087, TC-106 | ✅ |
 | FR-007 | FR-007-AC-1, FR-007-AC-2, FR-007-AC-3, FR-007-AC-4, FR-007-AC-5, FR-007-AC-6, FR-007-AC-7 | TC-039, TC-040, TC-041, TC-042, TC-043, TC-071, TC-075 | ✅ |
-| FR-008 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-3, FR-008-AC-4, FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-044, TC-045, TC-046, TC-047, TC-048, TC-049, TC-050, TC-051, TC-052, TC-053, TC-073, TC-074 | ✅ |
+| FR-008 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-3, FR-008-AC-4, FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-10, FR-008-AC-11, FR-008-AC-12, FR-008-AC-13 | TC-044, TC-045, TC-046, TC-047, TC-048, TC-049, TC-050, TC-051, TC-052, TC-053, TC-073, TC-074, TC-097, TC-107 | ✅ |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5, FR-009-AC-6, FR-009-AC-7, FR-009-AC-8, FR-009-AC-9 | TC-078, TC-079, TC-080, TC-081, TC-082, TC-083, TC-084, TC-085, TC-086 | ✅ |
 | NFR-001 | NFR-001-AC-1, NFR-001-AC-2, NFR-001-AC-3, NFR-001-AC-4, NFR-001-AC-5 | TC-054, TC-055, TC-056, TC-057, TC-058 | ✅ |
 | NFR-002 | NFR-002-AC-1, NFR-002-AC-2, NFR-002-AC-3 | TC-059, TC-060, TC-061 | ✅ |
 | NFR-003 | NFR-003-AC-1, NFR-003-AC-2, NFR-003-AC-3, NFR-003-AC-4, NFR-003-AC-5 | TC-062, TC-063, TC-064, TC-065, TC-077 | ✅ |
 | NFR-004 | NFR-004-AC-1, NFR-004-AC-2, NFR-004-AC-3, NFR-004-AC-4, NFR-004-AC-5 | TC-066, TC-067, TC-068, TC-069, TC-070 | ✅ |
+| FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5 | TC-101, TC-102, TC-103, TC-104, TC-105 | ✅ |
 
 ---
 
@@ -169,6 +170,25 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 | TC-086 | Records without the new fields deserialize unchanged | Unit | FR-009-AC-9 | ✅ |
 | TC-087 | Node identity separates object type from qualified name | Unit | FR-006-CON-1 | ✅ |
 | TC-088 | The `reason` vocabulary matches the consumer contract value for value | Unit | FR-004-CON-1 | ✅ |
+| TC-089 | A Rust trait method is a declaration parented by its trait | Unit | FR-001-AC-9 | ✅ |
+| TC-090 | A TypeScript interface member is a declaration parented by its interface | Unit | FR-001-AC-9 | ✅ |
+| TC-091 | Only a const holding a function expression is a callable declaration | Unit | FR-001-AC-10 | ✅ |
+| TC-092 | Containment parent is the declaring type in Rust, TypeScript and Python | Unit | FR-003-AC-6 | ✅ |
+| TC-093 | A comment above a declaration's attributes belongs to that declaration | Unit | FR-005-AC-9 | ✅ |
+| TC-094 | An inner doc comment stays with its enclosing scope | Unit | FR-005-AC-9 | ✅ |
+| TC-095 | Criterion-level identifiers are harvested whole, and not also as their prefix | Unit | FR-005-AC-10 | ✅ |
+| TC-096 | A suffixed criterion identifier is not a mention | Unit | FR-005-AC-5 | ✅ |
+| TC-097 | A Python base class yields an `extends` edge | Integration | FR-008-AC-7 | ✅ |
+| TC-098 | An `export` wrapper does not break leading-comment attribution | Unit | FR-005-AC-9 | ✅ |
+| TC-099 | A trailing comment does not attach to the next declaration | Unit | FR-005-AC-9 | ✅ |
+| TC-100 | An abstract method is a declaration parented by its class | Unit | FR-001-AC-9 | ✅ |
+| TC-101 | The documented invocation writes canonical records on stdout | Integration | FR-010-AC-1 | ✅ |
+| TC-102 | Extraction order does not depend on the filesystem's order | Integration | FR-010-AC-2 | ✅ |
+| TC-103 | An unsupported language is skipped without failing or diagnosing | Integration | FR-010-AC-3 | ✅ |
+| TC-104 | A malformed invocation writes no records to stdout | Integration | FR-010-AC-4 | ✅ |
+| TC-105 | A symbolic link is not followed | Integration | FR-010-AC-5 | ✅ |
+| TC-106 | A self-edge is never emitted | Unit | FR-006-AC-7 | ✅ |
+| TC-107 | One declaration shape resolves at one tier in every language | Integration | FR-008-AC-13 | ✅ |
 
 ---
 

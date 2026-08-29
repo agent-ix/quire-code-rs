@@ -30,6 +30,11 @@ carries `confidence` ∈ [0.0, 1.0], `reason` ∈ {`syntactic`, `path-resolved`,
 `evidence: [{file, line}]` capped at 20 entries, and `count` — the total
 call-site count folded onto the single deduplicated edge.
 
+**The corpus grades this crate:** `src/bin/extract_tree.rs` is the producer
+`agent-ix/quire-corpus` invokes. Its flags and its stdout are a pinned contract
+(`producer_contract.version: 1`), so changing either invalidates every recorded
+observation — bump the version there rather than changing the shape here.
+
 **Traceability is gated:** `make coverage` reconciles `spec/tests.md` against
 the suite with `quire coverage`. Every row is backed by a tagged test or its
 declared verification method says why no symbol can exist. A tag binds every id

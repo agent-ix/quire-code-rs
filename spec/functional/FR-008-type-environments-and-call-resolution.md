@@ -70,9 +70,13 @@ other case.
   candidate, so that a simple name occurring in more than one file — including
   the same name in two languages — SHALL NOT suppress the relationships within
   each file that declares it.
-- Where a Rust method is invoked through a trait object or a generic parameter,
-  and the concrete implementation is therefore not determined by the source, the
-  library SHALL emit no `calls` edge.
+- Where a Rust method is invoked through a trait object, the library SHALL emit
+  the `calls` edge to the trait's own method and SHALL NOT emit one to any
+  implementor: the source names the interface, and naming the interface is not
+  guessing which implementation runs.
+- Where a method is invoked through a generic parameter, and the concrete type
+  is therefore not determined by the source, the library SHALL emit no `calls`
+  edge.
 - The library SHALL configure per-language behavior through data rather than
   through separate resolution engines per language.
 - The library SHALL resolve only against the facts present in the supplied
@@ -99,11 +103,12 @@ other case.
 | FR-008-AC-5 | A name rebound inside a callable does not change resolution at file level | Test (TC-048) |
 | FR-008-AC-6 | A cyclic set of bindings terminates at the iteration bound and emits only the edges resolved so far | Test (TC-049) |
 | FR-008-AC-7 | Rust `impl` blocks yield `implements_trait` edges and TypeScript subclasses yield `extends` edges | Test (TC-050) |
-| FR-008-AC-8 | A call through a Rust trait object yields no `calls` edge | Test (TC-051) |
+| FR-008-AC-8 | A call through a Rust trait object resolves to the trait's own method and never to an implementor | Test (TC-051) |
 | FR-008-AC-9 | Same-file resolution produces identical edges whether or not unrelated files are present in the batch | Test (TC-052) |
 | FR-008-AC-10 | Each resolution tier stamps its own `reason`, and `receiver-typed` outranks `import-scoped`, which outranks `name-match` | Test (TC-053) |
 | FR-008-AC-11 | The result reports the batch file count and the unresolved call-site count | Test (TC-073) |
 | FR-008-AC-12 | A simple type name declared in two files still resolves within each file that declares it | Test (TC-074) |
+| FR-008-AC-13 | One declaration shape resolves at the same tier in every supported language | Test (TC-107) |
 
 ## Dependencies
 
