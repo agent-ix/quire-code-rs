@@ -66,7 +66,7 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 | FR-003 | FR-003-AC-1, FR-003-AC-2, FR-003-AC-3, FR-003-AC-4, FR-003-AC-5, FR-003-AC-6 | TC-015, TC-016, TC-017, TC-018, TC-019, TC-092 | ✅ |
 | FR-004 | FR-004-AC-1, FR-004-AC-2, FR-004-AC-3, FR-004-AC-4, FR-004-AC-5, FR-004-AC-6, FR-004-CON-1 | TC-020, TC-021, TC-022, TC-023, TC-024, TC-025, TC-088 | ✅ |
 | FR-005 | FR-005-AC-1, FR-005-AC-2, FR-005-AC-3, FR-005-AC-4, FR-005-AC-5, FR-005-AC-6, FR-005-AC-7, FR-005-AC-8, FR-005-AC-9, FR-005-AC-10 | TC-026, TC-027, TC-028, TC-029, TC-030, TC-031, TC-032, TC-072, TC-093, TC-094, TC-095, TC-096, TC-098, TC-099 | ✅ |
-| FR-006 | FR-006-AC-1, FR-006-AC-2, FR-006-AC-3, FR-006-AC-4, FR-006-AC-5, FR-006-AC-6, FR-006-CON-1 | TC-033, TC-034, TC-035, TC-036, TC-037, TC-038, TC-087 | ✅ |
+| FR-006 | FR-006-AC-1, FR-006-AC-2, FR-006-AC-3, FR-006-AC-4, FR-006-AC-5, FR-006-AC-6, FR-006-CON-1, FR-006-AC-7 | TC-033, TC-034, TC-035, TC-036, TC-037, TC-038, TC-087, TC-106 | ✅ |
 | FR-007 | FR-007-AC-1, FR-007-AC-2, FR-007-AC-3, FR-007-AC-4, FR-007-AC-5, FR-007-AC-6, FR-007-AC-7 | TC-039, TC-040, TC-041, TC-042, TC-043, TC-071, TC-075 | ✅ |
 | FR-008 | FR-008-AC-1, FR-008-AC-2, FR-008-AC-3, FR-008-AC-4, FR-008-AC-5, FR-008-AC-6, FR-008-AC-7, FR-008-AC-8, FR-008-AC-9, FR-008-AC-10, FR-008-AC-11, FR-008-AC-12 | TC-044, TC-045, TC-046, TC-047, TC-048, TC-049, TC-050, TC-051, TC-052, TC-053, TC-073, TC-074, TC-097 | ✅ |
 | FR-009 | FR-009-AC-1, FR-009-AC-2, FR-009-AC-3, FR-009-AC-4, FR-009-AC-5, FR-009-AC-6, FR-009-AC-7, FR-009-AC-8, FR-009-AC-9 | TC-078, TC-079, TC-080, TC-081, TC-082, TC-083, TC-084, TC-085, TC-086 | ✅ |
@@ -187,6 +187,7 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 | TC-103 | An unsupported language is skipped without failing or diagnosing | Integration | FR-010-AC-3 | ✅ |
 | TC-104 | A malformed invocation writes no records to stdout | Integration | FR-010-AC-4 | ✅ |
 | TC-105 | A symbolic link is not followed | Integration | FR-010-AC-5 | ✅ |
+| TC-106 | A self-edge is never emitted | Unit | FR-006-AC-7 | ✅ |
 
 ---
 

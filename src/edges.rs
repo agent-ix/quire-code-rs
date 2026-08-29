@@ -133,6 +133,23 @@ impl EdgeAccumulator {
         evidence: Evidence,
     ) {
         let key = (source_ref.into(), edge_type, target_ref.into());
+
+        // A self-edge is dropped at the one place every edge passes through
+        // (FR-006-AC-7). It carries no traversal information — an impact
+        // closure that reaches the node already has it — and the consumer's
+        // graph rejects one outright, so emitting it fails a whole reindex run
+        // rather than adding a wrong row (filament-ide-rs FR-072).
+        //
+        // Two sources produce them. A genuinely recursive call, which is what
+        // this drop is for. And a type carrying both an inherent and a trait
+        // `impl` of one method name, whose two declarations share a qualified
+        // name under FR-002-AC-2 — there the self-edge is a *symptom* of an
+        // identity collision, and dropping it hides rather than fixes it
+        // (agent-ix/quire-code-rs#18).
+        if key.0 == key.2 {
+            return;
+        }
+
         let confidence = reason.confidence();
         match self.edges.get_mut(&key) {
             Some(pending) => {
@@ -190,6 +207,36 @@ mod tests {
             file: file.to_string(),
             line,
         }
+    }
+
+    // TC-106, FR-006-AC-7: an edge whose source and target are equal is not
+    // emitted, whatever produced it.
+    #[test]
+    fn a_self_edge_is_never_emitted() {
+        let mut acc = EdgeAccumulator::new();
+        acc.add(
+            "org/repo/src/lib.rs::recurse",
+            EdgeType::Calls,
+            "org/repo/src/lib.rs::recurse",
+            Reason::ReceiverTyped,
+            ev("src/lib.rs", 3),
+        );
+        acc.add(
+            "org/repo/src/lib.rs::caller",
+            EdgeType::Calls,
+            "org/repo/src/lib.rs::callee",
+            Reason::ReceiverTyped,
+            ev("src/lib.rs", 9),
+        );
+        let edges = acc.finish();
+        assert_eq!(
+            edges
+                .iter()
+                .map(|e| (e.source_ref.as_str(), e.target_ref.as_str()))
+                .collect::<Vec<_>>(),
+            vec![("org/repo/src/lib.rs::caller", "org/repo/src/lib.rs::callee")],
+            "the self-edge is dropped and the ordinary edge survives"
+        );
     }
 
     // TC-020, FR-004-AC-1: two sites on one triple fold to one edge, count 2.

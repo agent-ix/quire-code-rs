@@ -71,6 +71,7 @@ that a consumer writes code records and specification records through one path.
 | FR-006-AC-4 | Every emitted edge type is drawn from the six-value set | Test (TC-036) |
 | FR-006-AC-5 | Serialized output contains no timestamp, absolute path, hostname or process identifier | Test (TC-037) |
 | FR-006-AC-6 | Records emitted for a fixture match a committed golden file byte for byte | Test (TC-038) |
+| FR-006-AC-7 | No emitted edge carries the same value as its source and its target | Test (TC-106) |
 
 ## Dependencies
 
