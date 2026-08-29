@@ -307,10 +307,13 @@ fn the_ambiguity_corpus_emits_nothing() {
     );
 }
 
-// TC-051, FR-008-AC-8: a call through a Rust trait object yields no edge,
-// because the source does not determine which implementation runs.
+// TC-051, FR-008-AC-8: a call through a Rust trait object resolves to the
+// trait's own method and never to an implementor. The source names the
+// interface and does not determine which implementation runs, so the interface
+// is the whole of what is known — and now that a trait method is a declaration
+// (#11), it is a node the edge can point at rather than an absence.
 #[test]
-fn a_trait_object_call_yields_no_edge() {
+fn a_trait_object_call_resolves_to_the_trait_and_no_further() {
     let files = vec![SourceFile::new(
         "agent-ix",
         "demo",
@@ -341,9 +344,45 @@ pub fn run(sink: &dyn Persist) {
         .into_iter()
         .filter(|e| e.target_ref.ends_with("::flush"))
         .collect();
-    assert!(
-        flush_edges.is_empty(),
-        "a dyn-dispatched call must not pick an implementation: {flush_edges:#?}"
+
+    let targets: Vec<&str> = flush_edges.iter().map(|e| e.target_ref.as_str()).collect();
+    assert_eq!(
+        targets,
+        vec!["agent-ix/demo/src/lib.rs::Persist::flush"],
+        "the interface is what the source names; an implementor is a guess"
+    );
+    for implementor in ["Disk::flush", "Memory::flush"] {
+        assert!(
+            !targets.iter().any(|t| t.ends_with(implementor)),
+            "a dyn-dispatched call must not pick {implementor}: {flush_edges:#?}"
+        );
+    }
+}
+
+// TC-097, FR-008-AC-7: a Python base class is an `extends` relation, so a
+// supertype is reachable in every language rather than only where the grammar
+// spells the keyword.
+#[test]
+fn a_python_base_class_yields_an_extends_edge() {
+    let result = extract(&[SourceFile::new(
+        "agent-ix",
+        "demo",
+        "src/store.py",
+        Language::Python,
+        "class Persist:\n    pass\n\n\nclass Store(Persist):\n    pass\n",
+    )]);
+    let extends: Vec<_> = result
+        .edges
+        .iter()
+        .filter(|e| e.edge_type == "extends")
+        .map(|e| (e.source_ref.as_str(), e.target_ref.as_str()))
+        .collect();
+    assert_eq!(
+        extends,
+        vec![(
+            "agent-ix/demo/src/store.py::Store",
+            "agent-ix/demo/src/store.py::Persist"
+        )]
     );
 }
 

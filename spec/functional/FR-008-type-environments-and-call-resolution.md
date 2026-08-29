@@ -99,7 +99,7 @@ other case.
 | FR-008-AC-5 | A name rebound inside a callable does not change resolution at file level | Test (TC-048) |
 | FR-008-AC-6 | A cyclic set of bindings terminates at the iteration bound and emits only the edges resolved so far | Test (TC-049) |
 | FR-008-AC-7 | Rust `impl` blocks yield `implements_trait` edges and TypeScript subclasses yield `extends` edges | Test (TC-050) |
-| FR-008-AC-8 | A call through a Rust trait object yields no `calls` edge | Test (TC-051) |
+| FR-008-AC-8 | A call through a Rust trait object resolves to the trait's own method and never to an implementor | Test (TC-051) |
 | FR-008-AC-9 | Same-file resolution produces identical edges whether or not unrelated files are present in the batch | Test (TC-052) |
 | FR-008-AC-10 | Each resolution tier stamps its own `reason`, and `receiver-typed` outranks `import-scoped`, which outranks `name-match` | Test (TC-053) |
 | FR-008-AC-11 | The result reports the batch file count and the unresolved call-site count | Test (TC-073) |

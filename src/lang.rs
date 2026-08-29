@@ -85,6 +85,14 @@ pub(crate) struct DeclKind {
     /// Whether this declaration contributes a `::` segment to the qualified
     /// names of declarations nested inside it (FR-002).
     pub names_children: bool,
+    /// Node kinds the declaration's `value` must have for it to count.
+    ///
+    /// Empty means unconditional, which is every ordinary declaration. It is
+    /// non-empty for the one form whose node kind does not say what it declares:
+    /// a TypeScript `variable_declarator` is a constant, a component or a
+    /// handler depending only on what is on the right of the `=`, and only the
+    /// callable ones are declarations of a callable (#12).
+    pub value_kinds: &'static [&'static str],
 }
 
 /// How a language spells visibility (FR-009-CON-2). Classification stays in
@@ -142,6 +150,13 @@ pub(crate) struct LanguageConfig {
     pub parameter_nodes: &'static [&'static str],
     /// Node kinds declaring a field on a type.
     pub field_nodes: &'static [&'static str],
+    /// Nodes on a type declaration that carry its supertypes.
+    ///
+    /// TypeScript spells them in a heritage clause that says `extends` or
+    /// `implements`; Python spells them as a bare argument list, where every
+    /// entry is an `extends`. Kept in the table rather than branched on in the
+    /// walker, per FR-001-CON-2.
+    pub superclass_nodes: &'static [&'static str],
 }
 
 static RUST: LanguageConfig = LanguageConfig {
@@ -156,42 +171,60 @@ static RUST: LanguageConfig = LanguageConfig {
             object_type: ObjectType::Module,
             kind: "module",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "function_item",
             object_type: ObjectType::Function,
             kind: "function",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "struct_item",
             object_type: ObjectType::Type,
             kind: "struct",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "enum_item",
             object_type: ObjectType::Type,
             kind: "enum",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "trait_item",
             object_type: ObjectType::Type,
             kind: "trait",
             names_children: true,
+            value_kinds: &[],
+        },
+        // A trait method with no body. Without this the declaration a
+        // `implements_trait` edge points *into* does not exist, so every
+        // traversal that reaches an interface stops there, and FR-009-AC-4's
+        // rule for trait-item visibility has no node to apply to (#11).
+        DeclKind {
+            node: "function_signature_item",
+            object_type: ObjectType::Function,
+            kind: "function",
+            names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "type_item",
             object_type: ObjectType::Type,
             kind: "type_alias",
             names_children: false,
+            value_kinds: &[],
         },
         DeclKind {
             node: "union_item",
             object_type: ObjectType::Type,
             kind: "union",
             names_children: true,
+            value_kinds: &[],
         },
         // `impl_item` is deliberately absent as a fact: FR-002 names a method
         // by its implementing *type*, not by the impl block, and the trait an
@@ -209,6 +242,7 @@ static RUST: LanguageConfig = LanguageConfig {
     member_nodes: &["field_expression"],
     parameter_nodes: &["parameter", "self_parameter"],
     field_nodes: &["field_declaration"],
+    superclass_nodes: &[],
 };
 
 static TYPESCRIPT: LanguageConfig = LanguageConfig {
@@ -223,60 +257,90 @@ static TYPESCRIPT: LanguageConfig = LanguageConfig {
             object_type: ObjectType::Module,
             kind: "namespace",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "module",
             object_type: ObjectType::Module,
             kind: "namespace",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "function_declaration",
             object_type: ObjectType::Function,
             kind: "function",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "generator_function_declaration",
             object_type: ObjectType::Function,
             kind: "generator_function",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "method_definition",
             object_type: ObjectType::Function,
             kind: "method",
             names_children: true,
+            value_kinds: &[],
+        },
+        // An interface member — the same declaration as a trait method, and
+        // absent for the same reason (#11).
+        DeclKind {
+            node: "method_signature",
+            object_type: ObjectType::Function,
+            kind: "method",
+            names_children: true,
+            value_kinds: &[],
+        },
+        // `const f = () => {}` and `const f = function () {}`. The dominant
+        // declaration form in modern TypeScript — components, hooks, handlers,
+        // most module-scope helpers — and the one whose node kind says nothing
+        // about what it declares, hence the value guard (#12).
+        DeclKind {
+            node: "variable_declarator",
+            object_type: ObjectType::Function,
+            kind: "function",
+            names_children: true,
+            value_kinds: &["arrow_function", "function_expression", "function"],
         },
         DeclKind {
             node: "class_declaration",
             object_type: ObjectType::Type,
             kind: "class",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "abstract_class_declaration",
             object_type: ObjectType::Type,
             kind: "class",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "interface_declaration",
             object_type: ObjectType::Type,
             kind: "interface",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "enum_declaration",
             object_type: ObjectType::Type,
             kind: "enum",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "type_alias_declaration",
             object_type: ObjectType::Type,
             kind: "type_alias",
             names_children: false,
+            value_kinds: &[],
         },
     ],
     name_fields: &["name"],
@@ -295,6 +359,7 @@ static TYPESCRIPT: LanguageConfig = LanguageConfig {
     member_nodes: &["member_expression"],
     parameter_nodes: &["required_parameter", "optional_parameter"],
     field_nodes: &["property_signature", "public_field_definition"],
+    superclass_nodes: &["class_heritage", "extends_type_clause"],
 };
 
 static PYTHON: LanguageConfig = LanguageConfig {
@@ -309,12 +374,14 @@ static PYTHON: LanguageConfig = LanguageConfig {
             object_type: ObjectType::Function,
             kind: "function",
             names_children: true,
+            value_kinds: &[],
         },
         DeclKind {
             node: "class_definition",
             object_type: ObjectType::Type,
             kind: "class",
             names_children: true,
+            value_kinds: &[],
         },
     ],
     name_fields: &["name"],
@@ -329,12 +396,27 @@ static PYTHON: LanguageConfig = LanguageConfig {
     member_nodes: &["attribute"],
     parameter_nodes: &["typed_parameter", "identifier"],
     field_nodes: &["assignment"],
+    superclass_nodes: &["argument_list"],
 };
 
 impl LanguageConfig {
     /// The declaration configuration for a grammar node kind, if it is one.
     pub(crate) fn decl_for(&self, node_kind: &str) -> Option<&DeclKind> {
-        self.decls.iter().find(|d| d.node == node_kind)
+        self.decls
+            .iter()
+            .find(|d| d.node == node_kind && d.value_kinds.is_empty())
+    }
+
+    /// The declaration this node is, including the guarded forms whose node
+    /// kind alone does not say (`value_kinds`).
+    pub(crate) fn decl_for_node(&self, node: tree_sitter::Node<'_>) -> Option<&DeclKind> {
+        self.decls.iter().find(|d| {
+            d.node == node.kind()
+                && (d.value_kinds.is_empty()
+                    || node
+                        .child_by_field_name("value")
+                        .is_some_and(|value| d.value_kinds.contains(&value.kind())))
+        })
     }
 
     pub(crate) fn is_comment(&self, node_kind: &str) -> bool {

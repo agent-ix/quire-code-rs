@@ -12,7 +12,7 @@
 //! contradicts the reason ADR-001 chose tree-sitter: extraction has to work on
 //! trees that do not compile.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use tree_sitter::{Node, Parser, Tree};
 
@@ -111,6 +111,47 @@ pub struct CommentText {
 /// an unbounded parse (FR-007).
 const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
 
+/// Whether an annotation describes its enclosing scope rather than the next
+/// declaration: Rust's `//!`, `/*!` and `#![…]` forms.
+fn is_inner_annotation(text: &str) -> bool {
+    let text = text.trim_start();
+    text.starts_with("//!") || text.starts_with("/*!") || text.starts_with("#![")
+}
+
+/// Re-parent every fact to the fact its own qualified name says declares it.
+///
+/// Containment came from the walker's *nesting*, and a name comes from FR-002's
+/// rule that a method is named by its implementing type. In Rust those disagree:
+/// an `impl` block is deliberately not a fact, so a method inside one nested
+/// under the file while its name said the type. TypeScript's class *is* a fact,
+/// so the same declaration hung off its class there — one rule in the name, two
+/// different edges, and neither FR-003-AC-1 nor TC-015 could see it because both
+/// hold under either shape (#13).
+///
+/// Name-derived and conservative: a parent that is not declared in this file is
+/// left alone, so containment stays a tree rooted at the file.
+fn reparent_to_declaring_name(facts: &mut [CodeFact]) {
+    let declared: BTreeSet<&str> = facts
+        .iter()
+        .map(|fact| fact.qualified_name.as_str())
+        .collect();
+
+    let reparented: Vec<Option<String>> = facts
+        .iter()
+        .map(|fact| {
+            let (prefix, _) = fact.qualified_name.rsplit_once("::")?;
+            (declared.contains(prefix) && fact.parent.as_deref() != Some(prefix))
+                .then(|| prefix.to_string())
+        })
+        .collect();
+
+    for (fact, parent) in facts.iter_mut().zip(reparented) {
+        if let Some(parent) = parent {
+            fact.parent = Some(parent);
+        }
+    }
+}
+
 /// Parse one file into facts, diagnostics, imports and comments.
 ///
 /// Never panics: malformed input, oversized input and grammar failures all come
@@ -206,6 +247,7 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
         return_types: BTreeMap::new(),
         field_types: BTreeMap::new(),
         type_relations: Vec::new(),
+        pending_comments: Vec::new(),
     };
     let root_ctx = Context {
         name_parent: file_qualified_name.clone(),
@@ -215,6 +257,7 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
         in_test: false,
     };
     walker.walk(root, &root_ctx);
+    reparent_to_declaring_name(&mut walker.facts);
 
     out.facts.extend(walker.facts);
     out.comments = walker.comments;
@@ -284,6 +327,11 @@ struct Walker<'a> {
     return_types: BTreeMap<String, String>,
     field_types: BTreeMap<(String, String), String>,
     type_relations: Vec<(String, String, bool)>,
+    /// Indices of the comments and attributes seen since the last sibling that
+    /// was neither an annotation nor a transparent wrapper. A leading block
+    /// belongs to the declaration it introduces (#14), and it has to survive
+    /// recursion because `export class C {}` puts a wrapper between them.
+    pending_comments: Vec<usize>,
 }
 
 impl<'a> Walker<'a> {
@@ -297,13 +345,22 @@ impl<'a> Walker<'a> {
             let kind = child.kind();
 
             if self.config.is_comment(kind) || self.config.is_attribute(kind) {
+                // An *inner* annotation describes the thing it is written
+                // inside, not the declaration that happens to follow it: a
+                // module doc comment at the top of a file belongs to the file
+                // even when a struct is the next item.
+                if !is_inner_annotation(child.utf8_text(self.source).unwrap_or("")) {
+                    self.pending_comments.push(self.comments.len());
+                }
                 self.record_comment(child, &ctx.contain_parent, ctx.in_test);
                 continue;
             }
 
             if self.config.is_import(kind) {
                 self.record_import(child);
-                // Fall through: an export statement can also wrap a declaration.
+                // Fall through: an export statement can also wrap a declaration,
+                // and it is transparent to a leading comment — `export class C`
+                // is still introduced by the comment above the `export`.
             }
 
             if self.config.is_string(kind) {
@@ -323,7 +380,7 @@ impl<'a> Walker<'a> {
                 self.record_field(child, ctx);
             }
 
-            match self.config.decl_for(kind) {
+            match self.config.decl_for_node(child) {
                 Some(decl) => {
                     let (segment, simple_name) = self.segment_for(child, decl, &ctx.name_parent);
                     let qualified = child_name(&ctx.name_parent, &segment);
@@ -336,6 +393,11 @@ impl<'a> Walker<'a> {
                     } else {
                         None
                     };
+
+                    for index in std::mem::take(&mut self.pending_comments) {
+                        self.comments[index].owner = qualified.clone();
+                        self.comments[index].owner_is_test = is_test;
+                    }
 
                     self.facts.push(CodeFact {
                         object_type: decl.object_type,
@@ -382,6 +444,17 @@ impl<'a> Walker<'a> {
                     self.walk(child, &next);
                 }
                 None => {
+                    // The annotation run ended against something that is not a
+                    // declaration, so it introduces nothing and keeps the owner
+                    // it was recorded with — unless the node is a transparent
+                    // wrapper, which introduces the declaration inside it.
+                    // Anonymous nodes are the grammar's keywords and
+                    // punctuation — the `export` token itself among them. They
+                    // end no annotation run, or `export class C {}` would lose
+                    // the comment above it to its own keyword.
+                    if child.is_named() && !self.config.is_import(kind) {
+                        self.pending_comments.clear();
+                    }
                     // Not a declaration in this language's config. Rust `impl`
                     // blocks land here deliberately: FR-002 names a method by
                     // its implementing type, so the impl contributes a name
@@ -616,11 +689,12 @@ impl<'a> Walker<'a> {
     fn record_type_relations(&mut self, node: Node<'a>, simple_name: &str) {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            if child.kind() != "class_heritage" && child.kind() != "extends_type_clause" {
+            if !self.config.superclass_nodes.contains(&child.kind()) {
                 continue;
             }
             let mut inner = child.walk();
             let mut is_trait = false;
+            let mut named_a_clause = false;
             for part in child.children(&mut inner) {
                 match part.kind() {
                     "extends_clause" => {
@@ -651,6 +725,22 @@ impl<'a> Walker<'a> {
                     }
                     _ => {
                         let _ = is_trait;
+                    }
+                }
+                named_a_clause |= matches!(part.kind(), "extends_clause" | "implements_clause");
+            }
+
+            // A supertype list with no clause keyword — Python's
+            // `class Store(Persist)` — is an `extends` of every entry. Without
+            // it a Python subclass had no relation at all, so a base class was
+            // reachable in TypeScript and invisible in Python (found by
+            // quire-corpus `surfaces/export-surface/python`).
+            if !named_a_clause {
+                let mut deep = child.walk();
+                for target in child.children(&mut deep) {
+                    if let Some(name) = self.simple_type_name(target) {
+                        self.type_relations
+                            .push((simple_name.to_string(), name, false));
                     }
                 }
             }
@@ -1603,6 +1693,169 @@ impl Persist for Store {
             parsed.diagnostics.iter().any(|d| d.code == "parse_error"),
             "the unreadable root is still diagnosed: {:?}",
             parsed.diagnostics
+        );
+    }
+
+    // TC-090, FR-001-AC-9: a TypeScript interface member is the same
+    // declaration as a trait method, and is a fact for the same reason.
+    #[test]
+    fn an_interface_member_is_a_declaration_of_its_interface() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "demo",
+            "src/index.ts",
+            Language::TypeScript,
+            "export interface Persist {\n  save(): void;\n}\n",
+        ));
+        let save = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "save")
+            .expect("the interface member is a fact");
+        assert_eq!(save.object_type, ObjectType::Function);
+        assert_eq!(
+            save.parent.as_deref(),
+            Some("agent-ix/demo/src/index.ts::Persist")
+        );
+    }
+
+    // TC-091, FR-001-AC-10: a const initialized with a function is a callable
+    // declaration; a const initialized with anything else is not.
+    #[test]
+    fn only_a_const_holding_a_function_is_a_declaration() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "demo",
+            "src/index.ts",
+            Language::TypeScript,
+            "export const handler = (): void => {};\n             export const legacy = function () {};\n             export const LIMIT = 20;\n             export const config = { retries: 2 };\n",
+        ));
+        let callables: Vec<_> = parsed
+            .facts
+            .iter()
+            .filter(|f| f.object_type == ObjectType::Function)
+            .map(|f| f.simple_name.as_str())
+            .collect();
+        assert_eq!(
+            callables,
+            vec!["handler", "legacy"],
+            "the node kind is the same for all four; only the value says which \
+             two declare a callable"
+        );
+    }
+
+    // TC-098, FR-005-AC-9: an `export` wrapper is transparent to the comment
+    // above it. The keyword is a node too, and treating it as the end of the
+    // annotation run gave the comment back to the file.
+    #[test]
+    fn an_export_wrapper_does_not_break_leading_attribution() {
+        let parsed = parse_file(&SourceFile::new(
+            "agent-ix",
+            "demo",
+            "src/index.ts",
+            Language::TypeScript,
+            "// Implements: FR-001-AC-1\nexport class StoreView {}\n",
+        ));
+        let comment = parsed
+            .comments
+            .iter()
+            .find(|c| c.text.contains("FR-001-AC-1"))
+            .expect("the comment is recorded");
+        assert_eq!(comment.owner, "agent-ix/demo/src/index.ts::StoreView");
+    }
+
+    // TC-089, FR-001-AC-9: a Rust trait method is a declaration, parented by
+    // its trait.
+    #[test]
+    fn a_trait_method_is_a_declaration_of_its_trait() {
+        let parsed = rust("pub trait Persist {\n    fn save(&self);\n}\n");
+        let save = parsed
+            .facts
+            .iter()
+            .find(|f| f.simple_name == "save")
+            .expect("the trait method is a fact");
+        assert_eq!(save.object_type, ObjectType::Function);
+        assert_eq!(
+            save.qualified_name,
+            "agent-ix/quire-code-rs/src/lib.rs::Persist::save"
+        );
+        assert_eq!(
+            save.parent.as_deref(),
+            Some("agent-ix/quire-code-rs/src/lib.rs::Persist"),
+            "the trait declares it, so the trait contains it"
+        );
+    }
+
+    // TC-092, FR-003-AC-6: a method's containment parent is the declaration its
+    // qualified name names, whichever language declared it.
+    #[test]
+    fn containment_parent_is_the_declaring_type_in_every_language() {
+        let cases = [
+            (
+                Language::Rust,
+                "src/lib.rs",
+                "pub struct Store;\n\nimpl Store {\n    pub fn upsert(&self) {}\n}\n",
+            ),
+            (
+                Language::TypeScript,
+                "src/index.ts",
+                "export class Store {\n  upsert(): void {}\n}\n",
+            ),
+            (
+                Language::Python,
+                "src/store.py",
+                "class Store:\n    def upsert(self) -> None:\n        pass\n",
+            ),
+        ];
+        for (language, path, source) in cases {
+            let parsed = parse_file(&SourceFile::new("agent-ix", "demo", path, language, source));
+            let method = parsed
+                .facts
+                .iter()
+                .find(|f| f.simple_name == "upsert")
+                .unwrap_or_else(|| panic!("{path}: the method is a fact"));
+            let (prefix, _) = method
+                .qualified_name
+                .rsplit_once("::")
+                .expect("a method name carries its type");
+            assert_eq!(
+                method.parent.as_deref(),
+                Some(prefix),
+                "{path}: the name says {prefix} declares it and containment must agree"
+            );
+        }
+    }
+
+    // TC-093, FR-005-AC-9: a comment above a declaration's attributes belongs to
+    // that declaration, not to the scope the attributes sit in.
+    #[test]
+    fn a_leading_comment_belongs_to_the_declaration_it_introduces() {
+        let parsed = rust("// TC-001 covers this.\n#[test]\nfn a_test() {}\n");
+        let comment = parsed
+            .comments
+            .iter()
+            .find(|c| c.text.contains("TC-001"))
+            .expect("the comment is recorded");
+        assert_eq!(comment.owner, "agent-ix/quire-code-rs/src/lib.rs::a_test");
+        assert!(
+            comment.owner_is_test,
+            "the attribute the comment sits above is what makes it a test"
+        );
+    }
+
+    // TC-094, FR-005-AC-9: an inner doc comment describes what it is written
+    // inside, even when a declaration follows it.
+    #[test]
+    fn an_inner_doc_comment_stays_with_its_enclosing_scope() {
+        let parsed = rust("//! Storage. Implements FR-002.\n\npub struct Store;\n");
+        let comment = parsed
+            .comments
+            .iter()
+            .find(|c| c.text.contains("FR-002"))
+            .expect("the comment is recorded");
+        assert_eq!(
+            comment.owner, "agent-ix/quire-code-rs/src/lib.rs",
+            "a module doc belongs to the module, not to the next item"
         );
     }
 

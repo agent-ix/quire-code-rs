@@ -56,7 +56,21 @@ pub struct Mention {
 fn identifier_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r"(?:TC|NFR|FR|Task)-[0-9]{1,6}").expect("identifier pattern compiles")
+        // The criterion suffix is part of the identifier, not a separate one.
+        // Evidence binds at criterion granularity across the ecosystem — the
+        // traceability model mints `FR-NNN-AC-N`, `FR-NNN-CON-N` and
+        // `StR-NNN-VC-N`, and says in as many words that a bare requirement id
+        // deliberately backs none of its children. A harvester reading only the
+        // bare id can therefore never produce a mention that backs a row, which
+        // is what made every `Implements:` marker in the ecosystem invisible at
+        // the only granularity that counts (#15).
+        //
+        // The group is greedy and optional, so `FR-001` alone still matches and
+        // `FR-001-AC-1` matches whole rather than yielding its own prefix. The
+        // whole-token check outside then rejects `FR-001-AC-1a`, because the
+        // match ends against a token byte (FR-005-AC-5).
+        Regex::new(r"(?:TC|NFR|FR|StR|US|IT|Task)-[0-9]{1,6}(?:-[A-Z]{2,3}-[0-9]{1,4})?")
+            .expect("identifier pattern compiles")
     })
 }
 
@@ -243,6 +257,37 @@ mod tests {
         );
         let ids: Vec<_> = found.iter().map(|m| m.identifier.as_str()).collect();
         assert_eq!(ids, vec!["FR-004", "ix://agent-ix/demo/FR-003"]);
+    }
+
+    // TC-095, FR-005-AC-10: a criterion-level identifier is one mention,
+    // addressed as written — not its bare requirement prefix, and not both.
+    #[test]
+    fn criterion_level_identifiers_are_harvested_whole() {
+        for (text, expected) in [
+            ("// Implements: FR-001-AC-1", "FR-001-AC-1"),
+            ("// see NFR-002-AC-3 for the argument", "NFR-002-AC-3"),
+            ("// FR-004-CON-1: the vocabulary is fixed", "FR-004-CON-1"),
+            ("// StR-001-VC-2 is judged by review", "StR-001-VC-2"),
+            ("// FR-001 alone still matches", "FR-001"),
+        ] {
+            let found = harvest(&[comment(text, false)], "src/lib.rs");
+            let ids: Vec<_> = found.iter().map(|m| m.identifier.as_str()).collect();
+            assert_eq!(ids, vec![expected], "{text:?}");
+        }
+    }
+
+    // TC-096, FR-005-AC-5: the whole-token rule still holds over the longer
+    // form, so a criterion id with a suffix is not a mention of its prefix.
+    #[test]
+    fn a_suffixed_criterion_identifier_is_not_a_mention() {
+        for text in [
+            "// FR-001-AC-1a is not a mention",
+            "// XFR-001-AC-1 is a different identifier",
+            "// snake_FR-001-AC-1",
+        ] {
+            let found = harvest(&[comment(text, false)], "src/lib.rs");
+            assert!(found.is_empty(), "{text:?} matched: {found:?}");
+        }
     }
 
     // TC-030, FR-005-AC-5: an identifier inside a longer token is not a match.

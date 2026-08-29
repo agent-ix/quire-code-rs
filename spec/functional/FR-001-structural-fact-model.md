@@ -85,6 +85,8 @@ Terraform modules, and packages.
 | FR-001-AC-5 | Every emitted fact carries a `kind` discriminator and one-based inclusive start and end lines | Test (TC-005) |
 | FR-001-AC-6 | Facts for one file are ordered by declaration start position across repeated runs | Test (TC-006) |
 | FR-001-AC-7 | A dependency audit confirms no filesystem or network crate is reachable from the extraction path | Test (TC-007) |
+| FR-001-AC-9 | A Rust trait method and a TypeScript interface member each yield a `code_function` fact parented by the type declaring it | Test (TC-089), Test (TC-090) |
+| FR-001-AC-10 | A TypeScript `const` initialized with a function expression yields a `code_function` fact; one initialized with anything else yields none | Test (TC-091) |
 
 ## Dependencies
 
