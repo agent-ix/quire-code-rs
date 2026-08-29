@@ -78,6 +78,8 @@ enclosing code fact, and the file and one-based line where it appears.
 | FR-005-AC-5 | An identifier embedded in a longer token yields no mention | Test (TC-030) |
 | FR-005-AC-6 | A mention naming an artifact absent from the batch is still reported, addressed by the identifier as written | Test (TC-031) |
 | FR-005-AC-8 | A tracking tag outside a test declaration is reported as a citation, not as a verification claim | Test (TC-072) |
+| FR-005-AC-9 | A comment above a declaration's attributes is attributed to that declaration; an inner doc comment stays with its enclosing scope | Test (TC-093), Test (TC-094), Test (TC-098), Test (TC-099) |
+| FR-005-AC-10 | A criterion-level identifier is harvested as one mention, addressed as written, and not also as its bare requirement prefix | Test (TC-095) |
 | FR-005-AC-7 | Extracting this library's own test suite recovers the tracking tags its tests carry | Test (TC-032) |
 
 ## Dependencies
