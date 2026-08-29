@@ -15,6 +15,7 @@ help:
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
+	@echo "  make coverage         - Test Matrix rows vs the suite (quire coverage)"
 	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
 	@echo "  make bench            - NFR-003 budget + NFR-004 corpus-scale recall (performance lane)"
 
@@ -62,6 +63,13 @@ cargo-audit:
 audit-unsafe:
 	bash scripts/check_unsafe_comments.sh
 
+# Every matrix row is backed by a tagged test, or its own declared verification
+# method says why no symbol can exist. Needs `quire` on PATH and a module path
+# declaring the traceability model (#8).
+.PHONY: coverage
+coverage:
+	bash scripts/check_coverage.sh
+
 # =============================================================================
 # Performance lane
 # =============================================================================
@@ -80,4 +88,4 @@ bench:
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check lint test deny audit-unsafe
+ci: fmt-check lint test deny audit-unsafe coverage

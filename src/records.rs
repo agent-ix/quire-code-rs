@@ -176,7 +176,7 @@ mod tests {
         }
     }
 
-    // TC-086 — FR-009-AC-9 / FR-009-CON-1: the two fields are additive. A
+    // TC-086, FR-009-AC-9, FR-009-CON-1 / FR-009-CON-1: the two fields are additive. A
     // record serialized before FR-009 carries neither, and must still read
     // back — as `public` (the pre-FR-009 assumption that every declaration is
     // an export) with no signature.
@@ -208,7 +208,7 @@ mod tests {
         assert!(round_tripped.contains("\"visibility\":\"public\""));
     }
 
-    // TC-033 — FR-006-AC-1: records carry a hex id, an ix:// ref and a kind.
+    // TC-033, FR-006-AC-1: records carry a hex id, an ix:// ref and a kind.
     #[test]
     fn node_records_carry_id_reference_and_kind() {
         let record = node_record(&fact("agent-ix/repo/src/lib.rs::f", 1));
@@ -222,7 +222,7 @@ mod tests {
         assert_eq!(record.data.kind, "function");
     }
 
-    // TC-034 — FR-006-AC-2: moving a declaration preserves its id.
+    // TC-034, FR-006-AC-2: moving a declaration preserves its id.
     #[test]
     fn moving_a_declaration_preserves_its_id() {
         let before = node_record(&fact("agent-ix/repo/src/lib.rs::f", 10));
@@ -231,7 +231,7 @@ mod tests {
         assert_ne!(before.data.span, after.data.span);
     }
 
-    // TC-087 — FR-006-CON-1: node identity is a pure function of
+    // TC-087, FR-006-CON-1: node identity is a pure function of
     // `(object_type, qualified_name)`, so the two components cannot alias.
     #[test]
     fn identity_separates_type_from_name() {
@@ -243,7 +243,7 @@ mod tests {
         );
     }
 
-    // TC-035 — FR-006-AC-3: records appear in stable order.
+    // TC-035, FR-006-AC-3: records appear in stable order.
     #[test]
     fn records_sort_into_stable_order() {
         let mut nodes = vec![
@@ -277,7 +277,7 @@ mod tests {
         assert_eq!(edges[0].source_ref, "a");
     }
 
-    // TC-036 — FR-006-AC-4: the edge-type set matches the contract exactly.
+    // TC-036, FR-006-AC-4, FR-006-CON-2: the edge-type set matches the contract exactly.
     #[test]
     fn the_edge_type_set_matches_the_consumer_contract() {
         let names: Vec<_> = EDGE_TYPES.iter().map(|t| t.as_str()).collect();
@@ -294,7 +294,7 @@ mod tests {
         );
     }
 
-    // TC-088 — FR-004-CON-1: the `reason` vocabulary matches the set the
+    // TC-088, FR-004-CON-1: the `reason` vocabulary matches the set the
     // consumer contract in filament-ide-rs FR-072 reads, value for value.
     #[test]
     fn the_reason_vocabulary_matches_the_consumer_contract() {

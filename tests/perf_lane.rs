@@ -36,11 +36,11 @@ const SINGLE_FILE_P95_THRESHOLD_MS: f64 = 50.0;
 const PEAK_MEMORY_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const MAX_FIXPOINT_ITERATIONS: usize = 10;
 
-// TC-062 — NFR-003-AC-1: the full benchmark corpus extracts within 60 s.
-// TC-063 — NFR-003-AC-2: single-file re-extraction p95 is within 50 ms.
-// TC-064 — NFR-003-AC-3: peak resident memory stays within 2.0 GB.
-// TC-065 — NFR-003-AC-4: the fixpoint converges within its ten-iteration bound.
-// TC-070 — NFR-004-AC-5: per-language recall is computed and reported.
+// TC-062, NFR-003-AC-1: the full benchmark corpus extracts within 60 s.
+// TC-063, NFR-003-AC-2: single-file re-extraction p95 is within 50 ms.
+// TC-064, NFR-003-AC-3: peak resident memory stays within 2.0 GB.
+// TC-065, NFR-003-AC-4: the fixpoint converges within its ten-iteration bound.
+// TC-070, NFR-004-AC-5: per-language recall is computed and reported.
 //
 // `#[ignore]` precedes `#[test]` deliberately: the ecosystem's Rust symbol
 // scanner reads the attribute immediately above the `fn`, so the conventional

@@ -160,7 +160,7 @@ mod tests {
         }
     }
 
-    // TC-026 — FR-005-AC-1: a tag in a test declaration is a tracking tag.
+    // TC-026, FR-005-AC-1, StR-002-VC-1: a tag in a test declaration is a tracking tag.
     #[test]
     fn a_tag_inside_a_test_is_a_tracking_tag() {
         let found = harvest(
@@ -174,7 +174,7 @@ mod tests {
         assert_eq!(found[0].file, "src/lib.rs");
     }
 
-    // TC-072 — FR-005-AC-8: the same tag outside a test is a citation.
+    // TC-072, FR-005-AC-8: the same tag outside a test is a citation.
     #[test]
     fn a_tag_outside_a_test_is_only_a_citation() {
         let found = harvest(
@@ -184,7 +184,7 @@ mod tests {
         assert_eq!(found[0].kind, MentionKind::RequirementCitation);
     }
 
-    // TC-027 — FR-005-AC-2: requirement citations are harvested.
+    // TC-027, FR-005-AC-2: requirement citations are harvested.
     #[test]
     fn requirement_citations_are_harvested() {
         let found = harvest(
@@ -200,7 +200,7 @@ mod tests {
         assert!(ids.contains(&"Task-150"), "got {ids:?}");
     }
 
-    // TC-028 — FR-005-AC-3: ix:// references are harvested.
+    // TC-028, FR-005-AC-3, StR-002-VC-2: ix:// references are harvested.
     #[test]
     fn ix_references_are_harvested() {
         let found = harvest(
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(ids, vec!["FR-004", "ix://agent-ix/demo/FR-003"]);
     }
 
-    // TC-030 — FR-005-AC-5: an identifier inside a longer token is not a match.
+    // TC-030, FR-005-AC-5: an identifier inside a longer token is not a match.
     #[test]
     fn embedded_identifiers_are_not_mentions() {
         for text in [
@@ -267,7 +267,7 @@ mod tests {
         }
     }
 
-    // TC-031 — FR-005-AC-6: a mention of something absent is still reported,
+    // TC-031, FR-005-AC-6: a mention of something absent is still reported,
     // addressed by the identifier exactly as written.
     #[test]
     fn unresolvable_mentions_are_still_reported_as_written() {

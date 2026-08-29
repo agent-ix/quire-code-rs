@@ -176,6 +176,21 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 
 - **Status legend**: ⬜ Planned (matrix row authored, test not yet written),
   ✅ Complete (test written, tagged and green).
+- **The matrix is gated, not asserted.** `make coverage` runs
+  `quire coverage` over this repository and fails when a row claims a passing
+  status it cannot back, when an unbacked row's declared verification method
+  does not explain the absence, or when a declaration matches nothing and
+  reports a confident zero. The last case is why the gate exists: this table
+  claimed ✅ on all 102 of its rows for as long as its Test Case Summary minted
+  no `TC-NNN` id at all, and 95.8% line coverage said nothing about it
+  (agent-ix/quire-code-rs#8).
+- **Rows no symbol can back.** TC-061 and the four `Inspection` constraints
+  (FR-001-CON-1, FR-001-CON-2, FR-005-CON-1, FR-009-CON-2) carry a verification
+  method that mints no test symbol, so they are reported unbacked by
+  construction rather than as an overclaim. TC-061 is an `Analysis`: the
+  dependency closure holds no network client (TC-059) and extraction reads no
+  ambient state (TC-060), so an offline run and an online run are the same run
+  — there is no second condition to compare against.
 - Benchmark-verified criteria (TC-062..TC-065, TC-070) report measurements on
   every run and gate on threshold only in the performance lane, so that
   shared-runner variance does not make ordinary CI flaky.
@@ -183,8 +198,11 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
   check that the tracking tags this matrix claims are really present in the
   tests.
 - The benchmark rows (TC-062..TC-065, TC-070) run in the performance lane —
-  `make bench`, plus nightly and on-demand CI — not in the ordinary gate, since
-  benchmark timings on a shared runner would make the normal suite flaky. Their
+  `make bench`, which is `cargo test --test perf_lane -- --ignored` — not in the
+  ordinary gate, since benchmark timings on a shared runner would make the
+  normal suite flaky. The lane is an `#[ignore]`d test rather than a
+  `harness = false` bench so that each row binds a real symbol; a bare `fn` in a
+  custom harness carries the tag and backs nothing. Their
   corpus is generated deterministically rather than committed: a 500,000-line
   fixture would dominate the repository, would still not resemble a real
   codebase, and could not be regenerated at a different size when the budget

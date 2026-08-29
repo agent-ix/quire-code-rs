@@ -245,25 +245,25 @@ def from_constructor():
     }
 }
 
-// TC-066 — NFR-004-AC-1: zero wrong edges on the Rust precision corpus.
+// TC-066, NFR-004-AC-1, StR-002-VC-4: zero wrong edges on the Rust precision corpus.
 #[test]
 fn rust_corpus_emits_no_wrong_edges() {
     assert_precision(&rust_corpus());
 }
 
-// TC-067 — NFR-004-AC-2: zero wrong edges on the TypeScript precision corpus.
+// TC-067, NFR-004-AC-2: zero wrong edges on the TypeScript precision corpus.
 #[test]
 fn typescript_corpus_emits_no_wrong_edges() {
     assert_precision(&typescript_corpus());
 }
 
-// TC-068 — NFR-004-AC-3: zero wrong edges on the Python precision corpus.
+// TC-068, NFR-004-AC-3: zero wrong edges on the Python precision corpus.
 #[test]
 fn python_corpus_emits_no_wrong_edges() {
     assert_precision(&python_corpus());
 }
 
-// TC-069 — NFR-004-AC-4: the ambiguity corpus produces no call edge at all.
+// TC-069, NFR-004-AC-4: the ambiguity corpus produces no call edge at all.
 // Every call site here is deliberately unresolvable: two unrelated types
 // declare the same method name and no receiver type is recoverable.
 #[test]
@@ -307,7 +307,7 @@ fn the_ambiguity_corpus_emits_nothing() {
     );
 }
 
-// TC-051 — FR-008-AC-8: a call through a Rust trait object yields no edge,
+// TC-051, FR-008-AC-8: a call through a Rust trait object yields no edge,
 // because the source does not determine which implementation runs.
 #[test]
 fn a_trait_object_call_yields_no_edge() {
@@ -347,7 +347,7 @@ pub fn run(sink: &dyn Persist) {
     );
 }
 
-// TC-050 — FR-008-AC-7: Rust impls yield `implements_trait`, TypeScript
+// TC-050, FR-008-AC-7: Rust impls yield `implements_trait`, TypeScript
 // subclasses yield `extends`.
 #[test]
 fn type_relations_are_emitted_for_both_languages() {
@@ -378,7 +378,7 @@ fn type_relations_are_emitted_for_both_languages() {
     );
 }
 
-// TC-052 — FR-008-AC-9: same-file resolution is unaffected by batch
+// TC-052, FR-008-AC-9, FR-008-CON-3: same-file resolution is unaffected by batch
 // composition.
 #[test]
 fn same_file_resolution_is_independent_of_the_rest_of_the_batch() {
@@ -422,7 +422,7 @@ impl Local {
     assert!(!solo_calls.is_empty(), "the self-call should resolve");
 }
 
-// TC-073 — FR-008-AC-11: the result reports what the batch bounded.
+// TC-073, FR-008-AC-11: the result reports what the batch bounded.
 #[test]
 fn the_result_reports_batch_size_and_unresolved_calls() {
     let result = extract(&rust_corpus().files);
@@ -430,7 +430,7 @@ fn the_result_reports_batch_size_and_unresolved_calls() {
     assert_eq!(result.stats.files_with_errors, 0);
 }
 
-// TC-070 — NFR-004-AC-5: recall is computed and reported for every corpus.
+// TC-070, NFR-004-AC-5: recall is computed and reported for every corpus.
 #[test]
 fn recall_is_reported_for_every_language() {
     for corpus in [rust_corpus(), typescript_corpus(), python_corpus()] {
@@ -450,7 +450,7 @@ fn recall_is_reported_for_every_language() {
 // the edges *inside* each file. The batch ambiguity is real, but it is not the
 // ambiguity the call site has — FR-008 requires same-file resolution to succeed
 // without consulting other files.
-// TC-074 — FR-008-AC-12: a simple type name declared in two files still
+// TC-074, FR-008-AC-12: a simple type name declared in two files still
 // resolves within each file that declares it.
 #[test]
 fn a_name_shared_across_languages_does_not_suppress_same_file_edges() {

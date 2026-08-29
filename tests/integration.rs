@@ -105,7 +105,7 @@ def main():
     ]
 }
 
-// TC-046 (structural slice) — FR-001-AC-1/2/3: a mixed-language batch yields
+// TC-046, FR-001-AC-1, FR-001-AC-2, FR-001-AC-3: a mixed-language batch yields  (structural slice)
 // the four node types and structural edges across every language.
 #[test]
 fn mixed_language_batch_yields_every_node_type() {
@@ -126,7 +126,7 @@ fn mixed_language_batch_yields_every_node_type() {
     assert!(edge_types.contains("imports"), "got {edge_types:?}");
 }
 
-// TC-038 — FR-006-AC-6: extraction of the fixture matches its golden file.
+// TC-038, FR-006-AC-6: extraction of the fixture matches its golden file.
 #[test]
 fn fixture_extraction_matches_the_golden_file() {
     let result = extract(&fixture());
@@ -151,7 +151,7 @@ fn fixture_extraction_matches_the_golden_file() {
     }
 }
 
-// TC-054 — NFR-001-AC-1: one hundred repeated extractions are byte-identical.
+// TC-054, NFR-001-AC-1: one hundred repeated extractions are byte-identical.
 #[test]
 fn a_hundred_extractions_are_byte_identical() {
     let files = fixture();
@@ -162,7 +162,7 @@ fn a_hundred_extractions_are_byte_identical() {
     }
 }
 
-// TC-055 — NFR-001-AC-2: concurrent extractions are byte-identical.
+// TC-055, NFR-001-AC-2, StR-001-VC-4: concurrent extractions are byte-identical.
 #[test]
 fn concurrent_extractions_are_byte_identical() {
     let files = fixture();
@@ -180,7 +180,7 @@ fn concurrent_extractions_are_byte_identical() {
     }
 }
 
-// TC-056 — NFR-001-AC-3: shuffling the batch order changes nothing.
+// TC-056, NFR-001-AC-3: shuffling the batch order changes nothing.
 #[test]
 fn shuffled_batch_order_produces_identical_output() {
     let forward = extract(&fixture());
@@ -190,7 +190,7 @@ fn shuffled_batch_order_produces_identical_output() {
     assert_eq!(extract(&shuffled), forward);
 }
 
-// TC-032 / FR-005-AC-7 — the dogfooding check: extracting this repository's own
+// TC-032, FR-005-AC-7 — the dogfooding check: extracting this repository's own
 // sources recovers the TC tags its tests carry, using the library the tags
 // document.
 #[test]
@@ -252,7 +252,7 @@ fn self_extraction_recovers_this_repositorys_own_tracking_tags() {
     assert_eq!(result.stats.files_with_errors, 0, "our own sources parse");
 }
 
-// TC-059 — NFR-002-AC-1: no HTTP, RPC or socket client crate in the closure.
+// TC-059, NFR-002-AC-1: no HTTP, RPC or socket client crate in the closure.
 #[test]
 fn the_dependency_closure_holds_no_network_client() {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -275,7 +275,7 @@ fn the_dependency_closure_holds_no_network_client() {
     }
 }
 
-// TC-007 — FR-001-AC-7: a dependency audit confirms no filesystem or network
+// TC-007, FR-001-AC-7, StR-001-VC-2: a dependency audit confirms no filesystem or network
 // crate is reachable from the extraction path.
 //
 // An allowlist rather than a denylist: a denylist only rejects the crates
@@ -323,7 +323,7 @@ fn the_declared_dependencies_are_the_audited_set() {
     );
 }
 
-// TC-060 — NFR-002-AC-2: no filesystem, environment or process access in the
+// TC-060, NFR-002-AC-2, FR-003-CON-1: no filesystem, environment or process access in the
 // extraction path.
 #[test]
 fn extraction_touches_no_ambient_state() {
@@ -339,7 +339,7 @@ fn extraction_touches_no_ambient_state() {
     });
 }
 
-// TC-058 — NFR-001-AC-5: a static audit finds no clock, randomness, process or
+// TC-058, NFR-001-AC-5: a static audit finds no clock, randomness, process or
 // environment read in extraction paths.
 //
 // Separate from TC-060 because the two criteria fail for different reasons: an
@@ -379,7 +379,7 @@ fn for_each_extraction_source(check: impl Fn(String, &str)) {
     }
 }
 
-// TC-057 — NFR-001-AC-4: no order-observable hash iteration in extraction.
+// TC-057, NFR-001-AC-4: no order-observable hash iteration in extraction.
 #[test]
 fn extraction_paths_use_ordered_collections_only() {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -435,7 +435,7 @@ fn strip_comments(source: &str) -> String {
 /// Assumptions: the fixture is the same mixed-language repository the rest of
 /// this suite uses, so the comparison covers every record kind it emits.
 /// ACs: NFR-003-AC-5.
-/// Tracing: TC-077.
+/// Trace: TC-077, NFR-003-AC-5
 #[test]
 fn tc_077_caller_supplied_parses_are_reused_and_change_nothing() {
     use std::collections::BTreeMap;
