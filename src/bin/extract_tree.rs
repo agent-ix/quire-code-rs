@@ -6,8 +6,13 @@
 //! example, not the crate.
 //!
 //! ```text
-//! cargo run --example extract_tree -- --org agent-ix --repo demo path/to/tree
+//! cargo run --bin extract_tree -- --org agent-ix --repo demo path/to/tree
 //! ```
+//!
+//! A binary rather than an example so that an integration test can run it:
+//! `CARGO_BIN_EXE_extract_tree` exists for a bin target and not for an example,
+//! and a contract another repository is pinned to has to be executable by its
+//! own suite (FR-010).
 //!
 //! The invocation and the stdout contract are pinned by
 //! `agent-ix/quire-corpus` (`corpus.yaml`, `producer_contract.version: 1`), so

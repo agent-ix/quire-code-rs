@@ -74,6 +74,7 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 | NFR-002 | NFR-002-AC-1, NFR-002-AC-2, NFR-002-AC-3 | TC-059, TC-060, TC-061 | ✅ |
 | NFR-003 | NFR-003-AC-1, NFR-003-AC-2, NFR-003-AC-3, NFR-003-AC-4, NFR-003-AC-5 | TC-062, TC-063, TC-064, TC-065, TC-077 | ✅ |
 | NFR-004 | NFR-004-AC-1, NFR-004-AC-2, NFR-004-AC-3, NFR-004-AC-4, NFR-004-AC-5 | TC-066, TC-067, TC-068, TC-069, TC-070 | ✅ |
+| FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5 | TC-101, TC-102, TC-103, TC-104, TC-105 | ✅ |
 
 ---
 
@@ -181,6 +182,11 @@ targets backed; a row whose test is unwritten carries ⬜ and says so.
 | TC-098 | An `export` wrapper does not break leading-comment attribution | Unit | FR-005-AC-9 | ✅ |
 | TC-099 | A trailing comment does not attach to the next declaration | Unit | FR-005-AC-9 | ✅ |
 | TC-100 | An abstract method is a declaration parented by its class | Unit | FR-001-AC-9 | ✅ |
+| TC-101 | The documented invocation writes canonical records on stdout | Integration | FR-010-AC-1 | ✅ |
+| TC-102 | Extraction order does not depend on the filesystem's order | Integration | FR-010-AC-2 | ✅ |
+| TC-103 | An unsupported language is skipped without failing or diagnosing | Integration | FR-010-AC-3 | ✅ |
+| TC-104 | A malformed invocation writes no records to stdout | Integration | FR-010-AC-4 | ✅ |
+| TC-105 | A symbolic link is not followed | Integration | FR-010-AC-5 | ✅ |
 
 ---
 

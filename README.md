@@ -41,7 +41,7 @@ boundary has to read a tree before its output can be graded. That something is
 an example, not part of the crate:
 
 ```bash
-cargo run --release --example extract_tree -- --org agent-ix --repo demo path/to/tree
+cargo run --release --bin extract_tree -- --org agent-ix --repo demo path/to/tree
 ```
 
 `agent-ix/quire-corpus` pins that invocation as `producer_contract.version: 1`

@@ -13,6 +13,14 @@ name = "quire_code_rs"
 path = "src/lib.rs"
 crate-type = ["rlib"]
 
+# The producer `agent-ix/quire-corpus` invokes. Its flags and its stdout are a
+# pinned contract (`producer_contract.version: 1`), so it is a bin rather than an
+# example: an example cannot be executed by an integration test, and an
+# unexecutable contract is an unverified one (FR-010).
+[[bin]]
+name = "extract_tree"
+path = "src/bin/extract_tree.rs"
+
 [dependencies]
 serde = { version = "^1", features = ["derive"] }
 serde_json = "^1"

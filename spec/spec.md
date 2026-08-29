@@ -145,6 +145,7 @@ library by git revision and call it in-process.
 | Stakeholder requirements | StR-001..StR-002 | `stakeholder/` |
 | User stories | US-001..US-003 | `usecase/` |
 | Functional requirements | FR-001..FR-009 | `functional/` |
+| [FR-010](functional/FR-010-producer-invocation.md) | Producer invocation contract |
 | Non-functional requirements | NFR-001..NFR-004 | `non-functional/` |
 | Test matrix | TM-001 | `tests.md` |
 | Spec reviews | SR-NNN | `reviews/` |
