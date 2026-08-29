@@ -108,6 +108,7 @@ other case.
 | FR-008-AC-10 | Each resolution tier stamps its own `reason`, and `receiver-typed` outranks `import-scoped`, which outranks `name-match` | Test (TC-053) |
 | FR-008-AC-11 | The result reports the batch file count and the unresolved call-site count | Test (TC-073) |
 | FR-008-AC-12 | A simple type name declared in two files still resolves within each file that declares it | Test (TC-074) |
+| FR-008-AC-13 | One declaration shape resolves at the same tier in every supported language | Test (TC-107) |
 
 ## Dependencies
 

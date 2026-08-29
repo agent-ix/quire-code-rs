@@ -359,6 +359,64 @@ pub fn run(sink: &dyn Persist) {
     }
 }
 
+// TC-107, FR-008-AC-13: one declaration shape resolves at one tier in every
+// language. An annotated receiver whose type is declared in the same file
+// resolves, so FR-008 says `receiver-typed` — and saying `import-scoped` in one
+// language makes that language's dependencies rank below identical ones
+// elsewhere for any consumer that reads confidence.
+//
+// Raw strings, deliberately: an escaped literal here was reflowed by `cargo
+// fmt` into an indented continuation, which changed the Python fixture into a
+// different shape and made the test fail for a reason that was not the defect.
+#[test]
+fn one_shape_resolves_at_one_tier_in_every_language() {
+    let rust = r#"pub struct Store;
+
+impl Store {
+    pub fn upsert(&self) {}
+}
+
+pub fn same_file(store: &Store) {
+    store.upsert();
+}
+"#;
+    let typescript = r#"export class Store {
+  upsert(): void {}
+}
+
+export function sameFile(store: Store): void {
+  store.upsert();
+}
+"#;
+    let python = r#"class Store:
+    def upsert(self) -> None:
+        pass
+
+
+def same_file(store: Store) -> None:
+    store.upsert()
+"#;
+
+    for (language, path, source) in [
+        (Language::Rust, "src/lib.rs", rust),
+        (Language::TypeScript, "src/index.ts", typescript),
+        (Language::Python, "src/store.py", python),
+    ] {
+        let result = extract(&[SourceFile::new("agent-ix", "demo", path, language, source)]);
+        let call = result
+            .edges
+            .iter()
+            .find(|e| e.edge_type == "calls")
+            .unwrap_or_else(|| panic!("{path}: the call resolves"));
+        assert_eq!(
+            call.reason, "receiver-typed",
+            "{path}: the receiver's type is written down and declared in this \
+             file, so it resolves; a weaker tier here is a lower confidence on \
+             the same evidence"
+        );
+    }
+}
+
 // TC-097, FR-008-AC-7: a Python base class is an `extends` relation, so a
 // supertype is reachable in every language rather than only where the grammar
 // spells the keyword.

@@ -654,10 +654,31 @@ impl<'a> Walker<'a> {
             if !self.config.parameter_nodes.contains(&param.kind()) {
                 continue;
             }
+            let type_node = param.child_by_field_name("type");
             let name_node = param
                 .child_by_field_name("pattern")
-                .or_else(|| param.child_by_field_name("name"));
-            let type_node = param.child_by_field_name("type");
+                .or_else(|| param.child_by_field_name("name"))
+                .or_else(|| {
+                    // Python's `typed_parameter` names neither field: its
+                    // children are the identifier, the `:`, and the type, and
+                    // only the type is addressable by name. Without this fall
+                    // back the binding was never recorded, so an annotated
+                    // Python receiver resolved one tier lower than the same
+                    // declaration in Rust or TypeScript — a `calls` edge with
+                    // confidence 0.7 where the source supports 0.9, which reads
+                    // downstream as Python dependencies being systematically
+                    // weaker than identical ones elsewhere (#19).
+                    let mut child = param.named_child(0);
+                    while let Some(candidate) = child {
+                        if candidate.kind() == "identifier"
+                            && Some(candidate.id()) != type_node.map(|t| t.id())
+                        {
+                            return Some(candidate);
+                        }
+                        child = candidate.next_named_sibling();
+                    }
+                    None
+                });
             if let (Some(name_node), Some(type_node)) = (name_node, type_node) {
                 if let (Ok(name), Some(type_name)) = (
                     name_node.utf8_text(self.source),
