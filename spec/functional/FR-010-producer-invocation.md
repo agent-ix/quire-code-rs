@@ -6,20 +6,22 @@ type: FR
 
 # FR-010 — Producer invocation contract
 
+## Description
+
+The quire-code-rs crate SHALL ship an `extract_tree` binary that reads a source
+tree and writes canonical records as JSON on standard output.
+
 ## Behavior
 
-The crate SHALL ship an `extract_tree` binary that reads a source tree and
-writes canonical records as JSON on standard output.
-
-WHEN invoked as `extract_tree --org <org> --repo <repo> <dir>`, the binary
-SHALL emit the records of every file under `<dir>` whose extension names a
-supported language, and nothing else on standard output.
-
-WHEN a file whose extension names a supported language cannot be read, the
-binary SHALL name that file on standard error and SHALL exit non-zero, after
-writing the records it did produce.
-
-WHEN a directory entry is a symbolic link, the binary SHALL NOT follow it.
+- When invoked as `extract_tree --org <org> --repo <repo> <dir>`, the binary SHALL
+  emit the records of every supported-language file under `<dir>`.
+- The binary SHALL write no non-record content on standard output.
+- If a supported-language file cannot be read, then the binary SHALL name that
+  file on standard error.
+- If any supported-language file cannot be read, then the binary SHALL exit
+  non-zero after writing the records it did produce.
+- When a directory entry is a symbolic link, the binary SHALL leave that entry
+  unvisited.
 
 ## Rationale
 
@@ -52,3 +54,12 @@ absence.
 |----|------------|------|------------|
 | FR-010-CON-1 | The binary SHALL NOT be the only place a behavior is implemented; it reads a tree and calls the library, and owns no extraction logic | Maintainability | Inspection |
 | FR-010-CON-2 | A change to the flags or to the stdout shape SHALL be accompanied by a version bump of the corpus producer contract, because prior observations were measured through it | Interface | Inspection |
+
+## Dependencies
+
+- **Upstream**: [FR-006](./FR-006-canonical-record-emission.md) defines the
+  canonical records, [NFR-001](../non-functional/NFR-001-determinism.md) defines
+  stable output, and [NFR-002](../non-functional/NFR-002-filesystem-only-boundary.md)
+  keeps tree walking outside the library API.
+- **Downstream**: the pinned quire-corpus producer contract invokes this binary,
+  and [FR-012](./FR-012-governed-graph-quality-producer.md) scores its output.
