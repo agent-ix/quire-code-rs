@@ -304,6 +304,9 @@ fn the_declared_dependencies_are_the_audited_set() {
     // Parsing, serialization and hashing. Nothing here opens a file, a socket
     // or a process; adding a dependency that could is what this test is for.
     let audited: BTreeSet<&str> = [
+        // Draft-2020-12 validation runs with resolver features disabled; its
+        // closure contains no HTTP client and cannot fetch a remote schema.
+        "jsonschema",
         "regex",
         "serde",
         "serde_json",

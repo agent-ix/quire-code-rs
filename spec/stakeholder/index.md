@@ -10,3 +10,4 @@ description: "Index of artifacts in this directory."
 
 * [StR-001: Ecosystem needs one deterministic code-extraction engine](./StR-001-single-deterministic-code-extraction-engine.md)
 * [StR-002: Engineers need requirement-to-code-to-test traceability recovered from source](./StR-002-requirement-code-test-traceability.md)
+* [StR-003: Assurance consumers need governed extractor-quality observations](./StR-003-governed-extractor-quality-observations.md)

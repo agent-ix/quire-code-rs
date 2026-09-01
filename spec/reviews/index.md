@@ -12,3 +12,4 @@ description: "Index of artifacts in this directory."
 * [SR-002: integrity review of the quire-code-rs extraction contract](./integrity.md)
 * [SR-003: scope-boundary review of the quire-code-rs extraction contract](./scope-boundary.md)
 * [SR-004: code review of the traceability, producer and corpus-findings stack](./code-review-corpus-stack.md)
+* [SR-005: base review of governed graph-quality measurements](./governed-measurement-base.md)

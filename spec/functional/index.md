@@ -17,3 +17,6 @@ description: "Index of artifacts in this directory."
 * [FR-007: Per-file parse-error isolation](./FR-007-parse-error-isolation.md)
 * [FR-008: Type environments and receiver-typed fixpoint call resolution](./FR-008-type-environments-and-call-resolution.md)
 * [FR-009: Declaration visibility and normalized callable signature](./FR-009-declaration-visibility-and-signature.md)
+* [FR-010: Producer invocation contract](./FR-010-producer-invocation.md)
+* [FR-011: Versioned graph-quality observation schema](./FR-011-graph-quality-observation-schema.md)
+* [FR-012: Governed graph-quality measurement producer](./FR-012-governed-graph-quality-producer.md)

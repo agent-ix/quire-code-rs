@@ -18,6 +18,7 @@ pub mod extract;
 pub mod facts;
 pub mod imports;
 pub mod lang;
+pub mod measurement;
 pub mod mentions;
 pub mod naming;
 pub mod parse;
