@@ -67,19 +67,19 @@ directly; its rawEvidence retains the custom graph observation and scorer JSON.
 
 ### Contract and transformation tests
 
-- [ ] **TC-108..TC-117, TC-130..TC-131**: schema-valid measured records, dimension coverage, closed vocabularies, strict provenance, raw-output references, and extractor-independent validation.
+- [x] **TC-108..TC-117, TC-130..TC-131**: schema-valid measured records, dimension coverage, closed vocabularies, strict provenance, raw-output references, and extractor-independent validation.
 
 ### Producer and failure-domain tests
 
-- [ ] **TC-118..TC-123, TC-132..TC-134**: exact mappings, independent recall/precision, wrong-edge gate, non-measured populations, missing pins, filesystem-only boundary, and no network closure.
+- [x] **TC-118..TC-123, TC-132..TC-134**: exact mappings, independent recall/precision, wrong-edge gate, non-measured populations, missing pins, filesystem-only boundary, and no network closure.
 
 ### Determinism and governance tests
 
-- [ ] **TC-124..TC-129**: repeated and permuted inputs, ambient-field exclusion, invalid-plan rejection, and active MP-001 enforcement.
+- [x] **TC-124..TC-129**: repeated and permuted inputs, ambient-field exclusion, invalid-plan rejection, and active MP-001 enforcement.
 
 ### Ecosystem integration
 
-- [ ] **TC-111, TC-118, TC-124, TC-125, TC-129**: real release extractor plus real quire-corpus scorer, Quire validation, Quoin record, and Quoin report.
+- [x] **TC-111, TC-118, TC-124, TC-125, TC-129**: real release extractor plus real quire-corpus scorer, Quire validation, Quoin record, and Quoin report.
 
 ## Remaining Work
 
