@@ -16,7 +16,10 @@ relationships:
 
 A graph-quality observation SHALL conform to the engine-agnostic JSON Schema
 below so that population state, raw quality results, and producing revisions are
-independently validatable by assurance consumers.
+independently validatable by assurance consumers. The authoritative executable
+copy SHALL be checked in at
+`schemas/graph-quality-observation-v1.schema.json`; the listing below documents
+that file and SHALL remain semantically equivalent to it.
 
 ## Schema
 
@@ -121,7 +124,7 @@ independently validatable by assurance consumers.
           "properties": {
             "languages": {
               "type": "array",
-              "items": { "$ref": "#/$defs/census_item" }
+              "items": { "$ref": "#/$defs/language_census_item" }
             },
             "node_kinds": {
               "type": "array",
@@ -302,7 +305,30 @@ independently validatable by assurance consumers.
       "properties": {
         "dimension": { "$ref": "#/$defs/dimension" },
         "key": { "type": "string", "minLength": 1 }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "dimension": { "const": "overall" } } },
+          "then": { "properties": { "key": { "const": "overall" } } }
+        },
+        {
+          "if": { "properties": { "dimension": { "const": "language" } } },
+          "then": {
+            "properties": {
+              "key": { "enum": ["rust", "typescript", "tsx", "python", "mixed"] }
+            }
+          }
+        }
+      ]
+    },
+    "language_census_item": {
+      "type": "object",
+      "required": ["key", "count"],
+      "properties": {
+        "key": { "enum": ["rust", "typescript", "tsx", "python", "mixed"] },
+        "count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
     },
     "census_item": {
       "type": "object",
@@ -338,7 +364,11 @@ independently validatable by assurance consumers.
             "true_positive": { "type": "integer", "minimum": 0 },
             "false_positive": { "type": "integer", "minimum": 0 },
             "false_negative": { "type": "integer", "minimum": 0 },
-            "true_negative": { "type": "integer", "minimum": 0 }
+            "true_negative": {
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "description": "null when the scorer declares no true-negative population"
+            }
           }
         }
       ]

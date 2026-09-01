@@ -1,11 +1,12 @@
 ---
 type: index
-title: "Measurement"
-description: "Index of artifacts in this directory."
+title: "Assurance"
+description: "Governed MeasurementPlans for quire-code-rs."
 ---
 
-# Measurement
+# Assurance
 
 ## Contents
 
 * [MP-001: Governed graph-quality observation](./MP-001-graph-quality-observation.md)
+

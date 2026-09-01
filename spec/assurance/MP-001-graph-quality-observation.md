@@ -66,3 +66,4 @@ negatives so the reason for missing recovery stays inspectable.
 Non-measured states carry no confusion matrices or recall. Corpus defects,
 producer failures, exclusions, and other limitations remain attached to the raw
 observation rather than being normalized into zeros.
+

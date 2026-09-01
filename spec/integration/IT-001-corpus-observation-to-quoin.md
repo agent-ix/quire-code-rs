@@ -24,8 +24,9 @@ counts.
 
 The producer under test invokes the real `extract_tree` binary and reads the real
 quire-corpus population and truth files from the filesystem. Quire validates
-MP-001 and the observation schema. Quoin accepts and renders the resulting
-engine-agnostic record through its evidence and report surfaces.
+MP-001, and the producer validates the raw observation against its checked-in
+schema. Quoin accepts and renders the resulting MeasurementCollection v2
+through its measurement and report surfaces.
 
 ## Preconditions
 
@@ -40,7 +41,7 @@ available.
 - Pinned complete-graph corpus manifest, sources, truth records, and population
   declaration.
 - Built `extract_tree` and graph-quality producer binaries.
-- Active [MP-001](../measurement/MP-001-graph-quality-observation.md).
+- Active [MP-001](../assurance/MP-001-graph-quality-observation.md).
 - A deterministic output directory relative to the run root.
 
 ## Test Procedure
@@ -54,8 +55,8 @@ available.
 3. Validate each observation against the versioned JSON Schema.
    - IT-001-SC-03: both observations validate and name MP-001's exact definition
      version.
-4. Submit one observation and its raw scorer output to a real temporary Quoin
-   evidence store.
+4. Submit the emitted MeasurementCollection v2 to a real temporary Quoin
+   measurement store.
    - IT-001-SC-04: Quoin accepts the record and retains its content digest and
      producer tuple.
 5. Render Quoin's report for the observation.

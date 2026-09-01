@@ -25,12 +25,15 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The `extract_tree` producer and its declared producer-contract version.
 - Exact parser grammar revisions and a canonical extraction-configuration digest.
 - Source, extractor, scorer, and corpus revisions.
-- Active [MP-001](../measurement/MP-001-graph-quality-observation.md).
+- Active [MP-001](../assurance/MP-001-graph-quality-observation.md).
 - An output directory for raw scorer output and the canonical observation.
 
 ## Outputs
 
-- One schema-valid graph-quality observation on standard output.
+- One Quoin MeasurementCollection v2 on standard output. Its `rawEvidence`
+  contains the schema-valid graph-quality observation and the complete parsed
+  scorer report; its typed `observations` expose precision, recall, unresolved,
+  and ambiguous values without transcribing away their dimensions.
 - Raw scorer output at the relative path and digest named by the observation.
 - Non-zero process status when the population is not measured, validation fails,
   or a wrong heuristic edge violates the decision rule.
@@ -38,6 +41,9 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 ## Behavior
 
 - When scoring begins, the producer SHALL validate MP-001 with Quire.
+- The producer SHALL invoke the corpus's real `score.py --json` scorer with the
+  real release `extract_tree` binary; neither scorer truth comparison nor
+  extractor behavior may be reimplemented in the measurement producer.
 - The producer SHALL match MP-001's definition version to the observation
   contract.
 - For a supported non-empty readable population, the producer SHALL compute the
@@ -63,6 +69,12 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL retain the raw scorer output used to derive the observation.
 - The producer SHALL write dimension collections in canonical sorted order.
 - The producer SHALL derive the observation identifier from canonical content.
+- The producer SHALL use a caller-supplied pinned collection timestamp and
+  toolchain identities so Quoin's required envelope remains deterministic.
+- The producer SHALL emit a Quoin v2 verification-stack attestation containing
+  full clean source revisions, release executable and lock digests, pinned
+  Node/Rust/Python identities, and content digests for the schema, plan,
+  configuration, and retained raw scorer output.
 
 ## Constraints
 
@@ -91,6 +103,6 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
   extractor output, [FR-011](./FR-011-graph-quality-observation-schema.md)
   supplies the record contract, [NFR-004](../non-functional/NFR-004-conservative-resolution-precision.md)
   supplies the precision invariant, and
-  [MP-001](../measurement/MP-001-graph-quality-observation.md) governs collection
+  [MP-001](../assurance/MP-001-graph-quality-observation.md) governs collection
   and interpretation.
 - **Downstream**: Quoin validates, retains, and reports the emitted observation.

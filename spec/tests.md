@@ -48,7 +48,7 @@ is checkable by extracting this repository with the library it specifies.
 
 ### User Story Coverage
 
-| User Story | Trace to FR | Test/Validation | Coverage Status |
+| User Story | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
 | US-001 Index a code layer | FR-001, FR-002, FR-003, FR-006, FR-007, FR-009 | TC-001..TC-019, TC-033..TC-043, TC-078..TC-086 | ✅ Complete |
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
@@ -61,7 +61,7 @@ Every requirement, its acceptance criteria, and the test cases that discharge
 them. `Status` is ✅ only while `quire coverage` reports the row's
 targets backed; a row whose test is unwritten carries 🚧 and says so.
 
-| Functional Req | Acceptance Criteria | Test Cases | Status |
+| Functional Req | Acceptance Criteria | Test Cases | Coverage Status |
 |---|---|---|---|
 | FR-001 | FR-001-AC-1, FR-001-AC-2, FR-001-AC-3, FR-001-AC-8, FR-001-AC-4, FR-001-AC-5, FR-001-AC-6, FR-001-AC-7, FR-001-AC-9, FR-001-AC-10 | TC-001, TC-002, TC-003, TC-004, TC-005, TC-006, TC-007, TC-076, TC-089, TC-090, TC-091, TC-100 | ✅ |
 | FR-002 | FR-002-AC-1, FR-002-AC-2, FR-002-AC-3, FR-002-AC-4, FR-002-AC-5, FR-002-AC-6, FR-002-AC-7 | TC-008, TC-009, TC-010, TC-011, TC-012, TC-013, TC-014 | ✅ |

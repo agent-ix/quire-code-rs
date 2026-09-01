@@ -216,7 +216,7 @@ targets name the owning repository.
 
 | ID | Artifact |
 |---|---|
-| [MP-001](./measurement/MP-001-graph-quality-observation.md) | Governing decision use, population, collection, and interpretation for graph-quality observations |
+| [MP-001](./assurance/MP-001-graph-quality-observation.md) | Governing decision use, population, collection, and interpretation for graph-quality observations |
 | [IT-001](./integration/IT-001-corpus-observation-to-quoin.md) | Real corpus-to-producer-to-Quoin evidence path |
 
 ## 6. Architecture Decisions
