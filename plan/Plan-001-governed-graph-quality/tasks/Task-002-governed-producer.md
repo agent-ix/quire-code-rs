@@ -2,7 +2,7 @@
 id: Task-002
 title: "Governed graph-quality producer"
 type: Task
-status: not_started
+status: done
 track: A
 priority: P0
 relationships:
@@ -41,9 +41,9 @@ retention, and Quoin v2 envelope.
 
 ## Subtasks
 
-- [ ] Parse and validate every explicit revision, digest, grammar, timestamp, and toolchain pin.
-- [ ] Validate MP-001 with Quire and invoke real score.py with the release extractor.
-- [ ] Retain raw bytes and derive typed dimensioned Quoin observations.
+- [x] Parse and validate every explicit revision, digest, grammar, timestamp, and toolchain pin.
+- [x] Validate MP-001 with Quire and invoke real score.py with the release extractor.
+- [x] Retain raw bytes and derive typed dimensioned Quoin observations.
 
 ## Deliverables
 
@@ -53,4 +53,3 @@ retention, and Quoin v2 envelope.
 ## Notes
 
 - The scorer is authoritative; no truth comparison is duplicated here.
-

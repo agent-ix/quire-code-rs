@@ -44,7 +44,7 @@ is checkable by extracting this repository with the library it specifies.
 |---|---|---|---|
 | StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002 | TC-001, TC-038, TC-054, TC-059 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
-| StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | 🚧 Pending |
+| StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
 ### User Story Coverage
 
@@ -53,7 +53,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-001 Index a code layer | FR-001, FR-002, FR-003, FR-006, FR-007, FR-009 | TC-001..TC-019, TC-033..TC-043, TC-078..TC-086 | ✅ Complete |
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
-| US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | 🚧 Pending |
+| US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -77,15 +77,15 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | NFR-003 | NFR-003-AC-1, NFR-003-AC-2, NFR-003-AC-3, NFR-003-AC-4, NFR-003-AC-5 | TC-062, TC-063, TC-064, TC-065, TC-077 | ✅ |
 | NFR-004 | NFR-004-AC-1, NFR-004-AC-2, NFR-004-AC-3, NFR-004-AC-4, NFR-004-AC-5 | TC-066, TC-067, TC-068, TC-069, TC-070 | ✅ |
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5 | TC-101, TC-102, TC-103, TC-104, TC-105 | ✅ |
-| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | 🚧 |
-| FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | 🚧 |
-| NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | 🚧 |
+| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
+| FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
+| NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
 
 ### Measurement Plan Coverage
 
 | Measurement Plan | Verification | Test Cases | Coverage Status |
 |---|---|---|---|
-| MP-001 | Active plan validates; complete census, two repetitions, zero-wrong-edge decision, independent recall, and non-measured handling are enforced | TC-129 | 🚧 Pending |
+| MP-001 | Active plan validates; complete census, two repetitions, zero-wrong-edge decision, independent recall, and non-measured handling are enforced | TC-129 | ✅ Complete |
 
 ---
 
@@ -200,33 +200,33 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-105 | A symbolic link is not followed | Integration | P1 | FR-010-AC-5 | ✅ |
 | TC-106 | A self-edge is never emitted | Unit | P1 | FR-006-AC-7 | ✅ |
 | TC-107 | One declaration shape resolves at one tier in every language | Integration | P1 | FR-008-AC-13 | ✅ |
-| TC-108 | Supported population retains all dimensioned quality observations | Integration | P0 | StR-003-VC-1, US-004-EX-1 | 🚧 |
-| TC-109 | Non-measured populations cannot become measured zeros | Property | P0 | StR-003-VC-2, US-004-EX-2 | 🚧 |
-| TC-110 | Measured observation pins the complete producer tuple | Unit | P0 | StR-003-VC-3 | 🚧 |
-| TC-111 | Raw output, schema, and MeasurementPlan validate together | Integration | P0 | StR-003-VC-4 | 🚧 |
-| TC-112 | Valid measured observation passes schema version 1 | Unit | P0 | FR-011-AC-1 | 🚧 |
-| TC-113 | Measured record covers all four dimensions and overall | Property | P0 | FR-011-AC-2 | 🚧 |
-| TC-114 | Population-state conditional schema rejects result lies | Property | P0 | FR-011-AC-3 | 🚧 |
-| TC-115 | Missing or malformed provenance and plan identities fail | Property | P0 | FR-011-AC-4 | 🚧 |
-| TC-116 | Raw scorer output path and digest are strict | Property | P0 | FR-011-AC-5 | 🚧 |
-| TC-117 | Closed vocabulary and unknown-field rejection | Property | P0 | FR-011-AC-6 | 🚧 |
-| TC-118 | Real supported corpus emits a governed observation | Integration | P0 | FR-012-AC-1 | 🚧 |
-| TC-119 | Producer emits exact census and four-dimension results | Integration | P0 | FR-012-AC-2 | 🚧 |
-| TC-120 | Zero wrong edges and incomplete recall remain separate | Integration | P0 | FR-012-AC-3, US-004-EX-3 | 🚧 |
-| TC-121 | False-positive heuristic edge fails regardless of recall | Integration | P0 | FR-012-AC-4 | 🚧 |
-| TC-122 | Empty, unreadable, and unsupported populations fail non-measured | Property | P0 | FR-012-AC-5 | 🚧 |
-| TC-123 | Missing revision or configuration emits no observation | Property | P0 | FR-012-AC-6 | 🚧 |
-| TC-124 | Pinned repetitions produce identical record and raw digest | Integration | P0 | FR-012-AC-7 | 🚧 |
-| TC-125 | Invalid plan or observation is rejected before Quoin intake | Integration | P0 | FR-012-AC-8 | 🚧 |
-| TC-126 | Two pinned repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | 🚧 |
-| TC-127 | Filesystem order permutation changes no canonical byte | Property | P0 | NFR-005-AC-2 | 🚧 |
-| TC-128 | Record contains no host-specific or run-time identity | Static | P0 | NFR-005-AC-3 | 🚧 |
-| TC-129 | Active MeasurementPlan governs population and decision rule | Integration | P0 | MP-001 | 🚧 |
-| TC-130 | Observation schema is engine-agnostic JSON data | Static | P0 | FR-011-CON-1 | 🚧 |
-| TC-131 | Observation validation needs no extractor library | Integration | P0 | FR-011-CON-2 | 🚧 |
-| TC-132 | Recall has no threshold that relaxes precision | Static | P0 | FR-012-CON-1 | 🚧 |
-| TC-133 | Measurement producer reads local filesystem inputs only | Static | P0 | FR-012-CON-2 | 🚧 |
-| TC-134 | Measurement producer has no network dependency or request | Static | P0 | FR-012-CON-3 | 🚧 |
+| TC-108 | Supported population retains all dimensioned quality observations | Integration | P0 | StR-003-VC-1, US-004-EX-1 | ✅ |
+| TC-109 | Non-measured populations cannot become measured zeros | Property | P0 | StR-003-VC-2, US-004-EX-2 | ✅ |
+| TC-110 | Measured observation pins the complete producer tuple | Unit | P0 | StR-003-VC-3 | ✅ |
+| TC-111 | Raw output, schema, and MeasurementPlan validate together | Integration | P0 | StR-003-VC-4 | ✅ |
+| TC-112 | Valid measured observation passes schema version 1 | Unit | P0 | FR-011-AC-1 | ✅ |
+| TC-113 | Measured record covers all four dimensions and overall | Property | P0 | FR-011-AC-2 | ✅ |
+| TC-114 | Population-state conditional schema rejects result lies | Property | P0 | FR-011-AC-3 | ✅ |
+| TC-115 | Missing or malformed provenance and plan identities fail | Property | P0 | FR-011-AC-4 | ✅ |
+| TC-116 | Raw scorer output path and digest are strict | Property | P0 | FR-011-AC-5 | ✅ |
+| TC-117 | Closed vocabulary and unknown-field rejection | Property | P0 | FR-011-AC-6 | ✅ |
+| TC-118 | Real supported corpus emits a governed observation | Integration | P0 | FR-012-AC-1 | ✅ |
+| TC-119 | Producer emits exact census and four-dimension results | Integration | P0 | FR-012-AC-2 | ✅ |
+| TC-120 | Zero wrong edges and incomplete recall remain separate | Integration | P0 | FR-012-AC-3, US-004-EX-3 | ✅ |
+| TC-121 | False-positive heuristic edge fails regardless of recall | Integration | P0 | FR-012-AC-4 | ✅ |
+| TC-122 | Empty, unreadable, and unsupported populations fail non-measured | Property | P0 | FR-012-AC-5 | ✅ |
+| TC-123 | Missing revision or configuration emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
+| TC-124 | Pinned repetitions produce identical record and raw digest | Integration | P0 | FR-012-AC-7 | ✅ |
+| TC-125 | Invalid plan or observation is rejected before Quoin intake | Integration | P0 | FR-012-AC-8 | ✅ |
+| TC-126 | Two pinned repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | ✅ |
+| TC-127 | Filesystem order permutation changes no canonical byte | Property | P0 | NFR-005-AC-2 | ✅ |
+| TC-128 | Record contains no host-specific or run-time identity | Static | P0 | NFR-005-AC-3 | ✅ |
+| TC-129 | Active MeasurementPlan governs population and decision rule | Integration | P0 | MP-001 | ✅ |
+| TC-130 | Observation schema is engine-agnostic JSON data | Static | P0 | FR-011-CON-1 | ✅ |
+| TC-131 | Observation validation needs no extractor library | Integration | P0 | FR-011-CON-2 | ✅ |
+| TC-132 | Recall has no threshold that relaxes precision | Static | P0 | FR-012-CON-1 | ✅ |
+| TC-133 | Measurement producer reads local filesystem inputs only | Static | P0 | FR-012-CON-2 | ✅ |
+| TC-134 | Measurement producer has no network dependency or request | Static | P0 | FR-012-CON-3 | ✅ |
 
 ---
 
@@ -260,9 +260,9 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 
 | Integration ID | Purpose | Target Project | Type | Test Cases | Status |
 |---|---|---|---|---|---|
-| INT-001 | Read pinned population and truth records | quire-corpus | service | TC-118, TC-119, TC-124 | 🚧 |
-| INT-002 | Validate MP-001 and authored observation contract | quire-rs | service | TC-111, TC-125, TC-129 | 🚧 |
-| INT-003 | Retain and render engine-agnostic observations | quoin | service | TC-111, TC-125 | 🚧 |
+| INT-001 | Read pinned population and truth records | quire-corpus | service | TC-118, TC-119, TC-124 | ✅ |
+| INT-002 | Validate MP-001 and authored observation contract | quire-rs | service | TC-111, TC-125, TC-129 | ✅ |
+| INT-003 | Retain and render engine-agnostic observations | quoin | service | TC-111, TC-125 | ✅ |
 
 ### Integration Test Details
 

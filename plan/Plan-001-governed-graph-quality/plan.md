@@ -26,17 +26,17 @@ relationships:
 
 ### Stakeholder and user requirements
 
-- [ ] **StR-003 / US-004**: turn extractor quality into inspectable governed evidence without converting absence into success.
+- [x] **StR-003 / US-004**: turn extractor quality into inspectable governed evidence without converting absence into success.
 
 ### Functional requirements
 
-- [ ] **FR-011**: ship a strict, versioned, engine-agnostic raw-observation schema.
-- [ ] **FR-012**: run the real scorer/extractor and emit a Quoin v2 collection with retained raw evidence.
+- [x] **FR-011**: ship a strict, versioned, engine-agnostic raw-observation schema.
+- [x] **FR-012**: run the real scorer/extractor and emit a Quoin v2 collection with retained raw evidence.
 
 ### Non-functional and governance requirements
 
-- [ ] **NFR-005**: identical pinned inputs produce identical canonical bytes.
-- [ ] **MP-001 / IT-001**: apply the zero-wrong-edge decision and prove real Quire/Quoin acceptance.
+- [x] **NFR-005**: identical pinned inputs produce identical canonical bytes.
+- [x] **MP-001 / IT-001**: apply the zero-wrong-edge decision and prove real Quire/Quoin acceptance.
 
 ## Dependency Graph
 
@@ -101,14 +101,13 @@ directly; its rawEvidence retains the custom graph observation and scorer JSON.
 
 | Task | Track | Owns (references) | Verified by (verifies) | Status |
 |---|---|---|---|---|
-| Task-001 | A | FR-011 | TC-112..TC-117, TC-130..TC-131 | in_progress |
-| Task-002 | A | FR-012 | TC-108..TC-111, TC-118..TC-123, TC-132..TC-134 | not_started |
-| Task-003 | Gate | NFR-005, MP-001 | TC-124..TC-129 | not_started |
-| Task-004 | C | IT-001 | TC-111, TC-118, TC-124, TC-125, TC-129 | not_started |
+| Task-001 | A | FR-011 | TC-112..TC-117, TC-130..TC-131 | done |
+| Task-002 | A | FR-012 | TC-108..TC-111, TC-118..TC-123, TC-132..TC-134 | done |
+| Task-003 | Gate | NFR-005, MP-001 | TC-124..TC-129 | done |
+| Task-004 | C | IT-001 | TC-111, TC-118, TC-124, TC-125, TC-129 | done |
 
 ## Coordination Rules
 
 The JSON schema is frozen before producer mapping begins. The binary never
 reimplements scorer truth logic. Real ecosystem intake starts only after the
 local precision and byte-repeatability gate is green.
-

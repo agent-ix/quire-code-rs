@@ -2,7 +2,7 @@
 id: Task-003
 title: "Failure and determinism gates"
 type: Task
-status: not_started
+status: done
 track: Gate
 priority: P0
 relationships:
@@ -35,9 +35,9 @@ plan enforcement before external intake.
 
 ## Subtasks
 
-- [ ] Exercise empty, unsupported, unreadable, malformed-pin, and invalid-plan cases.
-- [ ] Prove false positives fail independently from recall.
-- [ ] Prove reordered identical populations serialize byte-for-byte identically.
+- [x] Exercise empty, unsupported, unreadable, malformed-pin, and invalid-plan cases.
+- [x] Prove false positives fail independently from recall.
+- [x] Prove reordered identical populations serialize byte-for-byte identically.
 
 ## Deliverables
 
@@ -46,4 +46,3 @@ plan enforcement before external intake.
 ## Notes
 
 - This is the quality gate for Task-004.
-

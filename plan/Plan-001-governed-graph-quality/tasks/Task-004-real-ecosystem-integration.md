@@ -2,7 +2,7 @@
 id: Task-004
 title: "Real ecosystem integration"
 type: Task
-status: not_started
+status: done
 track: C
 priority: P0
 relationships:
@@ -31,8 +31,8 @@ Quire, and record/report the result with a real Quoin CLI and temporary store.
 
 ## Subtasks
 
-- [ ] Add a gated real-dependency integration harness with no mocked I/O or subprocess.
-- [ ] Prove Quoin retains and renders every dimension plus raw evidence identity.
+- [x] Add a gated real-dependency integration harness with no mocked I/O or subprocess.
+- [x] Prove Quoin retains and renders every dimension plus raw evidence identity.
 
 ## Deliverables
 
@@ -41,4 +41,3 @@ Quire, and record/report the result with a real Quoin CLI and temporary store.
 ## Notes
 
 - Local paths are test inputs only and never enter emitted evidence.
-

@@ -2,7 +2,7 @@
 id: Task-001
 title: "Versioned observation contract"
 type: Task
-status: in_progress
+status: done
 track: A
 priority: P0
 relationships:
@@ -35,9 +35,9 @@ content identity, and validation needed before any process orchestration.
 
 ## Subtasks
 
-- [ ] Check in and compile the schema without HTTP/file resolvers.
-- [ ] Define closed population, dimension, provenance, and result types.
-- [ ] Validate semantic invariants JSON Schema cannot express alone.
+- [x] Check in and compile the schema without HTTP/file resolvers.
+- [x] Define closed population, dimension, provenance, and result types.
+- [x] Validate semantic invariants JSON Schema cannot express alone.
 
 ## Deliverables
 
@@ -48,4 +48,3 @@ content identity, and validation needed before any process orchestration.
 ## Notes
 
 - True-negative remains null when the scorer owns no negative population.
-
