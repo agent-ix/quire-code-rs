@@ -32,8 +32,8 @@ through its measurement and report surfaces.
 
 The quire-code-rs source, quire-corpus checkout, extraction configuration, parser
 grammars, scorer, Quire, and Quoin are available locally at recorded exact
-revisions. The selected corpus fixture is non-empty, readable, and includes truth
-for all required dimensions. An empty temporary output and Quoin store are
+revisions. The complete corpus is non-empty, readable, and includes truth for
+all required dimensions. An empty temporary output and Quoin store are
 available.
 
 ## Inputs

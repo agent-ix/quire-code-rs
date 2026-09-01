@@ -44,12 +44,20 @@ tier. Files outside the supported language set remain visible in the population
 state but do not become true negatives. An unreadable supported file invalidates
 measurement of the whole declared population.
 
+The truth-population census uses the scorer's recovered plus missing truth
+records, excluding producer-only false positives. Unresolved counts are the
+extractor's reported unresolved calls in the corpus's authored ambiguous-call
+cases; ambiguous counts are those cases' expected ambiguous call sites. Each is
+an exact marginal census of `call_site` / `calls` / `unresolved`, stratified by
+the case language.
+
 ## Collection Procedure
 
 1. Record the exact extractor, producer contract, parser grammar, configuration,
    source, corpus, scorer, and measurement-definition revisions.
 2. Run the corpus scorer twice with those pinned inputs in an isolated filesystem
-   environment.
+   environment, once after reversing tracked-file creation order. Reject either
+   report unless its scored-case count equals its complete case-digest map.
 3. Retain each raw scorer output by relative path and content digest.
 4. Compare the two canonical observation records byte for byte.
 5. Validate the record against
@@ -66,4 +74,3 @@ negatives so the reason for missing recovery stays inspectable.
 Non-measured states carry no confusion matrices or recall. Corpus defects,
 producer failures, exclusions, and other limitations remain attached to the raw
 observation rather than being normalized into zeros.
-

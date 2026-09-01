@@ -22,6 +22,15 @@ pub const METRIC: &str = "graph_quality";
 type LanguageUnresolvedCounts = BTreeMap<String, (u64, u64)>;
 type UnresolvedCounts = (u64, u64, LanguageUnresolvedCounts);
 
+const GRAMMAR_LANGUAGES: [&str; 4] = ["python", "rust", "tsx", "typescript"];
+const RESULT_DIMENSIONS: [&str; 5] = [
+    "overall",
+    "language",
+    "node_kind",
+    "relation_kind",
+    "resolver_tier",
+];
+
 #[derive(Debug, Error)]
 pub enum MeasurementError {
     #[error("schema is invalid: {0}")]
@@ -71,7 +80,8 @@ pub struct Population {
 pub struct CollectionInputs {
     pub timestamp: String,
     pub lock_digest: String,
-    pub executable_digest: String,
+    pub producer_executable_digest: String,
+    pub extractor_executable_digest: String,
     pub schema_digest: String,
     pub plan_digest: String,
     pub node_version: String,
@@ -180,6 +190,18 @@ pub fn validate_observation(value: &Value) -> Result<(), MeasurementError> {
             "observation_id mismatch: expected {expected}"
         )));
     }
+    let grammar_languages = value
+        .pointer("/producer/parser_grammars")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|grammar| grammar.get("language").and_then(Value::as_str))
+        .collect::<BTreeSet<_>>();
+    if grammar_languages != BTreeSet::from(GRAMMAR_LANGUAGES) {
+        return Err(MeasurementError::InvalidObservation(
+            "parser_grammars must pin exactly python, rust, tsx, and typescript".into(),
+        ));
+    }
     for pointer in [
         "/population/census/languages",
         "/population/census/node_kinds",
@@ -195,29 +217,39 @@ pub fn validate_observation(value: &Value) -> Result<(), MeasurementError> {
         }
     }
     if value.pointer("/population/state") == Some(&Value::String("measured".into())) {
-        let matrices = value
-            .pointer("/results/confusion_matrices")
-            .and_then(Value::as_array)
-            .ok_or_else(|| {
-                MeasurementError::InvalidObservation(
-                    "measured record has no confusion matrices".into(),
-                )
-            })?;
-        let dimensions: BTreeSet<_> = matrices
-            .iter()
-            .filter_map(|item| item.get("dimension").and_then(Value::as_str))
-            .collect();
-        for required in [
-            "overall",
-            "language",
-            "node_kind",
-            "relation_kind",
-            "resolver_tier",
+        for (name, pointer) in [
+            ("confusion matrices", "/results/confusion_matrices"),
+            ("unresolved counts", "/results/unresolved"),
+            ("ambiguous counts", "/results/ambiguous"),
+            ("recall", "/results/recall"),
         ] {
-            if !dimensions.contains(required) {
-                return Err(MeasurementError::InvalidObservation(format!(
-                    "confusion matrices omit {required}"
-                )));
+            let items = value
+                .pointer(pointer)
+                .and_then(Value::as_array)
+                .ok_or_else(|| {
+                    MeasurementError::InvalidObservation(format!("measured record has no {name}"))
+                })?;
+            let dimensions: BTreeSet<_> = items
+                .iter()
+                .filter_map(|item| item.get("dimension").and_then(Value::as_str))
+                .collect();
+            for required in RESULT_DIMENSIONS {
+                if !dimensions.contains(required) {
+                    return Err(MeasurementError::InvalidObservation(format!(
+                        "{name} omit {required}"
+                    )));
+                }
+            }
+            for item in items {
+                if item.get("dimension").and_then(Value::as_str) == Some("language")
+                    && !item.get("key").and_then(Value::as_str).is_some_and(|key| {
+                        matches!(key, "rust" | "typescript" | "tsx" | "python" | "mixed")
+                    })
+                {
+                    return Err(MeasurementError::InvalidObservation(format!(
+                        "{name} contain an unknown language key"
+                    )));
+                }
             }
         }
     }
@@ -231,7 +263,7 @@ pub fn build_quoin_collection(
     inputs: &CollectionInputs,
 ) -> Result<Value, MeasurementError> {
     validate_observation(observation)?;
-    let observations = quoin_observations(observation)?;
+    let observations = quoin_observations(observation, scorer_report)?;
     let collection_id = observation["observation_id"]
         .as_str()
         .unwrap_or_default()
@@ -255,7 +287,7 @@ pub fn build_quoin_collection(
         "verificationStack": {
             "schemaVersion": "verification-stack-attestation-v1",
             "lockDigest": inputs.lock_digest,
-            "executableDigest": inputs.executable_digest,
+            "executableDigest": inputs.producer_executable_digest,
             "buildProfile": "release",
             "toolchains": { "node": inputs.node_version, "rust": inputs.rust_version, "python": inputs.python_version },
             "sources": {
@@ -265,6 +297,7 @@ pub fn build_quoin_collection(
             "capabilities": ["graph-quality-observation-v1", "quire-corpus-scorer-v1"],
             "artifacts": {
                 "configuration": provenance.configuration_digest,
+                "release-extractor": inputs.extractor_executable_digest,
                 "measurement-plan": inputs.plan_digest,
                 "observation-schema": inputs.schema_digest,
                 "raw-scorer-output": observation["raw_scorer_output"]["digest"]
@@ -287,31 +320,14 @@ fn observation_id(value: &Value) -> Result<String, MeasurementError> {
 }
 
 fn census_from(report: &Value) -> Result<Value, MeasurementError> {
-    let cases = report
-        .get("cases")
-        .and_then(Value::as_object)
-        .ok_or_else(|| MeasurementError::InvalidScorerReport("missing cases object".into()))?;
-    let mut languages = BTreeMap::<String, u64>::new();
-    let mut node_kinds = BTreeMap::<String, u64>::new();
-    for (name, case) in cases {
-        let language = name.rsplit('/').next().unwrap_or("mixed");
-        *languages.entry(language.to_string()).or_default() += 1;
-        if let Some(objects) = case.get("kind_census").and_then(Value::as_object) {
-            for (object_type, kinds) in objects {
-                let count = kinds
-                    .as_object()
-                    .map(|values| values.values().filter_map(Value::as_u64).sum())
-                    .unwrap_or(0);
-                *node_kinds.entry(object_type.clone()).or_default() += count;
-            }
-        }
-    }
     let confusion = report
         .get("confusion")
         .and_then(Value::as_object)
         .ok_or_else(|| MeasurementError::InvalidScorerReport("missing confusion object".into()))?;
-    let relation = axis_census(confusion.get("relation"));
-    let tier = axis_census(confusion.get("tier"));
+    let languages = truth_axis_census(confusion.get("language"));
+    let node_kinds = truth_axis_census(confusion.get("object_type"));
+    let relation = truth_axis_census(confusion.get("relation"));
+    let tier = truth_axis_census(confusion.get("tier"));
     Ok(json!({
         "languages": census_items(languages),
         "node_kinds": census_items(node_kinds),
@@ -320,13 +336,15 @@ fn census_from(report: &Value) -> Result<Value, MeasurementError> {
     }))
 }
 
-fn axis_census(axis: Option<&Value>) -> BTreeMap<String, u64> {
+fn truth_axis_census(axis: Option<&Value>) -> BTreeMap<String, u64> {
     axis.and_then(Value::as_object)
         .map(|entries| {
             entries
                 .iter()
                 .map(|(key, value)| {
-                    let count = ["tp", "fp", "fn"]
+                    // The population is the declared truth set. Producer-only
+                    // false positives are results, never population members.
+                    let count = ["tp", "fn"]
                         .iter()
                         .filter_map(|field| value.get(field).and_then(Value::as_u64))
                         .sum();
@@ -435,7 +453,10 @@ fn dimension_counts(
 ) -> Vec<Value> {
     let mut out = vec![
         json!({"dimension":"overall", "key":"overall", "count":total}),
-        json!({"dimension":"node_kind", "key":"unattributed", "count":total}),
+        // `ambiguous_call_sites` is a homogeneous truth population: each item
+        // is a call site, concerns a `calls` relation, and was left unresolved.
+        // These are exact marginal strata, not inferred producer node counts.
+        json!({"dimension":"node_kind", "key":"call_site", "count":total}),
         json!({"dimension":"relation_kind", "key":"calls", "count":total}),
         json!({"dimension":"resolver_tier", "key":"unresolved", "count":total}),
     ];
@@ -444,6 +465,20 @@ fn dimension_counts(
     }
     out.sort_by_key(dimension_sort_key);
     out
+}
+
+/// Evaluate only the governed precision rule. Scorer process status and recall
+/// are deliberately excluded because the plan gives recall no pass threshold.
+pub fn precision_decision_passed(report: &Value) -> Result<bool, MeasurementError> {
+    let false_positives = report
+        .pointer("/confusion/axis_kind/edge/fp")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| {
+            MeasurementError::InvalidScorerReport(
+                "missing edge false-positive count for precision decision".into(),
+            )
+        })?;
+    Ok(false_positives == 0)
 }
 
 fn dimension_sort_key(value: &Value) -> (String, String) {
@@ -477,7 +512,10 @@ fn require_sorted_unique(items: &[Value], pointer: &str) -> Result<(), Measureme
     Ok(())
 }
 
-fn quoin_observations(observation: &Value) -> Result<Vec<Value>, MeasurementError> {
+fn quoin_observations(
+    observation: &Value,
+    scorer_report: Option<&Value>,
+) -> Result<Vec<Value>, MeasurementError> {
     let state = observation
         .pointer("/population/state")
         .and_then(Value::as_str)
@@ -516,7 +554,36 @@ fn quoin_observations(observation: &Value) -> Result<Vec<Value>, MeasurementErro
                 "count",
             ));
         }
+        let tp = matrix["true_positive"].as_u64().unwrap_or(0);
+        let fp = matrix["false_positive"].as_u64().unwrap_or(0);
+        if tp + fp > 0 {
+            out.push(quoin_value(
+                "precision",
+                matrix,
+                json!(tp as f64 / (tp + fp) as f64),
+                "fraction",
+                "ratio",
+            ));
+        }
     }
+    let scorer_report = scorer_report.ok_or_else(|| {
+        MeasurementError::InvalidScorerReport("measured collection has no scorer report".into())
+    })?;
+    let decision = precision_decision_passed(scorer_report)?;
+    let edge_tp = scorer_report
+        .pointer("/confusion/axis_kind/edge/tp")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let edge_fp = scorer_report
+        .pointer("/confusion/axis_kind/edge/fp")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    out.push(json!({
+        "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
+        "state": "measured", "value": if decision { 1 } else { 0 }, "unit": "decision", "shape": "scalar",
+        "population": {"examined": edge_tp + edge_fp, "matched": edge_tp, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
+        "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall"}
+    }));
     for recall in &recalls {
         out.push(quoin_value(
             "recall",
@@ -555,11 +622,19 @@ fn quoin_observations(observation: &Value) -> Result<Vec<Value>, MeasurementErro
 
 fn quoin_value(measure: &str, item: &Value, value: Value, unit: &str, shape: &str) -> Value {
     let tp = item.get("true_positive").and_then(Value::as_u64);
+    let fp = item.get("false_positive").and_then(Value::as_u64);
     let fn_count = item.get("false_negative").and_then(Value::as_u64);
+    let recovered = item.get("recovered").and_then(Value::as_u64);
+    let expected = item.get("expected").and_then(Value::as_u64);
+    let (examined, matched) = match measure {
+        "precision" => (tp.zip(fp).map(|(a, b)| a + b), tp),
+        "recall" => (expected, recovered),
+        _ => (tp.zip(fn_count).map(|(a, b)| a + b), tp),
+    };
     json!({
         "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
         "state": "measured", "value": value, "unit": unit, "shape": shape,
-        "population": {"examined": tp.zip(fn_count).map(|(a,b)| a+b), "matched": tp, "complete": true, "identity": observation_population_identity(item)},
+        "population": {"examined": examined, "matched": matched, "complete": true, "identity": observation_population_identity(item)},
         "dimensions": {"measure":measure, "dimension":item["dimension"], "key":item["key"]}
     })
 }
@@ -580,7 +655,8 @@ mod tests {
                 "language":{"rust":{"tp":4,"fp":0,"fn":1},"python":{"tp":4,"fp":0,"fn":1}},
                 "object_type":{"code_function":{"tp":2,"fp":0,"fn":1}},
                 "relation":{"calls":{"tp":3,"fp":0,"fn":1}},
-                "tier":{"receiver-typed":{"tp":3,"fp":0,"fn":1}}
+                "tier":{"receiver-typed":{"tp":3,"fp":0,"fn":1}},
+                "axis_kind":{"edge":{"tp":3,"fp":0,"fn":1},"node":{"tp":5,"fp":0,"fn":1}}
             },
             "cases": {
                 "relations/a/python":{"kind_census":{"code_function":{"function":2}},"census":{"ambiguous_call_sites":{"reported":1,"expected":1}}},
@@ -596,11 +672,28 @@ mod tests {
             corpus_revision: format!("sha256:{}", "c".repeat(64)),
             scorer_version: "b".repeat(40),
             configuration_digest: format!("sha256:{}", "d".repeat(64)),
-            parser_grammars: vec![GrammarRevision {
-                language: "rust".into(),
-                grammar: "tree-sitter-rust".into(),
-                revision: "0.24.2".into(),
-            }],
+            parser_grammars: vec![
+                GrammarRevision {
+                    language: "python".into(),
+                    grammar: "tree-sitter-python".into(),
+                    revision: "0.25.0".into(),
+                },
+                GrammarRevision {
+                    language: "rust".into(),
+                    grammar: "tree-sitter-rust".into(),
+                    revision: "0.24.2".into(),
+                },
+                GrammarRevision {
+                    language: "tsx".into(),
+                    grammar: "tree-sitter-typescript".into(),
+                    revision: "0.23.2".into(),
+                },
+                GrammarRevision {
+                    language: "typescript".into(),
+                    grammar: "tree-sitter-typescript".into(),
+                    revision: "0.23.2".into(),
+                },
+            ],
         }
     }
 
@@ -628,6 +721,27 @@ mod tests {
                 0
             },
         }
+    }
+
+    fn collection_inputs() -> CollectionInputs {
+        CollectionInputs {
+            timestamp: "2026-08-31T00:00:00Z".into(),
+            lock_digest: format!("sha256:{}", "1".repeat(64)),
+            producer_executable_digest: format!("sha256:{}", "2".repeat(64)),
+            extractor_executable_digest: format!("sha256:{}", "3".repeat(64)),
+            schema_digest: format!("sha256:{}", "4".repeat(64)),
+            plan_digest: format!("sha256:{}", "5".repeat(64)),
+            node_version: "24.15.0".into(),
+            rust_version: "1.95.0".into(),
+            python_version: "3.14.7".into(),
+            source_remote: "local-source".into(),
+            corpus_source_revision: "b".repeat(40),
+            corpus_remote: "local-corpus".into(),
+        }
+    }
+
+    fn reseal(value: &mut Value) {
+        value["observation_id"] = Value::String(observation_id(value).unwrap());
     }
 
     // TC-112, TC-113, TC-130, TC-131 / FR-011-AC-1..2, FR-011-CON-1..2.
@@ -664,6 +778,31 @@ mod tests {
             .pointer("/results/confusion_matrices/0/true_negative")
             .unwrap()
             .is_null());
+        assert_eq!(
+            value.pointer("/population/census/node_kinds/0/count"),
+            Some(&json!(3)),
+            "truth census excludes producer-only false positives"
+        );
+        for pointer in ["/results/unresolved", "/results/ambiguous"] {
+            let items = value.pointer(pointer).unwrap().as_array().unwrap();
+            let dimensions = items
+                .iter()
+                .map(|item| item["dimension"].as_str().unwrap())
+                .collect::<BTreeSet<_>>();
+            assert_eq!(dimensions, BTreeSet::from(RESULT_DIMENSIONS));
+            for (dimension, key, count) in [
+                ("overall", "overall", 1),
+                ("language", "python", 1),
+                ("language", "rust", 0),
+                ("node_kind", "call_site", 1),
+                ("relation_kind", "calls", 1),
+                ("resolver_tier", "unresolved", 1),
+            ] {
+                assert!(items.iter().any(|item| {
+                    item["dimension"] == dimension && item["key"] == key && item["count"] == count
+                }));
+            }
+        }
     }
 
     // TC-114, TC-122 / FR-011-AC-3, FR-012-AC-5.
@@ -701,13 +840,37 @@ mod tests {
         for mutate in [
             |v: &mut Value| v["producer"]["source_revision"] = json!("short"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!("/tmp/raw.json"),
+            |v: &mut Value| v["raw_scorer_output"]["path"] = json!("../raw.json"),
             |v: &mut Value| v["producer"]["parser_grammars"][0]["language"] = json!("java"),
+            |v: &mut Value| {
+                v["measurement_plan"]["ref"] = json!("ix://agent-ix/quire-code-rs/MP-999")
+            },
             |v: &mut Value| v["surprise"] = json!(true),
         ] {
             let mut bad = good.clone();
             mutate(&mut bad);
+            reseal(&mut bad);
             assert!(validate_observation(&bad).is_err());
         }
+
+        let mut bad_language = good.clone();
+        let language = bad_language["results"]["recall"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|item| item["dimension"] == "language")
+            .unwrap();
+        language["key"] = json!("java");
+        reseal(&mut bad_language);
+        assert!(validate_observation(&bad_language).is_err());
+
+        let mut missing_dimension = good.clone();
+        missing_dimension["results"]["ambiguous"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|item| item["dimension"] != "resolver_tier");
+        reseal(&mut missing_dimension);
+        assert!(validate_observation(&missing_dimension).is_err());
     }
 
     // TC-120, TC-121, TC-128, TC-132 / FR-012-AC-3..4, NFR-005-AC-3,
@@ -722,20 +885,59 @@ mod tests {
             &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
+        assert!(precision_decision_passed(&report()).unwrap());
+        let mut wrong_edge = report();
+        wrong_edge["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
+        assert!(!precision_decision_passed(&wrong_edge).unwrap());
         assert_eq!(value.pointer("/results/recall/0/ratio"), Some(&json!(0.8)));
-        assert_eq!(
-            value.pointer("/results/confusion_matrices/0/false_positive"),
-            Some(&json!(0))
-        );
         let text = String::from_utf8(canonical_bytes(&value).unwrap()).unwrap();
         for forbidden in ["hostname", "process_id", "/Users/", "timestamp"] {
             assert!(!text.contains(forbidden));
         }
     }
 
-    // TC-124, TC-126, TC-127 / FR-012-AC-7, NFR-005-AC-1..2.
+    // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3:
+    // Quoin receives typed precision and the producer/extractor attestations
+    // retain their distinct executable identities.
     #[test]
-    fn pinned_inputs_are_byte_identical_even_when_report_maps_arrive_reordered() {
+    fn collection_exposes_precision_decision_and_both_executable_digests() {
+        let scorer = report();
+        let observation = build_observation(
+            Some(&scorer),
+            &population(PopulationState::Measured),
+            &provenance(),
+            "raw/scorer.json",
+            &format!("sha256:{}", "e".repeat(64)),
+        )
+        .unwrap();
+        let collection = build_quoin_collection(
+            &observation,
+            Some(&scorer),
+            &provenance(),
+            &collection_inputs(),
+        )
+        .unwrap();
+        assert_eq!(
+            collection.pointer("/verificationStack/executableDigest"),
+            Some(&json!(format!("sha256:{}", "2".repeat(64))))
+        );
+        assert_eq!(
+            collection.pointer("/verificationStack/artifacts/release-extractor"),
+            Some(&json!(format!("sha256:{}", "3".repeat(64))))
+        );
+        let measures = collection["observations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|item| item.pointer("/dimensions/measure").and_then(Value::as_str))
+            .collect::<BTreeSet<_>>();
+        assert!(measures.contains("precision"));
+        assert!(measures.contains("precision_decision"));
+    }
+
+    // TC-124, TC-126 / FR-012-AC-7, NFR-005-AC-1.
+    #[test]
+    fn pinned_inputs_are_byte_identical_when_report_maps_arrive_reordered() {
         let first = build_observation(
             Some(&report()),
             &population(PopulationState::Measured),

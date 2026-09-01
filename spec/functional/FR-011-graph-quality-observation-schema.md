@@ -14,379 +14,58 @@ relationships:
 
 ## Description
 
-A graph-quality observation SHALL conform to the engine-agnostic JSON Schema
-below so that population state, raw quality results, and producing revisions are
-independently validatable by assurance consumers. The authoritative executable
-copy SHALL be checked in at
-`schemas/graph-quality-observation-v1.schema.json`; the listing below documents
-that file and SHALL remain semantically equivalent to it.
+A graph-quality observation SHALL validate against the engine-agnostic JSON
+Schema at `schemas/graph-quality-observation-v1.schema.json`. That checked-in
+draft-2020-12 file is the single executable schema; this requirement defines
+the semantic invariants enforced in addition to its structural rules.
 
 ## Schema
+
+The archetype-level schema declaration points to the checked-in executable
+artifact rather than restating it:
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agent-ix.github.io/quire-code-rs/schemas/graph-quality-observation-v1.schema.json",
-  "title": "GraphQualityObservationV1",
-  "type": "object",
-  "required": [
-    "schema_version",
-    "record_type",
-    "observation_id",
-    "producer",
-    "measurement_plan",
-    "population",
-    "raw_scorer_output"
-  ],
-  "properties": {
-    "schema_version": { "const": 1 },
-    "record_type": { "const": "graph_quality_observation" },
-    "observation_id": { "$ref": "#/$defs/digest" },
-    "producer": {
-      "type": "object",
-      "required": [
-        "extractor_revision",
-        "producer_contract_version",
-        "parser_grammars",
-        "configuration_digest",
-        "source_revision",
-        "corpus_revision",
-        "scorer_version"
-      ],
-      "properties": {
-        "extractor_revision": { "$ref": "#/$defs/revision" },
-        "producer_contract_version": { "type": "integer", "minimum": 1 },
-        "parser_grammars": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "object",
-            "required": ["language", "grammar", "revision"],
-            "properties": {
-              "language": {
-                "type": "string",
-                "enum": ["rust", "typescript", "tsx", "python"]
-              },
-              "grammar": { "type": "string", "minLength": 1 },
-              "revision": { "$ref": "#/$defs/revision" }
-            },
-            "additionalProperties": false
-          }
-        },
-        "configuration_digest": { "$ref": "#/$defs/digest" },
-        "source_revision": { "$ref": "#/$defs/revision" },
-        "corpus_revision": { "$ref": "#/$defs/revision" },
-        "scorer_version": { "$ref": "#/$defs/revision" }
-      },
-      "additionalProperties": false
-    },
-    "measurement_plan": {
-      "type": "object",
-      "required": ["ref", "definition_version"],
-      "properties": {
-        "ref": {
-          "const": "ix://agent-ix/quire-code-rs/MP-001"
-        },
-        "definition_version": {
-          "const": "quire-code.graph-quality-v1"
-        }
-      },
-      "additionalProperties": false
-    },
-    "population": {
-      "type": "object",
-      "required": [
-        "state",
-        "files_seen",
-        "supported_files",
-        "unreadable_files",
-        "unsupported_files",
-        "census"
-      ],
-      "properties": {
-        "state": {
-          "type": "string",
-          "enum": ["measured", "empty", "unreadable", "unsupported"]
-        },
-        "files_seen": { "type": "integer", "minimum": 0 },
-        "supported_files": { "type": "integer", "minimum": 0 },
-        "unreadable_files": { "type": "integer", "minimum": 0 },
-        "unsupported_files": { "type": "integer", "minimum": 0 },
-        "census": {
-          "type": "object",
-          "required": [
-            "languages",
-            "node_kinds",
-            "relation_kinds",
-            "resolver_tiers"
-          ],
-          "properties": {
-            "languages": {
-              "type": "array",
-              "items": { "$ref": "#/$defs/language_census_item" }
-            },
-            "node_kinds": {
-              "type": "array",
-              "items": { "$ref": "#/$defs/census_item" }
-            },
-            "relation_kinds": {
-              "type": "array",
-              "items": { "$ref": "#/$defs/census_item" }
-            },
-            "resolver_tiers": {
-              "type": "array",
-              "items": { "$ref": "#/$defs/census_item" }
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "results": {
-      "type": "object",
-      "required": ["confusion_matrices", "unresolved", "ambiguous", "recall"],
-      "properties": {
-        "confusion_matrices": {
-          "type": "array",
-          "minItems": 4,
-          "items": { "$ref": "#/$defs/confusion_matrix" }
-        },
-        "unresolved": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/dimension_count" }
-        },
-        "ambiguous": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/dimension_count" }
-        },
-        "recall": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "allOf": [
-              { "$ref": "#/$defs/dimension_key" },
-              {
-                "type": "object",
-                "required": ["recovered", "expected", "ratio"],
-                "properties": {
-                  "recovered": { "type": "integer", "minimum": 0 },
-                  "expected": { "type": "integer", "minimum": 1 },
-                  "ratio": { "type": "number", "minimum": 0, "maximum": 1 }
-                }
-              }
-            ]
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "raw_scorer_output": {
-      "type": "object",
-      "required": ["path", "digest"],
-      "properties": {
-        "path": {
-          "type": "string",
-          "minLength": 1,
-          "not": { "pattern": "^(?:/|[A-Za-z]:)" }
-        },
-        "digest": { "$ref": "#/$defs/digest" }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false,
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "population": {
-            "properties": { "state": { "const": "measured" } },
-            "required": ["state"]
-          }
-        },
-        "required": ["population"]
-      },
-      "then": {
-        "required": ["results"],
-        "properties": {
-          "population": {
-            "properties": {
-              "supported_files": { "minimum": 1 },
-              "unreadable_files": { "const": 0 }
-            }
-          }
-        }
-      },
-      "else": { "not": { "required": ["results"] } }
-    },
-    {
-      "if": {
-        "properties": {
-          "population": {
-            "properties": { "state": { "const": "empty" } },
-            "required": ["state"]
-          }
-        },
-        "required": ["population"]
-      },
-      "then": {
-        "properties": {
-          "population": {
-            "properties": {
-              "files_seen": { "const": 0 },
-              "supported_files": { "const": 0 },
-              "unreadable_files": { "const": 0 },
-              "unsupported_files": { "const": 0 }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "population": {
-            "properties": { "state": { "const": "unreadable" } },
-            "required": ["state"]
-          }
-        },
-        "required": ["population"]
-      },
-      "then": {
-        "properties": {
-          "population": {
-            "properties": { "unreadable_files": { "minimum": 1 } }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "population": {
-            "properties": { "state": { "const": "unsupported" } },
-            "required": ["state"]
-          }
-        },
-        "required": ["population"]
-      },
-      "then": {
-        "properties": {
-          "population": {
-            "properties": {
-              "files_seen": { "minimum": 1 },
-              "supported_files": { "const": 0 },
-              "unreadable_files": { "const": 0 },
-              "unsupported_files": { "minimum": 1 }
-            }
-          }
-        }
-      }
-    }
-  ],
-  "$defs": {
-    "digest": {
-      "type": "string",
-      "pattern": "^sha256:[a-f0-9]{64}$"
-    },
-    "revision": {
-      "type": "string",
-      "pattern": "^(?:[a-f0-9]{40}|v?[0-9]+[.][0-9]+[.][0-9]+(?:[-+][0-9A-Za-z.-]+)?|sha256:[a-f0-9]{64})$"
-    },
-    "dimension": {
-      "type": "string",
-      "enum": ["overall", "language", "node_kind", "relation_kind", "resolver_tier"]
-    },
-    "dimension_key": {
-      "type": "object",
-      "required": ["dimension", "key"],
-      "properties": {
-        "dimension": { "$ref": "#/$defs/dimension" },
-        "key": { "type": "string", "minLength": 1 }
-      },
-      "allOf": [
-        {
-          "if": { "properties": { "dimension": { "const": "overall" } } },
-          "then": { "properties": { "key": { "const": "overall" } } }
-        },
-        {
-          "if": { "properties": { "dimension": { "const": "language" } } },
-          "then": {
-            "properties": {
-              "key": { "enum": ["rust", "typescript", "tsx", "python", "mixed"] }
-            }
-          }
-        }
-      ]
-    },
-    "language_census_item": {
-      "type": "object",
-      "required": ["key", "count"],
-      "properties": {
-        "key": { "enum": ["rust", "typescript", "tsx", "python", "mixed"] },
-        "count": { "type": "integer", "minimum": 0 }
-      },
-      "additionalProperties": false
-    },
-    "census_item": {
-      "type": "object",
-      "required": ["key", "count"],
-      "properties": {
-        "key": { "type": "string", "minLength": 1 },
-        "count": { "type": "integer", "minimum": 0 }
-      },
-      "additionalProperties": false
-    },
-    "dimension_count": {
-      "allOf": [
-        { "$ref": "#/$defs/dimension_key" },
-        {
-          "type": "object",
-          "required": ["count"],
-          "properties": { "count": { "type": "integer", "minimum": 0 } }
-        }
-      ]
-    },
-    "confusion_matrix": {
-      "allOf": [
-        { "$ref": "#/$defs/dimension_key" },
-        {
-          "type": "object",
-          "required": [
-            "true_positive",
-            "false_positive",
-            "false_negative",
-            "true_negative"
-          ],
-          "properties": {
-            "true_positive": { "type": "integer", "minimum": 0 },
-            "false_positive": { "type": "integer", "minimum": 0 },
-            "false_negative": { "type": "integer", "minimum": 0 },
-            "true_negative": {
-              "type": ["integer", "null"],
-              "minimum": 0,
-              "description": "null when the scorer declares no true-negative population"
-            }
-          }
-        }
-      ]
-    }
-  }
+  "$ref": "../../../schemas/graph-quality-observation-v1.schema.json"
 }
 ```
+
+## Schema Contract
+
+- `schema_version` is `1` and `record_type` is
+  `graph_quality_observation`.
+- `observation_id` is the SHA-256 digest of canonical record bytes with the
+  identifier field omitted.
+- `producer` pins the extractor and source revisions, producer-contract
+  version, exactly the Python, Rust, TSX, and TypeScript parser grammar
+  identities, configuration digest, corpus revision, and scorer revision.
+- `measurement_plan` names `ix://agent-ix/quire-code-rs/MP-001` and definition
+  `quire-code.graph-quality-v1`.
+- `population` carries state, file counts, and sorted censuses for languages,
+  node kinds, relation kinds, and resolver tiers.
+- A measured record carries sorted confusion matrices, unresolved and ambiguous
+  counts, and recall for the overall population and the language, node-kind,
+  relation-kind, and resolver-tier dimensions. The scorer defines no
+  true-negative population, so `true_negative` is `null`; the producer never
+  invents a zero.
+- `raw_scorer_output` contains a relative non-parent-traversing path and the
+  SHA-256 digest of the exact retained scorer bytes.
+- Every object rejects unknown fields. Language names are closed to `rust`,
+  `typescript`, `tsx`, `python`, and `mixed`; dimension and population-state
+  names are also closed by the schema.
 
 ## Behavior
 
 - A measured record SHALL contain one complete population census and a results
   block.
-- A non-measured record SHALL omit the results block.
-- The producer revision tuple SHALL identify the extractor, producer contract,
-  parser grammars, configuration, source, corpus, and scorer.
-- Each dimension array SHALL be sorted by dimension and key without duplicates.
-- The observation identifier SHALL be the SHA-256 digest of the canonical record
-  with `observation_id` omitted.
+- An `empty`, `unreadable`, or `unsupported` record SHALL omit results rather
+  than encode unmeasured work as a zero.
+- Each dimension array SHALL cover all five dimension names, use only the
+  closed language vocabulary for a `language` key, and be sorted by dimension
+  and key without duplicates.
+- The producer SHALL run schema validation before placing the raw observation
+  and scorer report inside Quoin MeasurementCollection v2 `rawEvidence`.
 
 ## Constraints
 
@@ -403,7 +82,7 @@ that file and SHALL remain semantically equivalent to it.
 | FR-011-AC-2 | A measured record contains census and result entries for language, node kind, relation kind, and resolver tier plus an overall result. | Test (TC-113) |
 | FR-011-AC-3 | `empty`, `unreadable`, and `unsupported` records reject a results block, while `measured` rejects its absence. | Test (TC-114) |
 | FR-011-AC-4 | Missing or malformed producer revisions, grammar identities, configuration digest, or measurement-plan identity fail validation. | Test (TC-115) |
-| FR-011-AC-5 | Every record retains a relative raw-output path and SHA-256 digest; an absolute path or malformed digest fails validation. | Test (TC-116) |
+| FR-011-AC-5 | Every record retains a relative raw-output path and SHA-256 digest; an absolute or parent-traversing path or malformed digest fails validation. | Test (TC-116) |
 | FR-011-AC-6 | Unknown fields, dimension names, population states, or language names fail validation. | Test (TC-117) |
 
 ## Dependencies
@@ -411,4 +90,4 @@ that file and SHALL remain semantically equivalent to it.
 - **Upstream**: [US-004](../usecase/US-004-assess-versioned-extractor-quality.md)
   and [FR-010](./FR-010-producer-invocation.md).
 - **Downstream**: [FR-012](./FR-012-governed-graph-quality-producer.md) emits this
-  record, and Quoin consumes it without extractor-specific code.
+  record inside a Quoin MeasurementCollection v2.

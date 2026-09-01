@@ -14,7 +14,16 @@
       "properties": {
         "extractor_revision": { "$ref": "#/$defs/revision" },
         "producer_contract_version": { "type": "integer", "minimum": 1 },
-        "parser_grammars": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/grammar" } },
+        "parser_grammars": {
+          "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/grammar" },
+          "allOf": [
+            { "contains": { "properties": { "language": { "const": "python" } }, "required": ["language"] } },
+            { "contains": { "properties": { "language": { "const": "rust" } }, "required": ["language"] } },
+            { "contains": { "properties": { "language": { "const": "tsx" } }, "required": ["language"] } },
+            { "contains": { "properties": { "language": { "const": "typescript" } }, "required": ["language"] } }
+          ]
+        },
         "configuration_digest": { "$ref": "#/$defs/digest" },
         "source_revision": { "$ref": "#/$defs/revision" },
         "corpus_revision": { "$ref": "#/$defs/revision" },
@@ -37,7 +46,14 @@
       "type": "object",
       "required": ["path", "digest"],
       "properties": {
-        "path": { "type": "string", "minLength": 1, "not": { "pattern": "^(?:/|[A-Za-z]:|.*(?:^|/)\\.\\.(?:/|$))" } },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "allOf": [
+            { "not": { "pattern": "^(?:/|[A-Za-z]:)" } },
+            { "not": { "pattern": "(?:^|/)\\.\\.(?:/|$)" } }
+          ]
+        },
         "digest": { "$ref": "#/$defs/digest" }
       },
       "additionalProperties": false
@@ -69,7 +85,7 @@
     "language": { "type": "string", "enum": ["rust", "typescript", "tsx", "python", "mixed"] },
     "grammar": {
       "type": "object", "required": ["language", "grammar", "revision"],
-      "properties": { "language": { "$ref": "#/$defs/language" }, "grammar": { "type": "string", "minLength": 1 }, "revision": { "$ref": "#/$defs/revision" } },
+      "properties": { "language": { "enum": ["rust", "typescript", "tsx", "python"] }, "grammar": { "type": "string", "minLength": 1 }, "revision": { "$ref": "#/$defs/revision" } },
       "additionalProperties": false
     },
     "census_item": {
@@ -100,23 +116,38 @@
       }, "additionalProperties": false
     },
     "dimension": { "enum": ["overall", "language", "node_kind", "relation_kind", "resolver_tier"] },
+    "dimension_key_constraints": {
+      "allOf": [
+        {
+          "if": { "properties": { "dimension": { "const": "overall" } }, "required": ["dimension"] },
+          "then": { "properties": { "key": { "const": "overall" } } }
+        },
+        {
+          "if": { "properties": { "dimension": { "const": "language" } }, "required": ["dimension"] },
+          "then": { "properties": { "key": { "$ref": "#/$defs/language" } } }
+        }
+      ]
+    },
     "matrix": {
       "type": "object", "required": ["dimension", "key", "true_positive", "false_positive", "false_negative", "true_negative"],
       "properties": {
         "dimension": { "$ref": "#/$defs/dimension" }, "key": { "type": "string", "minLength": 1 },
         "true_positive": { "type": "integer", "minimum": 0 }, "false_positive": { "type": "integer", "minimum": 0 },
         "false_negative": { "type": "integer", "minimum": 0 }, "true_negative": { "type": ["integer", "null"], "minimum": 0 }
-      }, "additionalProperties": false
+      }, "additionalProperties": false,
+      "allOf": [{ "$ref": "#/$defs/dimension_key_constraints" }]
     },
     "dimension_count": {
       "type": "object", "required": ["dimension", "key", "count"],
       "properties": { "dimension": { "$ref": "#/$defs/dimension" }, "key": { "type": "string", "minLength": 1 }, "count": { "type": "integer", "minimum": 0 } },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/$defs/dimension_key_constraints" }]
     },
     "recall": {
       "type": "object", "required": ["dimension", "key", "recovered", "expected", "ratio"],
       "properties": { "dimension": { "$ref": "#/$defs/dimension" }, "key": { "type": "string", "minLength": 1 }, "recovered": { "type": "integer", "minimum": 0 }, "expected": { "type": "integer", "minimum": 1 }, "ratio": { "type": "number", "minimum": 0, "maximum": 1 } },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/$defs/dimension_key_constraints" }]
     },
     "results": {
       "type": "object", "required": ["confusion_matrices", "unresolved", "ambiguous", "recall"],

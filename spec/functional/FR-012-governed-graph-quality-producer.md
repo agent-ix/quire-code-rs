@@ -44,11 +44,25 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL invoke the corpus's real `score.py --json` scorer with the
   real release `extract_tree` binary; neither scorer truth comparison nor
   extractor behavior may be reimplemented in the measurement producer.
-- The producer SHALL match MP-001's definition version to the observation
-  contract.
+- The producer SHALL reject a scorer report whose `scored_cases` differs from
+  the number of declared `case_digests`; the complete-census plan has no
+  subset-selection input.
+- The producer SHALL require the scorer revision to equal the clean corpus
+  checkout revision, require each parser grammar identity to match the exact
+  corresponding `Cargo.lock` package version, and accept only the checked-out
+  `target/release` producer and extractor binaries.
+- The producer SHALL require MP-001 to be active and match the plan identifier,
+  metric, definition version, complete-census sampling rule, and
+  zero-wrong-heuristic-edge decision rule before emitting output.
 - For a supported non-empty readable population, the producer SHALL compute the
   exact census, confusion matrices, unresolved census, ambiguous census, and
   recall by language, node kind, relation kind, and resolver tier.
+- Population censuses SHALL count the scorer's declared truth population
+  (`tp + fn`), never producer-only false positives. The unresolved census SHALL
+  use the extractor's reported unresolved-call count, while the ambiguous
+  census SHALL use the corpus-authored expected ambiguous-call-site count.
+  Those call-site populations have the fixed node-kind `call_site`, relation
+  kind `calls`, and resolver tier `unresolved`; language remains case-derived.
 - The producer SHALL retain aggregate recall independently from the
   zero-wrong-heuristic-edge decision.
 - If the corpus truth set contains no match for an emitted heuristic edge, then
@@ -72,9 +86,10 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL use a caller-supplied pinned collection timestamp and
   toolchain identities so Quoin's required envelope remains deterministic.
 - The producer SHALL emit a Quoin v2 verification-stack attestation containing
-  full clean source revisions, release executable and lock digests, pinned
-  Node/Rust/Python identities, and content digests for the schema, plan,
-  configuration, and retained raw scorer output.
+  full clean source revisions, distinct release producer and extractor
+  executable digests, the lock digest, pinned Node/Rust/Python identities, and
+  content digests for the schema, plan, configuration, and retained raw scorer
+  output.
 
 ## Constraints
 
