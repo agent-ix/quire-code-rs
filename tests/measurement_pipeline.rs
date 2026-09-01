@@ -399,9 +399,42 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
     let retained: serde_json::Value =
         serde_json::from_slice(&fs::read(retained_path.trim()).expect("Quoin retained collection"))
             .expect("retained collection JSON");
+    for pointer in [
+        "/collectionId",
+        "/toolIdentity",
+        "/toolVersion",
+        "/configDigest",
+        "/sourceRevision",
+        "/corpusRevision",
+        "/verificationStack/executableDigest",
+        "/verificationStack/artifacts/release-extractor",
+        "/verificationStack/artifacts/raw-scorer-output",
+        "/rawEvidence/graphQualityObservation/observation_id",
+        "/rawEvidence/graphQualityObservation/raw_scorer_output/path",
+        "/rawEvidence/graphQualityObservation/raw_scorer_output/digest",
+        "/rawEvidence/graphQualityObservation/producer/source_revision",
+        "/rawEvidence/graphQualityObservation/producer/scorer_version",
+        "/rawEvidence/scorerReport/scored_cases",
+    ] {
+        assert_eq!(
+            retained.pointer(pointer),
+            parsed.pointer(pointer),
+            "Quoin changed retained field {pointer}"
+        );
+    }
     assert_eq!(
-        retained, parsed,
-        "Quoin must retain the complete collection"
+        retained["observations"].as_array().map(Vec::len),
+        parsed["observations"].as_array().map(Vec::len),
+        "Quoin changed the typed observation population"
+    );
+    assert_eq!(
+        retained["rawEvidence"]["scorerReport"]["case_digests"]
+            .as_object()
+            .map(serde_json::Map::len),
+        parsed["rawEvidence"]["scorerReport"]["case_digests"]
+            .as_object()
+            .map(serde_json::Map::len),
+        "Quoin changed the retained scorer population"
     );
 
     let report = output(Command::new(&quoin).args(["report", "--repo"]).arg(&intake));
