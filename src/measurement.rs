@@ -524,7 +524,7 @@ fn quoin_observations(
         return Ok(vec![json!({
             "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
             "state": "not_computed", "value": Value::Null, "unit": "decision", "shape": "scalar",
-            "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall"},
+            "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall", "population_state":state},
             "reason": format!("population state is {state}")
         })]);
     }
@@ -582,7 +582,7 @@ fn quoin_observations(
         "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
         "state": "measured", "value": if decision { 1 } else { 0 }, "unit": "decision", "shape": "scalar",
         "population": {"examined": edge_tp + edge_fp, "matched": edge_tp, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
-        "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall"}
+        "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall", "population_state":"measured"}
     }));
     for recall in &recalls {
         out.push(quoin_value(
@@ -635,7 +635,7 @@ fn quoin_value(measure: &str, item: &Value, value: Value, unit: &str, shape: &st
         "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
         "state": "measured", "value": value, "unit": unit, "shape": shape,
         "population": {"examined": examined, "matched": matched, "complete": true, "identity": observation_population_identity(item)},
-        "dimensions": {"measure":measure, "dimension":item["dimension"], "key":item["key"]}
+        "dimensions": {"measure":measure, "dimension":item["dimension"], "key":item["key"], "population_state":"measured"}
     })
 }
 
@@ -841,6 +841,10 @@ mod tests {
             |v: &mut Value| v["producer"]["source_revision"] = json!("short"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!("/tmp/raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!("../raw.json"),
+            |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"\raw.json"),
+            |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"\\server\share\raw.json"),
+            |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"..\raw.json"),
+            |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"C:raw.json"),
             |v: &mut Value| v["producer"]["parser_grammars"][0]["language"] = json!("java"),
             |v: &mut Value| {
                 v["measurement_plan"]["ref"] = json!("ix://agent-ix/quire-code-rs/MP-999")

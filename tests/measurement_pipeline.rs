@@ -3,9 +3,12 @@
 //! Run after a clean release build with:
 //! `QUIRE_CORPUS_ROOT=../quire-corpus QUOIN_BIN=quoin QUIRE_BIN=quire cargo test --test measurement_pipeline -- --ignored --nocapture`.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+use quire_code_rs::measurement::sha256;
 
 fn output(command: &mut Command) -> String {
     let result = command.output().expect("command starts");
@@ -303,20 +306,139 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         "complete-census plan forbids a filtered scorer run"
     );
     assert!(scorer["scored_cases"].as_u64().unwrap_or(0) > 100);
+    let observation = &parsed["rawEvidence"]["graphQualityObservation"];
+    assert_eq!(observation["population"]["state"], "measured");
+    assert_eq!(
+        observation["raw_scorer_output"]["path"],
+        "raw/scorer-report.json"
+    );
+    assert_eq!(
+        observation["raw_scorer_output"]["digest"],
+        sha256(
+            &fs::read(output_dir.join("raw/scorer-report.json")).expect("retained scorer bytes")
+        )
+    );
+    assert_eq!(observation["producer"]["source_revision"], source_revision);
+    assert_eq!(observation["producer"]["scorer_version"], corpus_revision);
+    assert_eq!(
+        observation["producer"]["parser_grammars"]
+            .as_array()
+            .map(Vec::len),
+        Some(4)
+    );
+    assert_eq!(
+        parsed["verificationStack"]["sources"]["quire-code-rs"]["revision"],
+        source_revision
+    );
+    assert_eq!(
+        parsed["verificationStack"]["sources"]["quire-corpus"]["revision"],
+        corpus_revision
+    );
+    for pointer in [
+        "/verificationStack/executableDigest",
+        "/verificationStack/artifacts/release-extractor",
+        "/verificationStack/artifacts/raw-scorer-output",
+    ] {
+        let digest = parsed
+            .pointer(pointer)
+            .and_then(serde_json::Value::as_str)
+            .unwrap();
+        assert!(
+            digest.starts_with("sha256:") && digest.len() == 71,
+            "invalid retained digest at {pointer}: {digest}"
+        );
+    }
+    let observations = parsed["observations"].as_array().unwrap();
+    let measures = observations
+        .iter()
+        .filter_map(|item| {
+            item.pointer("/dimensions/measure")
+                .and_then(serde_json::Value::as_str)
+        })
+        .collect::<BTreeSet<_>>();
+    for required in [
+        "precision",
+        "precision_decision",
+        "recall",
+        "unresolved",
+        "ambiguous",
+        "false_positive",
+    ] {
+        assert!(measures.contains(required), "missing typed {required}");
+    }
+    let dimensions = observations
+        .iter()
+        .filter_map(|item| {
+            item.pointer("/dimensions/dimension")
+                .and_then(serde_json::Value::as_str)
+        })
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        dimensions,
+        BTreeSet::from([
+            "overall",
+            "language",
+            "node_kind",
+            "relation_kind",
+            "resolver_tier"
+        ])
+    );
+    assert!(observations.iter().all(|item| {
+        item.pointer("/dimensions/population_state") == Some(&serde_json::json!("measured"))
+    }));
 
     let collection = scratch.join("collection.json");
     fs::write(&collection, first).expect("write collection");
-    output(
+    let retained_path = output(
         Command::new(&quoin)
             .args(["measurement", "record", "--repo"])
             .arg(&intake)
             .args(["--input"])
             .arg(&collection),
     );
+    let retained: serde_json::Value =
+        serde_json::from_slice(&fs::read(retained_path.trim()).expect("Quoin retained collection"))
+            .expect("retained collection JSON");
+    assert_eq!(
+        retained, parsed,
+        "Quoin must retain the complete collection"
+    );
+
     let report = output(Command::new(&quoin).args(["report", "--repo"]).arg(&intake));
     assert!(report.contains("graph_quality"));
-    assert!(report.contains("measure=recall"));
-    assert!(report.contains("measure=false_positive"));
+    for visible in [
+        "measure=precision",
+        "measure=precision_decision",
+        "measure=recall",
+        "measure=unresolved",
+        "measure=ambiguous",
+        "measure=false_positive",
+        "population_state=measured",
+        "dimension=overall",
+        "dimension=language",
+        "dimension=node_kind",
+        "dimension=relation_kind",
+        "dimension=resolver_tier",
+    ] {
+        assert!(report.contains(visible), "report omitted {visible}");
+    }
+    let report_json: serde_json::Value = serde_json::from_str(&output(
+        Command::new(&quoin)
+            .args(["report", "--format", "json", "--repo"])
+            .arg(&intake),
+    ))
+    .expect("Quoin report JSON");
+    let current = report_json["current"].as_array().unwrap();
+    assert!(current.iter().any(|row| {
+        row.pointer("/collection/toolIdentity")
+            == Some(&serde_json::json!(
+                "agent-ix/quire-code-rs/measure_graph_quality"
+            ))
+            && row.pointer("/collection/sourceRevision")
+                == Some(&serde_json::json!(source_revision))
+            && row.pointer("/observation/dimensions/measure")
+                == Some(&serde_json::json!("precision_decision"))
+    }));
 
     fs::remove_dir_all(&scratch).expect("remove scratch");
 }
