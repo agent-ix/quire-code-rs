@@ -3,7 +3,7 @@ id: SR-006
 title: "code review of issue 7 governed graph-quality measurements"
 type: SpecReview
 analysis: code-review
-scope: "origin/main...working tree: FR-011, FR-012, NFR-005, MP-001, IT-001, src/measurement.rs, src/bin/measure_graph_quality.rs, schemas/, tests/measurement_pipeline.rs"
+scope: "origin/main...a50288f: FR-011, FR-012, NFR-005, MP-001, IT-001, src/measurement.rs, src/bin/measure_graph_quality.rs, schemas/, tests/measurement_pipeline.rs"
 review_set: subset
 relationships:
   - target: ix://agent-ix/quire-code-rs/Plan-001
@@ -14,46 +14,69 @@ relationships:
 
 ## Summary
 
-The Quoin MeasurementCollection v2 envelope is accepted by the real installed
-Quoin CLI, and the ordinary Rust tests are green. The implementation is not
-merge-ready: its passing ecosystem lane samples two cases while claiming a
-complete population, its unresolved/ambiguous strata are synthesized rather
-than measured, and its decision/test gates do not enforce the authored plan.
+The remediated implementation is merge-ready. The governed producer now scores
+the complete 114-case corpus without a subset-selection surface, preserves the
+scorer as the truth comparator, enforces the active MeasurementPlan semantics,
+and gates only on false-positive edges while retaining recall independently.
+The real release-binary ecosystem lane passed against Quire and Quoin, including
+a reversed-creation-order checkout and semantic verification of stored evidence.
 
 ## Verdict
 
-**FAIL** — five high-severity correctness and false-confidence findings violate
-the population, decision, governance, and evidence requirements.
+**PASS** — no blocking correctness, compatibility, determinism, population,
+governance, or test-confidence issue remains in the reviewed scope.
 
 ## Findings
 
-| ID | Severity | Summary | Refs | Escape Cause |
-|---|---|---|---|---|
-| FND-001 | high | The real integration lane scores only two selected Rust cases but records every observation population as complete under a MeasurementPlan that prohibits sampling. The scorer report still identifies the whole corpus revision and all case digests, so the retained evidence can be mistaken for the declared 114-case population. | MP-001:11-17, MP-001:38-45, tests/measurement_pipeline.rs:94-100, tests/measurement_pipeline.rs:141-147, src/measurement.rs:542-548, TC-108, TC-118, TC-119, TC-129 | implementation-bug-despite-evidence |
-| FND-002 | high | Population/result censuses are not exact: node census counts produced nodes, both unresolved and ambiguous come from `ambiguous_call_sites`, and node/relation/tier unresolved strata copy the same total into invented `unattributed`, `calls`, and `unresolved` keys. | FR-012-AC-2, src/measurement.rs:289-320, src/measurement.rs:395-446, TC-108, TC-119 | implementation-bug-despite-evidence |
-| FND-003 | high | The process decision is not the zero-wrong-heuristic-edge rule. It requires the scorer process to pass (which fails on non-pending false negatives) and sums every false positive, including node/corpus findings, so recall below one can fail and non-heuristic findings can trip the heuristic-edge gate. | MP-001:17, MP-001:29-32, FR-012-AC-3, FR-012-AC-4, src/bin/measure_graph_quality.rs:51-52, src/bin/measure_graph_quality.rs:130-170, TC-120, TC-121 | implementation-bug-despite-evidence |
-| FND-004 | high | MeasurementPlan validation is structural only. A Quire-valid retired plan, changed metric, changed definition version, or changed decision rule reaches stdout; the producer never parses or matches those governed fields before offering the record to Quoin. | FR-012:43-48, FR-012-AC-8, src/bin/measure_graph_quality.rs:43, src/bin/measure_graph_quality.rs:173-187, TC-125, TC-129 | implementation-bug-despite-evidence |
-| FND-005 | high | Matrix rows marked complete are backed by tags but not by the promised behavior: TC-121 never constructs an FP or runs the exit gate; TC-122 never invokes the binary or checks status/stdout; TC-123 checks only the first missing generic CLI argument; TC-125 supplies no invalid plan; TC-127 reorders a JSON map rather than filesystem creation/enumeration. | src/measurement.rs:674-765, src/bin/measure_graph_quality.rs:456-468, tests/measurement_pipeline.rs:42-181, TC-121, TC-122, TC-123, TC-125, TC-127 | correct-requirement-no-evidence |
-| FND-006 | medium | The schema closes grammar/census languages but permits an arbitrary result key when `dimension` is `language`, and semantic validation requires all dimensions only for confusion matrices, not unresolved, ambiguous, or recall. | FR-011-AC-2, FR-011-AC-6, schemas/graph-quality-observation-v1.schema.json:109-135, src/measurement.rs:190-223, TC-113, TC-117 | implementation-bug-despite-evidence |
-| FND-007 | medium | The verification stack identifies `measure_graph_quality` as the tool but hashes the separate extractor path as `executableDigest`; it therefore does not attest the executable that created the collection. | FR-012:74-77, src/bin/measure_graph_quality.rs:89-99, src/measurement.rs:244-270, TC-110 | correct-requirement-no-evidence |
-| FND-008 | medium | Measured Quoin observations expose TP/FP/FN and recall but no typed precision value or precision-decision observation, despite the producer output contract requiring precision to remain directly exposed. | FR-012:31-39, src/measurement.rs:494-540, TC-108, TC-120 | implementation-bug-despite-evidence |
+| ID | Severity | Summary | Refs |
+|---|---|---|---|
+| FND-001 | low | No gaps found. | - |
+
+## Remediation Verification
+
+- The public producer has no `--case` input. It rejects a scorer report unless
+  `scored_cases` exactly equals the complete `case_digests` population.
+- Population censuses use scorer truth (`tp + fn`), and unresolved versus
+  ambiguous counts use the documented extractor-reported and corpus-authored
+  ambiguous-call marginals.
+- The decision reads only `/confusion/axis_kind/edge/fp`; scorer status, recall,
+  and non-edge false positives cannot create a false gate failure or pass.
+- MP-001 must be active and match its identifier, metric, definition version,
+  complete-census sampling rule, and zero-wrong-edge decision before emission.
+- The raw schema closes fields and vocabularies, requires all five result
+  dimensions, and rejects POSIX, UNC, drive-qualified, and slash or backslash
+  parent-traversing raw paths.
+- The Quoin attestation separately identifies the release producer, release
+  extractor, retained raw scorer output, plan, schema, configuration, lockfile,
+  source revisions, and toolchains. Typed observations include precision,
+  precision decision, recall, unresolved, ambiguous, and false-positive values
+  with explicit population state.
 
 ## Review Evidence
 
-- `make ci`: formatting, Clippy, 145 ordinary tests, license denial, and unsafe
-  checks passed; the final coverage target failed because the installed module
-  catalog declares two archetypes that match no document.
-- `quire validate --scope . 'spec/**/*.md' 'plan/**/*.md'`: passed after the
-  current FR-011 schema-link correction, with pre-existing grammar warnings.
-- Clean-clone ecosystem lane: one ignored test was explicitly run and passed
-  against the real release extractor, quire-corpus, Quire, and Quoin.
-- Full real scorer observation: 114 cases, 320 TP, 1 pending node FP, 0 FN. The
-  checked-in ecosystem test instead scored two selected Rust cases.
+- `make fmt-check`, `make lint`, `make test`, `make deny`, and
+  `make audit-unsafe`: pass. The ordinary suite ran 151 tests successfully; its
+  two deliberately conditional lanes remain ignored by default.
+- Explicit real lane at `a50288f`: pass with the current release producer and
+  extractor, the complete 114-case quire-corpus checkout, a reversed-creation
+  clone, installed Quire, and installed Quoin.
+- Independent capture of Quoin's stored collection compared equal to the input
+  as JSON data, including all raw evidence and typed observations. Quoin only
+  normalized JSON number spelling such as `1.0` to `1`, which is semantically
+  equal and is why the regression test compares retained semantics rather than
+  bytes chosen by the downstream store.
+- `quire validate --scope . 'spec/**/*.md' 'plan/**/*.md'
+  'reviews/**/*.md'`: pass, apart from pre-existing non-fatal catalog/grammar
+  warnings.
+- `make coverage` reaches 238/261 backed targets with the remaining two rows
+  explained by their declared method; its command status is blocked only by the
+  installed external catalog's pre-existing empty `Inspections` and
+  `SuiteRegistry` archetypes. All TC-108..TC-134 tags are directly present.
 
 ## Boundary and Completeness Review
 
-No production stubs, `todo!`, `unimplemented!`, unsafe blocks, network clients,
-or internal-logic mocks were found in the issue-7 diff. Filesystem and process
-operations stay at the binary boundary. The failures are semantic: population
-identity, exact transformation, governed decision logic, and tests that do not
-exercise their claimed behavior.
+No production stubs, `todo!`, `unimplemented!`, unsafe blocks, internal-logic
+mocks, network client, or ambient record identity were found in the issue-7
+diff. Filesystem and process operations stay at the binary boundary, while
+transformation, canonicalization, decision evaluation, and schema validation
+remain pure library behavior.
