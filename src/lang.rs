@@ -54,13 +54,18 @@ impl Language {
         }
     }
 
-    /// The tree-sitter grammar for this language.
-    pub(crate) fn grammar(self) -> tree_sitter::Language {
+    /// This language's counterpart in `quire_code_parse::Language` — the
+    /// shared parse layer this crate's own pipeline is routed through
+    /// (PLAT-849). The one place this crate crosses from its own `Language`
+    /// enum to the parse crate's; `src/parse.rs` calls this rather than
+    /// naming a tree-sitter grammar directly, which is what keeps this
+    /// crate off the list `tests/dependency_boundary.rs` checks.
+    pub(crate) fn parse_language(self) -> quire_code_parse::Language {
         match self {
-            Language::Rust => tree_sitter_rust::LANGUAGE.into(),
-            Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            Language::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
-            Language::Python => tree_sitter_python::LANGUAGE.into(),
+            Language::Rust => quire_code_parse::Language::Rust,
+            Language::TypeScript => quire_code_parse::Language::TypeScript,
+            Language::Tsx => quire_code_parse::Language::Tsx,
+            Language::Python => quire_code_parse::Language::Python,
         }
     }
 
@@ -422,7 +427,10 @@ impl LanguageConfig {
     /// callers are asking. Two ancestor guards used the narrow set for a
     /// release and stopped at a different set of declarations than the walker
     /// did.
-    pub(crate) fn decl_for_node(&self, node: tree_sitter::Node<'_>) -> Option<&DeclKind> {
+    pub(crate) fn decl_for_node(
+        &self,
+        node: quire_code_parse::tree_sitter::Node<'_>,
+    ) -> Option<&DeclKind> {
         self.decls.iter().find(|d| {
             d.node == node.kind()
                 && (d.value_kinds.is_empty()
@@ -474,18 +482,25 @@ mod tests {
         assert_eq!(Language::from_path("no-extension"), None);
     }
 
+    // PLAT-849: this crate no longer owns a tree-sitter `Parser` to load a
+    // grammar into directly — that lives entirely behind
+    // `quire_code_parse::parse_file` now. What this crate still owns is the
+    // mapping from its own `Language` to `quire_code_parse::Language`; this
+    // pins that every variant maps to one that actually parses, rather than
+    // trusting the `match` arms in `parse_language` by inspection.
     #[test]
-    fn every_grammar_loads() {
+    fn every_language_maps_to_a_parseable_quire_code_parse_language() {
         for lang in [
             Language::Rust,
             Language::TypeScript,
             Language::Tsx,
             Language::Python,
         ] {
-            let mut parser = tree_sitter::Parser::new();
-            parser
-                .set_language(&lang.grammar())
-                .expect("grammar loads for the configured language");
+            let parsed = quire_code_parse::parse_file(lang.parse_language(), "t", "");
+            assert!(
+                parsed.is_ok(),
+                "{lang:?} maps to a quire_code_parse::Language that fails to parse"
+            );
         }
     }
 }

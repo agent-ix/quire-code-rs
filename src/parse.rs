@@ -11,10 +11,20 @@
 //! the whole file, or a whole function because of a typo in its body —
 //! contradicts the reason ADR-001 chose tree-sitter: extraction has to work on
 //! trees that do not compile.
+//!
+//! Parsing itself is routed through `quire_code_parse::parse_file` (PLAT-849)
+//! rather than this module owning a `tree_sitter::Parser` directly — see
+//! [`parse_tree`]. This module keeps its own error-detection logic
+//! (`root.has_error()` plus [`first_error_position`]) rather than switching to
+//! `quire_code_parse::ParsedFile::diagnostic()`: that accessor fires on a
+//! narrower condition (only a declaration-structure error, not *any* error
+//! anywhere), and PLAT-849 is a routing change, not a behaviour change — the
+//! existing 115+ tests are its control. This module's own check is a superset
+//! of what `diagnostic()` would report, so nothing is lost by not reading it.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use tree_sitter::{Node, Parser, Tree};
+use quire_code_parse::tree_sitter::Node;
 
 use crate::facts::{CodeFact, Diagnostic, LineSpan, ObjectType, Visibility};
 use crate::lang::{Language, LanguageConfig, VisibilityStyle};
@@ -200,8 +210,8 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
         return out;
     }
 
-    let tree = match parse_tree(file) {
-        Some(tree) => tree,
+    let parsed = match parse_tree(file) {
+        Some(parsed) => parsed,
         None => {
             out.diagnostics.push(Diagnostic::file_error(
                 &path,
@@ -212,7 +222,7 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
         }
     };
 
-    let root = tree.root_node();
+    let root = parsed.root_node();
     let config = file.language.config();
 
     if root.has_error() {
@@ -286,10 +296,19 @@ struct Context {
     in_test: bool,
 }
 
-fn parse_tree(file: &SourceFile) -> Option<Tree> {
-    let mut parser = Parser::new();
-    parser.set_language(&file.language.grammar()).ok()?;
-    parser.parse(file.content.as_bytes(), None)
+/// Parse `file` through the shared parse layer (PLAT-849) rather than this
+/// crate owning a `tree_sitter::Parser` directly. `None` mirrors the old
+/// `parser.set_language(...).ok()?` / `parser.parse(...)` failure paths —
+/// [`quire_code_parse::ParseError`] is reserved for the same essentially
+/// defensive case (no tree at all), so both collapse to the same
+/// `parser_unavailable` diagnostic at the call site.
+fn parse_tree(file: &SourceFile) -> Option<quire_code_parse::ParsedFile<'_>> {
+    quire_code_parse::parse_file(
+        file.language.parse_language(),
+        file.path.as_str(),
+        file.content.as_str(),
+    )
+    .ok()
 }
 
 /// One-based line and zero-based column of the first error node, if any.

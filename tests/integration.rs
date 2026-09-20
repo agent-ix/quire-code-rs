@@ -303,19 +303,25 @@ fn the_declared_dependencies_are_the_audited_set() {
 
     // Parsing, serialization and hashing. Nothing here opens a file, a socket
     // or a process; adding a dependency that could is what this test is for.
+    //
+    // Re-audited for PLAT-849: `tree-sitter`/`tree-sitter-rust`/
+    // `tree-sitter-typescript`/`tree-sitter-python` are no longer declared
+    // here directly — they moved behind `quire-code-parse`
+    // (`crates/quire-code-parse`, enforced by `tests/dependency_boundary.rs`).
+    // `quire-code-parse` is in the audited set in their place: its own crate
+    // docs state it performs no I/O ("This crate never reads a path, opens a
+    // socket, or touches the filesystem"), so its closure is still within
+    // what FR-001-AC-7 allows.
     let audited: BTreeSet<&str> = [
         // Draft-2020-12 validation runs with resolver features disabled; its
         // closure contains no HTTP client and cannot fetch a remote schema.
         "jsonschema",
+        "quire-code-parse",
         "regex",
         "serde",
         "serde_json",
         "sha2",
         "thiserror",
-        "tree-sitter",
-        "tree-sitter-python",
-        "tree-sitter-rust",
-        "tree-sitter-typescript",
     ]
     .into_iter()
     .collect();

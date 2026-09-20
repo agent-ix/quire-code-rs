@@ -708,15 +708,12 @@ name = "quire-code-rs"
 version = "0.1.0"
 dependencies = [
  "jsonschema",
+ "quire-code-parse",
  "regex",
  "serde",
  "serde_json",
  "sha2",
  "thiserror",
- "tree-sitter",
- "tree-sitter-python",
- "tree-sitter-rust",
- "tree-sitter-typescript",
 ]
 
 [[package]]

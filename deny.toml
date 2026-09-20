@@ -10,11 +10,16 @@ allow = [
     "Unicode-3.0",
     "Zlib",
 ]
-# Our own crate is AGPL-3.0-or-later (the project license); allow it here
+# Our own crates are AGPL-3.0-or-later (the project license); allow it here
 # WITHOUT permitting AGPL in third-party dependencies — the allow-list above
-# stays permissive-only.
+# stays permissive-only. `quire-code-parse` was previously unreachable from
+# `quire-code-rs` in this check (PLAT-841: additive, no dependency edge
+# between them), so this exception was not yet exercised; PLAT-849 adds the
+# edge this check now walks, so it needs its own entry alongside the root
+# package's.
 exceptions = [
     { allow = ["AGPL-3.0-or-later"], crate = "quire-code-rs" },
+    { allow = ["AGPL-3.0-or-later"], crate = "quire-code-parse" },
 ]
 confidence-threshold = 0.9
 
