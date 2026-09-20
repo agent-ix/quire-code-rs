@@ -42,7 +42,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | Stakeholder Req | Trace to US/FR | Test/Validation | Coverage Status |
 |---|---|---|---|
-| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-174 | ✅ Complete |
+| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-175 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
 | StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
@@ -54,7 +54,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 | US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
-| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-174 | ✅ Complete |
+| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-175 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -81,7 +81,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
-| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-174 | ✅ |
+| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175 | ✅ |
 
 ### Measurement Plan Coverage
 
@@ -257,7 +257,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-160 | A TypeScript function with a malformed parameter list, nested inside a `namespace`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
 | TC-161 | A declaration-structure error attaches a `Diagnostic` to `Ok(ParsedFile)` | Unit | P1 | FR-013-AC-9 | ✅ |
 | TC-162 | A struct field tree-sitter could not resolve, nested inside a `mod`, trips the structural check (FND-001, fixture corrected under FND-007 to actually exercise a field_declaration, not a direct-ERROR sibling) | Unit | P1 | FR-013-AC-3 | ✅ |
-| TC-163 | A body-local error (assignment-shaped) inside a method nested inside a `class` stays `Ok` with no diagnostic (FND-001); the dangling-`return` shape is a distinct, disclosed case — see TC-174 | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-163 | A body-local error (assignment, followed by another statement in the same suite) inside a method nested inside a `class` stays `Ok` with no diagnostic (FND-001); a broken statement as the *last* statement in a suite reads as structural instead — see TC-174/TC-175 | Unit | P1 | FR-013-AC-10 | ✅ |
 | TC-164 | A body-local error inside a function nested inside a `namespace` stays `Ok` with no diagnostic (FND-001) | Unit | P1 | FR-013-AC-10 | ✅ |
 | TC-165 | A broken `impl` method (missing its own name) trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
 | TC-166 | Garbage two `mod`s deep trips the structural check — depth alone is not the discriminator (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
@@ -268,7 +268,8 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-171 | Diagnostics (carrying `file`) from several files project into one `Vec` that outlives any single file's own source buffer (retargeted from FR-013-AC-11 to AC-3/AC-12, FND-012/FND-013) | Integration | P1 | FR-013-AC-3, FR-013-AC-12 | ✅ |
 | TC-172 | A malformed parameter list tree-sitter could not resolve trips the structural check (FND-008) | Unit | P1 | FR-013-AC-3 | ✅ |
 | TC-173 | An enum variant tree-sitter could not resolve trips the structural check (FND-009) | Unit | P1 | FR-013-AC-3 | ✅ |
-| TC-174 | A dangling `return` recovers outside the function's `body` field and reads as structural, a disclosed mechanical consequence of the body-node rule, not a body-local error | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-174 | A dangling `return`, as the last statement in its suite, recovers outside the function's `body` field and reads as structural — a disclosed mechanical consequence of the body-node rule, not a body-local error (FND-015: not `return`-specific, see TC-175) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-175 | A dangling assignment, as the last statement in its suite, recovers outside the function's `body` field the same way TC-174's `return` does, pinning suite position — not statement kind — as the real trigger (FND-015) | Unit | P1 | FR-013-AC-3 | ✅ |
 
 ---
 
@@ -466,6 +467,25 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
   identity) rather than personal, and that a warning in a doc comment does
   not substitute for a check that would catch it mechanically. Fixed by
   moving the tag onto `parse_error_is_static` directly.
+- **FND-015 (PR #22 fourth review round, 2026-09-20): the "Known
+  limitations" disclosure for Python's last-statement recovery shape named
+  the wrong trigger.** It read as a `return`-specific oddity against an
+  otherwise-silent norm; run against a wider matrix (assignment/`return`/
+  call/`if`, each both followed by another statement and as the last
+  statement in its suite), the real trigger is suite position — an error
+  that is the *last* statement in a suite recovers with the `ERROR` outside
+  `body` regardless of statement kind — and a Python body-local error
+  surfaces as structural often enough that "generally silent, with a
+  `return` exception" had the shape backwards. `TC-175` (a dangling
+  assignment as the last statement) pins this next to `TC-174` (the
+  original dangling-`return` case), so the claim is backed by two statement
+  kinds, not one. `FR-013-AC-3`, `AC-10` and "Known limitations" restated
+  accordingly. `FND-010` (TypeScript's own recovery for a broken declaration
+  nested inside a function body) is withdrawn in the same round: tree-sitter
+  emits no declaration node at all in that shape, only a bare `ERROR` inside
+  the enclosing `statement_block`, so there is genuinely nothing for the
+  body-node rule to reset on — its "Known limitations" entry is removed
+  rather than kept as a limitation with nothing behind it.
 - Benchmark-verified criteria (TC-062..TC-065, TC-070) report measurements on
   every run and gate on threshold only in the performance lane, so that
   shared-runner variance does not make ordinary CI flaky.

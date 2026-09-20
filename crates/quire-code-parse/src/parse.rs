@@ -381,8 +381,7 @@ fn is_declaration_node(node: Node<'_>) -> bool {
 /// `node`'s own kind can, hence the explicit list here rather than a check
 /// on the field value's kind. (TypeScript's `declare module "..."`
 /// ambient-module spelling was not separately verified; see FR-013's "Known
-/// limitations" for why this rule is nonetheless expected to cover it, and
-/// FND-010 for a shape it does not.)
+/// limitations" for why this rule is nonetheless expected to cover it.)
 fn executable_body_field(node: Node<'_>) -> Option<Node<'_>> {
     if !matches!(
         node.kind(),
@@ -678,15 +677,16 @@ mod tests {
     #[cfg(feature = "python")]
     // TC-163, FR-013-AC-10 (FND-001): a body-local error inside a method
     // nested inside a class stays `Ok` with no diagnostic — nesting alone
-    // does not trip the check, only an unresolvable declaration does. An
-    // assignment with a dangling operator (`x = 1 +`) is used rather than a
-    // dangling `return`: Python's grammar recovers a broken `return`
-    // statement by attaching the resulting `ERROR` as an extra sibling of
-    // `function_definition` itself (outside its `body` field), which the
-    // body-node rule correctly reads as structural — that shape is
-    // documented separately (see the `return`-specific note below this
-    // test) rather than folded into this one, which exercises the ordinary
-    // case: an error genuinely nested inside the body node.
+    // does not trip the check, only an unresolvable declaration does. This
+    // fixture's broken assignment (`x = 1 +`) is *followed by another
+    // statement in the same suite* (`return x`) — Python's grammar resyncs
+    // against it and keeps the resulting `ERROR` nested inside `body`. The
+    // same broken assignment as the *last* statement in a suite (TC-175),
+    // or a dangling `return` in that same last-statement position (TC-174),
+    // both recover differently: the `ERROR` lands outside `body`, and the
+    // body-node rule reads them as structural. Suite position, not
+    // statement kind, is the discriminator — documented in FR-013's "Known
+    // limitations" section rather than folded silently into this test.
     #[test]
     fn body_local_error_in_a_method_nested_in_a_class_stays_ok_with_no_diagnostic() {
         let source = "class Foo:\n    def broken(self):\n        x = 1 +\n        return x\n    def intact(self):\n        return 2\n";
@@ -698,17 +698,20 @@ mod tests {
     }
 
     #[cfg(feature = "python")]
-    // TC-174, FR-013-AC-3: a dangling `return` (as opposed to a dangling
-    // assignment, TC-163) is a documented case where the body-node rule and
-    // intuition disagree. Python's grammar recovers `return 1 +` by
-    // attaching the resulting `ERROR` as an extra child of
-    // `function_definition` itself — a sibling of `body`, not inside it —
-    // even though the function's own kind, name and parameters are fully
-    // resolvable. The body-node rule reads this as structural, mechanically
+    // TC-174, FR-013-AC-3: a dangling `return`, as the *last* statement in
+    // its method's body (nothing follows before the next declaration), is a
+    // documented case where the body-node rule and intuition disagree.
+    // Python's grammar recovers `return 1 +` here by attaching the
+    // resulting `ERROR` as an extra child of `function_definition` itself —
+    // a sibling of `body`, not inside it — even though the function's own
+    // kind, name and parameters are fully resolvable. This is not specific
+    // to `return`: TC-175 shows the same outcome for a broken *assignment*
+    // in the same last-statement position, which is what pins the real
+    // trigger — see FR-013's "Known limitations" section, and TC-163, which
+    // is the same assignment shape with a *following* statement, and stays
+    // body-local. The body-node rule reads this as structural, mechanically
     // and consistently (it is, literally, not inside the body node); this is
-    // a documented known limitation, not a bug — FR-013's "Known
-    // limitations" section names it, rather than this test asserting the
-    // intuitive answer silently.
+    // a documented known limitation, not a bug.
     #[test]
     fn dangling_return_recovers_outside_the_body_node_and_reads_as_structural() {
         let source = "class Foo:\n    def broken(self):\n        return 1 +\n    def intact(self):\n        return 2\n";
@@ -716,6 +719,27 @@ mod tests {
         assert!(
             parsed.diagnostic().is_some(),
             "documents that this specific recovery shape reads as structural, not a claim that it should"
+        );
+    }
+
+    #[cfg(feature = "python")]
+    // TC-175, FR-013-AC-3 (FND-015): pins the real trigger behind TC-174 —
+    // it is not `return`-specific. A dangling *assignment*, in the same
+    // last-statement-in-a-suite position TC-174 uses for `return`, recovers
+    // the same way: Python's grammar attaches the resulting `ERROR` as an
+    // extra child of `function_definition` itself, outside `body`, once
+    // there is no following statement in the same suite for it to resync
+    // against. Contrast TC-163, the identical broken assignment *followed*
+    // by another statement in the same suite, which stays body-local — the
+    // discriminator is suite position, not statement kind.
+    #[test]
+    fn dangling_assignment_as_the_last_statement_recovers_outside_the_body_node_and_reads_as_structural(
+    ) {
+        let source = "class Foo:\n    def broken(self):\n        x = 1 +\n    def intact(self):\n        return 2\n";
+        let parsed = parse_file(Language::Python, "x.py", source).expect("tree still produced");
+        assert!(
+            parsed.diagnostic().is_some(),
+            "a dangling assignment as the last statement in a suite reads as structural, the same as TC-174's dangling return"
         );
     }
 

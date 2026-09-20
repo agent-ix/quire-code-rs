@@ -135,14 +135,14 @@ parse call borrowed.
 |----|----------|--------------|
 | FR-013-AC-1 | A consumer parses Rust source and walks the returned tree with tree-sitter's own `Node` API, with no dependency edge to the fact model, type environment, call resolver or record emitter | Test (TC-135, TC-146, TC-147) |
 | FR-013-AC-2 | The returned `ParsedFile` borrows its source text; the value and slices taken from it remain valid for the caller-chosen lifetime after the call returns | Test (TC-141, TC-150) |
-| FR-013-AC-3 | A file whose declaration structure is unrecoverable — an error outside every declaration's own executable body, at *any* nesting depth — returns `Ok(ParsedFile)` with `diagnostic()` returning `Some`, naming the file and the one-based line of the first error position, never a result indistinguishable from a clean parse. Verified nested one level deep in a `mod`, an `impl`, inside a struct's own field list, inside an enum's own variant list, inside a function's own parameter list, two `mod`s deep, and with a `mod` missing its closing brace (Rust); nested inside a `class`, and for the Python-specific dangling-`return` recovery shape (Python); nested inside a `namespace`, including inside a `namespace`'s own `class` (TypeScript); and across a batch of files collected into one `Vec` — not only at the top level, which an earlier, depth-1-only form of this check missed (PLAT-841 PR #22 review finding FND-001), and not only at container-body boundaries, which an earlier per-container-kind form of this check still missed for a struct field, enum variant or parameter list (PLAT-841 PR #22 review findings FND-007, FND-008, FND-009) | Test (TC-136, TC-148, TC-153, TC-157, TC-159, TC-160, TC-162, TC-165, TC-166, TC-167, TC-168, TC-171, TC-172, TC-173, TC-174) |
+| FR-013-AC-3 | A file whose declaration structure is unrecoverable — an error outside every declaration's own executable body, at *any* nesting depth — returns `Ok(ParsedFile)` with `diagnostic()` returning `Some`, naming the file and the one-based line of the first error position, never a result indistinguishable from a clean parse. Verified nested one level deep in a `mod`, an `impl`, inside a struct's own field list, inside an enum's own variant list, inside a function's own parameter list, two `mod`s deep, and with a `mod` missing its closing brace (Rust); nested inside a `class`, and for Python's own last-statement-in-a-suite recovery shape, which surfaces as structural for a broken `return` and, identically, for a broken assignment (Python); nested inside a `namespace`, including inside a `namespace`'s own `class` (TypeScript); and across a batch of files collected into one `Vec` — not only at the top level, which an earlier, depth-1-only form of this check missed (PLAT-841 PR #22 review finding FND-001), and not only at container-body boundaries, which an earlier per-container-kind form of this check still missed for a struct field, enum variant or parameter list (PLAT-841 PR #22 review findings FND-007, FND-008, FND-009) | Test (TC-136, TC-148, TC-153, TC-157, TC-159, TC-160, TC-162, TC-165, TC-166, TC-167, TC-168, TC-171, TC-172, TC-173, TC-174, TC-175) |
 | FR-013-AC-4 | Building `quire-code-parse` with `--no-default-features --features rust` compiles and links the Rust grammar only; the Python and TypeScript grammar crates are absent from the resolved dependency graph — verified by `make check-single-grammar`'s `cargo tree` inspection; see "Verification note on FR-013-AC-4" below for why this mints no TC id | Inspection |
 | FR-013-AC-5 | Parsing identical language, file identifier and source-text bytes twice yields syntax trees whose rendered structure is identical on both calls, including across process boundaries against a committed golden fixture, not only within one test run | Test (TC-142, TC-149, TC-155) |
 | FR-013-AC-6 | No source text a caller can supply as a `&str` causes a panic | Test (TC-143, TC-156) |
 | FR-013-AC-7 | `ParsedFile`'s `Send`/`Sync` status is documented and verified by a compiled static assertion rather than assumed from the underlying `tree-sitter` version's documentation; the crate documentation states the fan-out pattern(s) this verified status makes sound for parsing a repository in parallel | Test (TC-144, TC-145) |
 | FR-013-AC-8 | `Language` and `ParseError` — including each of `ParseError`'s struct-shaped variants individually — are declared `#[non_exhaustive]`, so a new language variant, diagnostic variant, or field on an existing diagnostic variant is not a breaking change for an existing consumer's `match` | Inspection |
 | FR-013-AC-9 | `Ok(ParsedFile)` carries the tree tree-sitter produced whether or not `diagnostic()` returns `Some`; acknowledging a declaration-structure diagnostic is never gated behind `Result`'s `Err` arm, so a caller is never locked out of the tree by reading the diagnostic attached to it | Test (TC-154, TC-161) |
-| FR-013-AC-10 | A body-local error — inside one declaration's own executable body, its own kind/name/signature still resolvable — returns `Ok(ParsedFile)` with `diagnostic()` returning `None`, the full tree walkable; only an error outside every declaration's own executable body trips FR-013-AC-3. Verified at the top level and nested one level deep in a `mod` (Rust), a `class` (Python), and a `namespace` (TypeScript), so nesting depth alone is never mistaken for a declaration-structure error (PLAT-841 PR #22 review finding FND-001); the Python dangling-`return` recovery shape is a disclosed exception to this, not covered here — see "Known limitations" | Test (TC-151, TC-152, TC-158, TC-163, TC-164) |
+| FR-013-AC-10 | A body-local error — inside one declaration's own executable body, its own kind/name/signature still resolvable — returns `Ok(ParsedFile)` with `diagnostic()` returning `None`, the full tree walkable; only an error outside every declaration's own executable body trips FR-013-AC-3. Verified at the top level and nested one level deep in a `mod` (Rust), a `class` (Python), and a `namespace` (TypeScript), so nesting depth alone is never mistaken for a declaration-structure error (PLAT-841 PR #22 review finding FND-001); Python's own last-statement-in-a-suite recovery shape is a disclosed exception to this — common, not `return`-specific — see "Known limitations" | Test (TC-151, TC-152, TC-158, TC-163, TC-164) |
 | FR-013-AC-11 | `ParseError` carries no lifetime parameter and is `'static`, verified by a compiled type-level assertion rather than assumed from its shape; a consumer boxes it as `Box<dyn std::error::Error + 'static>` and its accessors and `Display` message name the file and line it carries. An earlier shape of this crate carried a borrowed `ParsedFile` inside `ParseError`, which could not satisfy this (PLAT-841 PR #22 review finding FND-005). `ParseError::NoTree` is the only variant and is not reachable through `parse_file` for any input this crate's own fixtures or property tests have found; its `'static`-ness is real insurance against a currently unexercisable case, not motivated by a live use case today | Test (TC-139, TC-140, TC-169, TC-170) |
 | FR-013-AC-12 | `Diagnostic` carries a `file` field alongside `line` and `column`, so a caller that copies a `Diagnostic` out of the loop that produced it — to log it, or to collect it alongside diagnostics from other files — does not have to re-pair it with its source file by hand, or risk pairing it with the wrong one (PLAT-841 PR #22 review round 3, finding FND-013) | Test (TC-161, TC-171) |
 
@@ -172,17 +172,6 @@ zero-diagnostic result.
 Two shapes are disclosed here rather than left to a code comment a reader
 would have to find on their own:
 
-- **TypeScript's declaration-structure recovery for a broken declaration
-  nested inside a function body does not behave like Rust's or Python's**
-  (PLAT-841 PR #22 review finding FND-010). This crate's own predicate is
-  mechanical and grammar-agnostic — it asks whether the error lies inside a
-  declaration's own executable body node, per grammar's own field structure —
-  so a difference here is TypeScript's own recovery shape, not a special
-  case this crate adds or omits. Owner: `quire-code-rs` (this crate); no
-  further remediation is planned beyond this disclosure, since the crate's
-  contract is stated at the level of the body-node rule, not at the level of
-  "identical behavior across grammars" that grammar's own recovery does not
-  actually provide.
 - **`declare module` blocks and `.d.ts` ambient-module files are not
   separately verified against the declaration-structure predicate**
   (PLAT-841 PR #22 review finding FND-011), beyond what TypeScript's regular
@@ -190,18 +179,33 @@ would have to find on their own:
   Owner: `quire-code-rs` (this crate); tracked as a fixture gap, not a known
   incorrect behavior — no case demonstrating a wrong answer for either shape
   has been found.
-- **Python's error recovery for a dangling `return <expr> +` attaches the
-  resulting `ERROR` node as a sibling of `function_definition`, outside the
-  function's own `body` field**, rather than nesting it inside `body` the
-  way an assignment (`x = <expr> +`) does. Under the body-node rule this
-  reads as structural (`diagnostic()` returns `Some`) even though the error
-  sits, informally, "inside the function" — a mechanical consequence of
-  asking a structural question about where a node sits in the tree, not
-  about what a reader would call "inside" in prose. `TC-174` documents this
-  fixture and its `Some` outcome directly, rather than either fixture
-  silently taking one answer or the discrepancy going unrecorded; `TC-163`
-  uses an assignment-shaped fixture instead so it tests the genuinely
-  body-local case its row claims.
+- **In Python, a body-local error frequently recovers *outside* the
+  declaration's own `body` field and reads as structural — this is common,
+  not a `return`-specific oddity, and a reader should expect it rather than
+  expect Python body-local errors to be generally silent.** The reliable
+  trigger is *suite position*, verified across every statement kind tested
+  (a broken assignment, `return`, function call, and `if`): an error that is
+  the **last statement in its suite** — nothing else follows before the
+  next dedent or declaration — always recovers with tree-sitter attaching
+  the resulting `ERROR` as a sibling of the enclosing `function_definition`,
+  outside `body`, even though the function's own kind, name and parameters
+  stay fully resolvable (`TC-174`, a dangling `return`; `TC-175`, the
+  identical shape with a dangling assignment instead, pinning that the
+  trigger is suite position, not `return` specifically). An error with a
+  *following* statement in the same suite is not reliably safe either — it
+  depends on whether tree-sitter's own recovery can extend the broken
+  expression using that following statement's leading tokens (an
+  identifier- or literal-led statement often can and the error then stays
+  body-local; a keyword-led statement like `pass` cannot, and the error
+  still surfaces outside `body`) — `TC-163` is the one verified case where
+  this holds (a broken assignment followed by another statement in the same
+  suite stays body-local), not a general guarantee about every "followed"
+  shape. Owner: `quire-code-rs` (this crate); this is Python's own grammar
+  recovery behavior, not a special case this crate adds or omits, and no
+  further remediation beyond this disclosure is planned, since the crate's
+  contract is stated at the level of the body-node rule applied
+  mechanically, not at the level of matching a reader's intuition about
+  what counts as "inside" a function in prose.
 
 ## Correction record: FND-012, FND-013
 

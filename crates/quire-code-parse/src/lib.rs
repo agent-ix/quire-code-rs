@@ -115,14 +115,17 @@
 //! grammar — checked directly against those fixtures, not assumed from
 //! either grammar's documentation, and re-checked at every nesting depth
 //! after FND-001, not only at the top level. One shape does not honor this
-//! cleanly: Python's own recovery for a dangling `return <expr> +` attaches
-//! the resulting `ERROR` as a sibling of `function_definition` rather than
-//! nesting it inside the function's `body` field, so it reads as structural
-//! under this rule even though it sits, informally, "inside the function" —
-//! a disclosed, known limitation of the mechanical rule, not a silently
-//! different answer; see FR-013's "Known limitations" section and `TC-174`.
-//! Outside that one shape, that case returns `Ok` with `diagnostic()`
-//! returning `None`, tree fully walkable; a caller
+//! cleanly, and it is common rather than an edge case: in Python, an error
+//! that is the *last statement in its suite* — a broken assignment, a
+//! dangling `return`, an unclosed call, an unterminated `if`, alike —
+//! recovers with the resulting `ERROR` attached as a sibling of the
+//! enclosing `function_definition`, outside the function's own `body`
+//! field, so it reads as structural under this rule even though it sits,
+//! informally, "inside the function". This is a disclosed, known limitation
+//! of the mechanical rule, not a silently different answer, and it is not
+//! specific to `return`; see FR-013's "Known limitations" section and
+//! `TC-174`/`TC-175`. Outside that shape, that case returns `Ok` with
+//! `diagnostic()` returning `None`, tree fully walkable; a caller
 //! that wants to know a body-local error exists can see it directly via
 //! tree-sitter's own [`Node::has_error`](tree_sitter::Node::has_error) on
 //! whatever node it is inspecting. Treating every error anywhere as a
