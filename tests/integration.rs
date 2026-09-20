@@ -336,8 +336,9 @@ fn the_declared_dependencies_are_the_audited_set() {
 // extraction path.
 #[test]
 fn extraction_touches_no_ambient_state() {
-    // Tests are exempt — this very test reads files — so only `src/` is
-    // audited, with its own test modules stripped.
+    // Tests are exempt — this very test reads files — so only the extraction
+    // sources `for_each_extraction_source` sweeps are audited, with their own
+    // test modules stripped.
     for_each_extraction_source(|path, code| {
         for banned in ["std::fs", "std::net", "std::env", "std::process"] {
             assert!(
@@ -373,32 +374,45 @@ fn extraction_reads_no_clock_and_no_randomness() {
     });
 }
 
-/// Run `check` over every `src/*.rs` file with comments and test modules
-/// stripped — the code that actually runs during extraction.
+/// Run `check` over every `*.rs` file under `src/` and, as of PLAT-849,
+/// `crates/quire-code-parse/src/` — with comments and test modules stripped
+/// — the code that actually runs during extraction.
+///
+/// PLAT-849 review N2: before this swept `quire-code-parse` too,
+/// `the_declared_dependencies_are_the_audited_set` admitted `quire-code-parse`
+/// into the audited dependency set on the strength of a sentence in its own
+/// crate docs ("This crate never reads a path, opens a socket, or touches the
+/// filesystem"), with no compiled check behind it — a stated dependency
+/// property needs a compiled assertion here, not a sentence, and this
+/// crate's own parsing now runs through `quire-code-parse` on every
+/// extraction, so its source is as much "the extraction path" as this
+/// package's own `src/`. Widening this one helper closes the same hole in
+/// every check built on it: `extraction_touches_no_ambient_state`,
+/// `extraction_reads_no_clock_and_no_randomness`, and (via the refactor
+/// below) `extraction_paths_use_ordered_collections_only`, which duplicated
+/// this walk against `src/` alone before this change.
 fn for_each_extraction_source(check: impl Fn(String, &str)) {
     let root = env!("CARGO_MANIFEST_DIR");
-    for entry in std::fs::read_dir(format!("{root}/src")).expect("src is readable") {
-        let path = entry.expect("dir entry").path();
-        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
-            continue;
+    for dir in [
+        format!("{root}/src"),
+        format!("{root}/crates/quire-code-parse/src"),
+    ] {
+        for entry in std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("{dir} is readable: {e}")) {
+            let path = entry.expect("dir entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            let source = std::fs::read_to_string(&path).expect("source is readable");
+            let code = strip_comments(&strip_test_modules(&source));
+            check(path.display().to_string(), &code);
         }
-        let source = std::fs::read_to_string(&path).expect("source is readable");
-        let code = strip_comments(&strip_test_modules(&source));
-        check(path.display().to_string(), &code);
     }
 }
 
 // TC-057, NFR-001-AC-4: no order-observable hash iteration in extraction.
 #[test]
 fn extraction_paths_use_ordered_collections_only() {
-    let root = env!("CARGO_MANIFEST_DIR");
-    for entry in std::fs::read_dir(format!("{root}/src")).expect("src is readable") {
-        let path = entry.expect("dir entry").path();
-        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
-            continue;
-        }
-        let source = std::fs::read_to_string(&path).expect("source is readable");
-        let code = strip_comments(&strip_test_modules(&source));
+    for_each_extraction_source(|path, code| {
         // Match real usage — `HashMap<`, `HashMap::`, `use …HashMap` — rather
         // than the bare word, which appears in the comments explaining why
         // these modules use BTree collections instead.
@@ -406,13 +420,12 @@ fn extraction_paths_use_ordered_collections_only() {
             for form in [format!("{banned}<"), format!("{banned}::")] {
                 assert!(
                     !code.contains(&form),
-                    "{} uses {form}; iteration order is observable in the output, \
-                     so NFR-001 requires a BTree collection",
-                    path.display()
+                    "{path} uses {form}; iteration order is observable in the output, \
+                     so NFR-001 requires a BTree collection"
                 );
             }
         }
-    }
+    });
 }
 
 /// Drop `#[cfg(test)] mod tests { … }` so audits cover only shipping code.

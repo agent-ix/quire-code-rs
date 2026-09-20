@@ -211,12 +211,18 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
     }
 
     let parsed = match parse_tree(file) {
-        Some(parsed) => parsed,
-        None => {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            // Threaded through rather than discarded (PR #27 review N5):
+            // `quire_code_parse::ParseError`'s `Display` exists precisely to
+            // name the file and line this defensive path failed at
+            // (FR-013-AC-11 in quire-code-parse's own spec), and this was
+            // the one consumer throwing that away in favor of a generic
+            // string.
             out.diagnostics.push(Diagnostic::file_error(
                 &path,
                 "parser_unavailable",
-                "the grammar failed to produce a syntax tree",
+                error.to_string(),
             ));
             return out;
         }
@@ -297,18 +303,21 @@ struct Context {
 }
 
 /// Parse `file` through the shared parse layer (PLAT-849) rather than this
-/// crate owning a `tree_sitter::Parser` directly. `None` mirrors the old
-/// `parser.set_language(...).ok()?` / `parser.parse(...)` failure paths —
+/// crate owning a `tree_sitter::Parser` directly. The `Err` case mirrors the
+/// old `parser.set_language(...).ok()?` / `parser.parse(...)` failure paths —
 /// [`quire_code_parse::ParseError`] is reserved for the same essentially
-/// defensive case (no tree at all), so both collapse to the same
-/// `parser_unavailable` diagnostic at the call site.
-fn parse_tree(file: &SourceFile) -> Option<quire_code_parse::ParsedFile<'_>> {
+/// defensive case (no tree at all) — but is threaded through to the caller
+/// rather than collapsed to `None`, so its `Display` (naming a file and line,
+/// FR-013-AC-11) reaches the diagnostic instead of being discarded (PR #27
+/// review N5).
+fn parse_tree(
+    file: &SourceFile,
+) -> Result<quire_code_parse::ParsedFile<'_>, quire_code_parse::ParseError> {
     quire_code_parse::parse_file(
         file.language.parse_language(),
         file.path.as_str(),
         file.content.as_str(),
     )
-    .ok()
 }
 
 /// One-based line and zero-based column of the first error node, if any.

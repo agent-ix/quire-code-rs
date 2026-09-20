@@ -486,20 +486,34 @@ mod tests {
     // grammar into directly — that lives entirely behind
     // `quire_code_parse::parse_file` now. What this crate still owns is the
     // mapping from its own `Language` to `quire_code_parse::Language`; this
-    // pins that every variant maps to one that actually parses, rather than
-    // trusting the `match` arms in `parse_language` by inspection.
+    // pins that every variant maps to the *right* one, not merely to one
+    // that parses. An empty-string fixture (an earlier shape of this test,
+    // PR #27 review N4) would pass unchanged even if all four arms of
+    // `parse_language` mapped to `Language::Rust` — every grammar accepts
+    // empty input — which is exactly the risk on a PR where these four match
+    // arms were hand-written for the first time, `Tsx`/`TypeScript` being the
+    // obvious transposition. Each snippet below is real, minimal source that
+    // is syntactically clean under its *own* grammar; asserting
+    // `!has_error()` on the actual mapped result is what a swapped arm trips.
     #[test]
-    fn every_language_maps_to_a_parseable_quire_code_parse_language() {
-        for lang in [
-            Language::Rust,
-            Language::TypeScript,
-            Language::Tsx,
-            Language::Python,
-        ] {
-            let parsed = quire_code_parse::parse_file(lang.parse_language(), "t", "");
+    fn every_language_maps_to_its_own_parseable_quire_code_parse_language() {
+        let cases: &[(Language, &str)] = &[
+            (Language::Rust, "fn r() {}\n"),
+            (Language::TypeScript, "function t(): void {}\n"),
+            // JSX: valid under the Tsx grammar, a parse error under plain
+            // TypeScript's — this is what actually catches a Tsx/TypeScript
+            // transposition, since ordinary TypeScript source parses cleanly
+            // under either grammar and so cannot catch that swap on its own.
+            (Language::Tsx, "const x = <div />;\n"),
+            (Language::Python, "def p():\n    pass\n"),
+        ];
+        for (lang, source) in cases {
+            let parsed = quire_code_parse::parse_file(lang.parse_language(), "t", source)
+                .unwrap_or_else(|error| panic!("{lang:?} produced no tree at all: {error}"));
             assert!(
-                parsed.is_ok(),
-                "{lang:?} maps to a quire_code_parse::Language that fails to parse"
+                !parsed.root_node().has_error(),
+                "{lang:?} maps to a quire_code_parse::Language that could not parse this \
+                 language's own snippet cleanly — check parse_language's match arms"
             );
         }
     }
