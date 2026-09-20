@@ -1,5 +1,7 @@
 # quire-code-rs
 
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/6qsdhSPE)
+
 Deterministic source-code knowledge-graph extraction for the Filament/Quire
 ecosystem. Sibling of [quire-rs](https://github.com/agent-ix/quire-rs): quire-rs
 extracts canonical graph records from markdown spec artifacts; quire-code-rs
