@@ -13,7 +13,7 @@
 //! than the crate's production-code denial being relaxed.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use quire_code_parse::{parse_file, Language, ParseError};
+use quire_code_parse::{parse_file, Language};
 
 #[cfg(feature = "rust")]
 // TC-135, FR-013-AC-1: a consumer parses Rust source and walks the tree with
@@ -60,24 +60,24 @@ fn consumer_parses_typescript_and_tsx_and_walks_the_tree() {
 }
 
 #[cfg(feature = "rust")]
-// TC-136, FR-013-AC-3: a syntax-error file returns a named diagnostic with
-// `file:line`, never an empty or default `Ok` result.
+// TC-136, FR-013-AC-3: a declaration-structure error returns `Ok` with a
+// diagnostic naming the one-based line, never an empty or default result with
+// no way to tell it apart from a clean parse.
 #[test]
-fn syntax_error_file_returns_diagnostic_not_empty_result() {
+fn syntax_error_file_returns_ok_with_a_named_diagnostic() {
     let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
-    let result = parse_file(Language::Rust, "src/broken.rs", source);
-    match result {
-        Err(ParseError::Syntax { file, line, .. }) => {
-            assert_eq!(file, "src/broken.rs");
-            assert!(line >= 1, "line is one-based and always present");
-        }
-        Err(other) => panic!("expected ParseError::Syntax, got {other:?}"),
-        Ok(_) => panic!("a file with an unbalanced expression must not parse cleanly"),
-    }
+    let parsed = parse_file(Language::Rust, "src/broken.rs", source).expect("tree still produced");
+    let diagnostic = parsed
+        .diagnostic()
+        .expect("an unbalanced top-level item is a declaration-structure error");
+    assert!(
+        diagnostic.line() >= 1,
+        "line is one-based and always present"
+    );
 }
 
 #[cfg(feature = "rust")]
-// TC-151, FR-013-AC-3: a body-local syntax error — inside one declaration's
+// TC-151, FR-013-AC-10: a body-local syntax error — inside one declaration's
 // own expression, a sibling declaration intact — returns `Ok`, not `Err`.
 // This is the case `filament-ide-rs` needs: a file mid-edit almost always
 // carries exactly this shape of error, and the API must still hand back a
@@ -106,20 +106,17 @@ fn body_local_syntax_error_still_returns_ok_with_a_walkable_tree() {
 }
 
 #[cfg(feature = "rust")]
-// TC-154, FR-013-AC-3: the tree tree-sitter produced is still reachable
-// through `Err(ParseError::Syntax { parsed, .. })` — a hard diagnostic is
-// never the price of losing the tree.
+// TC-154, FR-013-AC-9: the tree tree-sitter produced is reachable through
+// `Ok(ParsedFile)` even when `diagnostic()` is `Some` — a hard diagnostic is
+// never the price of losing the tree, and it is never gated behind `Err`
+// either (PLAT-841 PR #22 review finding FND-005).
 #[test]
 fn syntax_error_still_carries_the_tree_it_names_a_diagnostic_against() {
     let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
-    let result = parse_file(Language::Rust, "src/broken.rs", source);
-    match result {
-        Err(ParseError::Syntax { parsed, .. }) => {
-            assert_eq!(parsed.root_node().kind(), "source_file");
-            assert_eq!(parsed.source(), source);
-        }
-        other => panic!("expected ParseError::Syntax carrying a tree, got {other:?}"),
-    }
+    let parsed = parse_file(Language::Rust, "src/broken.rs", source).expect("tree still produced");
+    assert!(parsed.diagnostic().is_some());
+    assert_eq!(parsed.root_node().kind(), "source_file");
+    assert_eq!(parsed.source(), source);
 }
 
 #[cfg(feature = "python")]
@@ -127,13 +124,12 @@ fn syntax_error_still_carries_the_tree_it_names_a_diagnostic_against() {
 #[test]
 fn syntax_error_file_returns_diagnostic_for_python_too() {
     let source = "def broken(\n    pass\n";
-    let result = parse_file(Language::Python, "tool/broken.py", source);
+    let parsed =
+        parse_file(Language::Python, "tool/broken.py", source).expect("tree still produced");
     assert!(
-        result.is_err(),
-        "an unclosed parameter list must not parse cleanly"
+        parsed.diagnostic().is_some(),
+        "an unclosed parameter list is a declaration-structure error"
     );
-    let err = result.expect_err("checked above");
-    assert_eq!(err.file(), "tool/broken.py");
 }
 
 #[cfg(feature = "rust")]
@@ -181,4 +177,21 @@ fn tree_structure_matches_a_golden_fixture_committed_across_process_boundaries()
     let parsed =
         parse_file(Language::Rust, "fixtures/determinism.rs.txt", source).expect("parses cleanly");
     assert_eq!(parsed.root_node().to_sexp(), golden.trim_end());
+}
+
+#[cfg(feature = "typescript")]
+// TC-168, FR-013-AC-3 (FND-001): a class method tree-sitter could not
+// resolve at all, nested inside a `namespace` two levels deep from root
+// (`namespace` > `class` > method), trips the structural check the same way
+// a top-level item would — exercising `class_body`'s own unconditional
+// container status from inside a `namespace`, not only at the top level.
+#[test]
+fn unresolvable_class_method_in_a_namespace_counts_as_a_declaration_structure_error() {
+    let source = "namespace NS {\n    class C {\n        m(: void { }\n    }\n}\n";
+    let parsed =
+        parse_file(Language::TypeScript, "src/ns_broken.ts", source).expect("tree still produced");
+    assert!(
+        parsed.diagnostic().is_some(),
+        "a method with a malformed parameter list, nested inside a namespaced class, must still be caught"
+    );
 }

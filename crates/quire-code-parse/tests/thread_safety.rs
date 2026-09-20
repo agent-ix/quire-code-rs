@@ -38,3 +38,16 @@ fn parsed_file_is_send() {
 fn parsed_file_is_sync() {
     static_assertions::assert_impl_all!(ParsedFile<'static>: Sync);
 }
+
+// TC-169, FR-013-AC-11: `ParseError` is `'static` — compiled, not asserted in
+// prose. An earlier shape of this crate carried a borrowed `ParsedFile<'src>`
+// inside `ParseError::Syntax`, which could never satisfy this bound (`E0597`
+// on any attempt); `ParseError` no longer carries the tree at all (PLAT-841
+// PR #22 review finding FND-005), and owns its `file: String` rather than
+// borrowing it, which is what makes this compile.
+fn assert_static<T: 'static>() {}
+
+#[test]
+fn parse_error_is_static() {
+    assert_static::<quire_code_parse::ParseError>();
+}

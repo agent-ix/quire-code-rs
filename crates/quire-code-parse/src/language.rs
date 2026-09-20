@@ -53,7 +53,7 @@ impl Language {
 mod tests {
     use super::*;
 
-    // TC-137, FR-013-AC-4: every compiled-in language loads its grammar.
+    // TC-137, FR-013-CON-3: every compiled-in language loads its grammar.
     #[test]
     fn every_compiled_language_loads_its_grammar() {
         let languages: &[Language] = &[

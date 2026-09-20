@@ -1,72 +1,59 @@
-//! The one error type this crate returns.
+//! The one error type this crate returns, and the diagnostic a caller finds
+//! attached to `Ok(ParsedFile)` when the tree's declaration structure could
+//! not be trusted.
 //!
 //! Implements [FR-013](../../../spec/functional/FR-013-borrowed-parse-tree-api.md)'s
-//! hard-diagnostic rule: a parse failure is a named, `Err`-returned
-//! diagnostic naming a file and a line, never an `Ok` value the caller has to
-//! inspect for silence. PLAT-14 is the reason this is structural rather than
-//! a convention — a hand-rolled scanner desynced on Python scope and returned
-//! zero symbols for a whole repository with nothing in its return type saying
-//! so.
+//! hard-diagnostic rule: a declaration-structure failure is a named position
+//! (file, line, column) that a caller cannot get past without seeing, never a
+//! result indistinguishable from a clean parse. PLAT-14 is the reason this is
+//! structural rather than a convention — a hand-rolled scanner desynced on
+//! Python scope and returned zero symbols for a whole repository with nothing
+//! in its return type saying so.
 //!
-//! The tree is never the price of that diagnostic. `ParseError::Syntax`
-//! carries the [`ParsedFile`] tree-sitter still produced, so a caller that
-//! receives `Err` is never locked out of the tree — only forced to
-//! acknowledge, via `Result`, that its declaration structure could not be
-//! fully trusted.
+//! `ParseError` itself is reserved for the case where no tree exists at all —
+//! [`NoTree`](ParseError::NoTree) — and owns its `file` rather than borrowing
+//! it, so it is `'static`-constructible: a consumer can `?` it into
+//! `anyhow::Result`, box it as `Box<dyn Error + 'static>`, or collect it into
+//! a `Vec` that outlives the source buffer a single parse borrowed. Tying
+//! `ParseError` to `ParsedFile`'s own `'src` (an earlier shape of this crate,
+//! carrying the tree inside `Err`) could not satisfy that: a `ParsedFile<'src>`
+//! cannot itself be `'static` (rejected by `E0597` in any but a `'static`
+//! source), so an error type that had to *carry* one could not be either. The
+//! tree-sitter grammar being requested is a rare, essentially process-startup
+//! condition (a missing or ABI-incompatible language, or a parse that
+//! tree-sitter's own API contract lets return no tree at all); the ordinary
+//! per-file failure this crate exists to make loud is a declaration-structure
+//! error, which is common — mid-edit files hit it on every keystroke a
+//! consumer like `filament-ide-rs` cares about — so it is `parse_file`'s
+//! `Ok` path, attached to the tree it is about, not the rare path.
 
-use crate::parse::ParsedFile;
-
-/// Every variant carries `file` and a one-based `line` (FR-013-AC-3): the two
-/// accessors below cannot return "no line" for any *reachable* variant,
-/// because every arm supplies one. A variant with no natural line position —
-/// there are none of those in this set — would still have to invent one
-/// rather than omit it, since `line` has no `Option` to opt out into.
-///
-/// `'src` matches [`ParsedFile`]'s own lifetime: this error type borrows
-/// exactly as much as the value it sometimes carries, never more, and never
-/// falls back to an owned copy to avoid the lifetime parameter.
+/// The one error `parse_file` returns: no syntax tree could be produced at
+/// all. Reserved for this rare, essentially defensive case rather than for
+/// every declaration-structure failure — see the module docs for why: this
+/// type owns its `file` and is `'static`, which a type carrying a borrowed
+/// [`ParsedFile`](crate::ParsedFile) could not be.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum ParseError<'src> {
-    /// The tree's declaration structure is unrecoverable: the root, or one of
-    /// its top-level children, is itself an `ERROR` or `MISSING` node — see
-    /// [`parse_file`](crate::parse_file) for the full definition and why it
-    /// is narrower than "the tree contains an error anywhere".
-    ///
-    /// The tree tree-sitter still produced is carried in `parsed`, not
-    /// discarded: a declaration-structure error is a loud diagnostic, never a
-    /// reason to withhold the tree a caller already paid to produce.
-    #[error("{file}:{line}: syntax error")]
-    #[non_exhaustive]
-    Syntax {
-        file: &'src str,
-        /// One-based line of the first error or missing node.
-        line: u32,
-        /// Zero-based column of the first error or missing node.
-        column: u32,
-        /// The tree tree-sitter produced despite the error, fully walkable.
-        parsed: ParsedFile<'src>,
-    },
-
+pub enum ParseError {
     /// tree-sitter accepted the requested language but produced no tree at
-    /// all for this input.
+    /// all for this input, or the language itself could not be linked to the
+    /// parser (an ABI mismatch this crate's own pinned grammar crates should
+    /// never actually produce, but `Parser::set_language` returns a
+    /// `Result`, so this crate has no path back to `unwrap`/`expect`/a panic
+    /// if that ever stops being true).
     ///
-    /// Defensive rather than exercised in normal use: `parse_file` sets
-    /// neither a timeout nor a cancellation flag, and tree-sitter otherwise
-    /// always returns a tree — even a malformed one, via `Syntax` above. This
-    /// variant exists so that `parse_file` has no path back to `unwrap`,
-    /// `expect` or a panic if that ever stops being true. No tree exists in
-    /// this case, so none is carried.
+    /// No tree exists in this case, so none is carried — contrast
+    /// [`Diagnostic`], which always accompanies a real tree.
     #[error("{file}:{line}: parser produced no syntax tree")]
     #[non_exhaustive]
-    NoTree { file: &'src str, line: u32 },
+    NoTree { file: String, line: u32 },
 }
 
-impl<'src> ParseError<'src> {
+impl ParseError {
     /// The file this diagnostic names.
     pub fn file(&self) -> &str {
         match self {
-            ParseError::Syntax { file, .. } | ParseError::NoTree { file, .. } => file,
+            ParseError::NoTree { file, .. } => file,
         }
     }
 
@@ -74,20 +61,38 @@ impl<'src> ParseError<'src> {
     /// line was recorded" — every variant supplies a real one.
     pub fn line(&self) -> u32 {
         match self {
-            ParseError::Syntax { line, .. } | ParseError::NoTree { line, .. } => *line,
+            ParseError::NoTree { line, .. } => *line,
         }
     }
+}
 
-    /// The tree tree-sitter produced despite the error, when one exists.
-    ///
-    /// `Some` for [`Syntax`](ParseError::Syntax) — the whole point of that
-    /// variant carrying it — and `None` for [`NoTree`](ParseError::NoTree),
-    /// where no tree was ever produced to carry.
-    pub fn parsed(&self) -> Option<&ParsedFile<'src>> {
-        match self {
-            ParseError::Syntax { parsed, .. } => Some(parsed),
-            ParseError::NoTree { .. } => None,
-        }
+/// A declaration-structure diagnostic attached to a [`ParsedFile`](crate::ParsedFile)
+/// that [`ParsedFile::diagnostic`](crate::ParsedFile::diagnostic) hands back —
+/// never itself the return type, because withholding the tree is never the
+/// price of reporting this (FR-013-AC-3, FR-013-AC-9).
+///
+/// Every field here is a plain value (no borrow), so a caller can copy this
+/// out of a `ParsedFile` and keep it independently of the tree's own
+/// lifetime — unlike `ParseError`, nothing about this type needed to be
+/// `'static` to make that true, since it never carries the tree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct Diagnostic {
+    /// One-based line of the first declaration-structure error.
+    pub line: u32,
+    /// Zero-based column of the first declaration-structure error.
+    pub column: u32,
+}
+
+impl Diagnostic {
+    /// One-based line of the first declaration-structure error.
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+
+    /// Zero-based column of the first declaration-structure error.
+    pub fn column(&self) -> u32 {
+        self.column
     }
 }
 
@@ -96,41 +101,64 @@ mod tests {
     use super::*;
     use crate::{parse_file, Language};
 
-    // TC-139, FR-013-AC-3: every variant's accessors return the file and a
+    // TC-139, FR-013-AC-11: `ParseError`'s accessors return the file and a
     // one-based line, never an absent value.
-    #[cfg(feature = "rust")]
     #[test]
     fn every_variant_carries_file_and_line() {
-        let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
-        let err = parse_file(Language::Rust, "src/lib.rs", source)
-            .expect_err("truncated declaration is unrecoverable");
-        assert_eq!(err.file(), "src/lib.rs");
-        assert!(err.line() >= 1);
-        assert!(
-            err.parsed().is_some(),
-            "Syntax carries the tree it names a diagnostic against"
-        );
-
         let no_tree = ParseError::NoTree {
-            file: "src/lib.rs",
+            file: "src/lib.rs".to_string(),
             line: 1,
         };
         assert_eq!(no_tree.file(), "src/lib.rs");
         assert_eq!(no_tree.line(), 1);
-        assert!(no_tree.parsed().is_none(), "no tree was ever produced");
     }
 
-    // TC-140, FR-013-AC-3: the diagnostic renders the file and line in its
+    // TC-140, FR-013-AC-11: the diagnostic renders the file and line in its
     // message, so it is legible without calling the accessors.
-    #[cfg(feature = "rust")]
     #[test]
-    fn syntax_error_message_names_file_and_line() {
-        let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
-        let err = parse_file(Language::Rust, "src/store.rs", source)
-            .expect_err("truncated declaration is unrecoverable");
+    fn no_tree_error_message_names_file_and_line() {
+        let err = ParseError::NoTree {
+            file: "src/store.rs".to_string(),
+            line: 7,
+        };
         assert_eq!(
             err.to_string(),
-            format!("src/store.rs:{}: syntax error", err.line())
+            "src/store.rs:7: parser produced no syntax tree"
+        );
+    }
+
+    // TC-170, FR-013-AC-11: a `ParseError` boxes as a trait object with no
+    // lifetime tied to any source it might have been produced alongside —
+    // this compiles only because `ParseError` owns its `file` and is
+    // `'static` (PLAT-841 PR #22 review finding FND-005). Constructed
+    // directly here (allowed only inside this crate, since the variant is
+    // `#[non_exhaustive]`) rather than produced through `parse_file`, since
+    // `NoTree` is a defensive case this crate's own inputs do not reach.
+    #[test]
+    fn parse_error_boxes_as_a_static_trait_object() {
+        let err = ParseError::NoTree {
+            file: "src/lib.rs".to_string(),
+            line: 1,
+        };
+        let boxed: Box<dyn std::error::Error + 'static> = Box::new(err);
+        assert!(boxed.to_string().contains("src/lib.rs"));
+    }
+
+    // TC-161, FR-013-AC-9: a declaration-structure error attaches a
+    // `Diagnostic` to `Ok(ParsedFile)` — the tree and the diagnostic are
+    // never in tension, since neither costs the caller the other.
+    #[cfg(feature = "rust")]
+    #[test]
+    fn syntax_error_file_returns_ok_with_a_diagnostic_naming_the_line() {
+        let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
+        let parsed =
+            parse_file(Language::Rust, "src/broken.rs", source).expect("tree still produced");
+        let diagnostic = parsed
+            .diagnostic()
+            .expect("declaration structure is unrecoverable");
+        assert!(
+            diagnostic.line() >= 1,
+            "line is one-based and always present"
         );
     }
 }

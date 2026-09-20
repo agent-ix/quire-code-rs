@@ -58,39 +58,58 @@
 //!
 //! ## A parse failure is loud — and the tree is never the price of saying so
 //!
-//! [`parse_file`] returns `Err` — a [`ParseError::Syntax`] naming the file
-//! and a one-based line — exactly when the tree's *declaration structure* is
-//! unrecoverable: the root, or one of its top-level children, is itself an
-//! `ERROR`/`MISSING` node, so tree-sitter could not resolve even the identity
-//! of a top-level item there. `ParseError` is `#[non_exhaustive]` and every
-//! variant carries `file` and `line`; there is no variant that omits either,
-//! so a caller cannot construct a diagnostic-shaped value that is silently
-//! missing one. This is a direct, structural response to PLAT-14: a
-//! hand-rolled Python scanner desynced mid-file and returned zero symbols for
-//! the file with nothing in its return type distinguishing that from "this
-//! file declares nothing" — 509 passing tests were invisible to coverage for
-//! as long as that distinction did not exist in a type.
+//! [`parse_file`] returns `Ok(ParsedFile)` whenever tree-sitter produces a
+//! tree at all — essentially always — and [`ParsedFile::diagnostic`] returns
+//! `Some(Diagnostic)`, naming a one-based line and zero-based column, exactly
+//! when the tree's *declaration structure* is unrecoverable: the root, or a
+//! declaration-list-shaped body nested at *any* depth (a `mod`/`impl`/`trait`
+//! body in Rust, a `class` body in Python, a `class`/`namespace` body in
+//! TypeScript), has a direct child that is itself an `ERROR`/`MISSING` node,
+//! so tree-sitter could not resolve even the identity of a declaration there.
+//! Checking only the root's own direct children — an earlier shape of this
+//! predicate — missed every declaration nested one level down; since every
+//! Python method sits at depth 2 inside `class_definition`, that earlier
+//! shape structurally could not see a broken Python method at all (PLAT-841
+//! PR #22 review finding FND-001) — the exact PLAT-14 shape this crate exists
+//! to end, reintroduced one layer down. This is a direct, structural response
+//! to PLAT-14: a hand-rolled Python scanner desynced mid-file and returned
+//! zero symbols for the file with nothing in its return type distinguishing
+//! that from "this file declares nothing" — 509 passing tests were invisible
+//! to coverage for as long as that distinction did not exist in a type.
 //!
-//! **The tree survives the error.** `ParseError::Syntax` carries the
-//! [`ParsedFile`] tree-sitter still produced — `Err` forces the caller to
-//! acknowledge the diagnostic via `Result`, but never locks it out of the
-//! tree that diagnostic is about. This split — loud diagnostic, tree never
-//! discarded — only works because the diagnostic fires on a narrower
-//! condition than "the tree contains an error anywhere": an error nested
-//! inside one declaration's own body (an incomplete expression, mid-edit)
-//! leaves that declaration's own kind, name and signature fully readable,
-//! and tree-sitter recovers it locally — verified empirically across all
-//! three grammars this crate loads, not assumed from either grammar's
-//! documentation. That case returns `Ok`, tree fully walkable; a caller that
-//! wants to know a body-local error exists can see it directly via
+//! **The tree is never gated behind `Err`.** An earlier shape of this crate
+//! put the declaration-structure diagnostic on `Err(ParseError::Syntax)`,
+//! carrying the tree inside it. That could not be made `'static`: a
+//! `ParsedFile<'src>` borrows its source, so an error carrying one could not
+//! either, which meant a consumer could not `?` it into `anyhow::Result`,
+//! box it as `Box<dyn Error + 'static>`, or collect it across files into a
+//! `Vec` outliving any one source buffer (PLAT-841 PR #22 review finding
+//! FND-005) — a real cost to a binary walking a tree of files, exactly
+//! `quire-rs`'s own shape. Moving the diagnostic onto `Ok(ParsedFile)`
+//! instead removes that tension: [`ParseError`] is now reserved for the rare,
+//! essentially defensive case where no tree exists at all, owns its `file`,
+//! and is `'static`; the tree is available through the same `Ok` value
+//! whether or not `diagnostic()` is `Some`, so acknowledging the diagnostic
+//! and keeping the tree were never actually in tension — only `Result`'s
+//! shape made them look that way.
+//!
+//! This diagnostic fires on a narrower condition than "the tree contains an
+//! error anywhere": an error nested inside one declaration's own body (an
+//! incomplete expression, mid-edit) leaves that declaration's own kind, name
+//! and signature fully readable, and tree-sitter recovers it locally —
+//! verified empirically across all three grammars this crate loads, not
+//! assumed from either grammar's documentation, and re-verified at every
+//! nesting depth after FND-001, not only at the top level. That case returns
+//! `Ok` with `diagnostic()` returning `None`, tree fully walkable; a caller
+//! that wants to know a body-local error exists can see it directly via
 //! tree-sitter's own [`Node::has_error`](tree_sitter::Node::has_error) on
-//! whatever node it is inspecting. Treating every error anywhere as a hard
-//! failure would mean `filament-ide-rs`'s live-editing use case — cited above
-//! as this crate's reason to exist — gets `Err` and no tree on essentially
-//! every keystroke, since mid-edit content almost always carries a body-local
-//! `ERROR` or `MISSING` node. It would also reproduce, one layer down, the
-//! exact defect this program exists to end: one `ERROR` node anywhere
-//! silently costing a whole file's worth of symbols.
+//! whatever node it is inspecting. Treating every error anywhere as a
+//! structural diagnostic would mean `filament-ide-rs`'s live-editing use case
+//! — cited above as this crate's reason to exist — gets a diagnostic on
+//! essentially every keystroke, since mid-edit content almost always carries
+//! a body-local `ERROR` or `MISSING` node. It would also reproduce, one layer
+//! down, the exact defect this program exists to end: one `ERROR` node
+//! anywhere silently costing a whole file's worth of symbols.
 //!
 //! ## `tree_sitter` is re-exported, deliberately
 //!
@@ -150,7 +169,7 @@ mod error;
 mod language;
 mod parse;
 
-pub use error::ParseError;
+pub use error::{Diagnostic, ParseError};
 pub use language::Language;
 pub use parse::{parse_file, ParsedFile};
 

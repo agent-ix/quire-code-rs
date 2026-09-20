@@ -42,7 +42,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | Stakeholder Req | Trace to US/FR | Test/Validation | Coverage Status |
 |---|---|---|---|
-| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-156 | ✅ Complete |
+| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-171 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
 | StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
@@ -54,7 +54,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 | US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
-| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-156 | ✅ Complete |
+| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-171 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -81,7 +81,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
-| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-156 | ✅ |
+| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-171 | ✅ |
 
 ### Measurement Plan Coverage
 
@@ -230,11 +230,11 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-133 | Measurement producer reads local filesystem inputs only | Static | P0 | FR-012-CON-2 | ✅ |
 | TC-134 | Measurement producer has no network dependency or request | Static | P0 | FR-012-CON-3 | ✅ |
 | TC-135 | Consumer parses Rust and walks the tree with no fact-model dependency | Integration | P1 | FR-013-AC-1 | ✅ |
-| TC-136 | Syntax-error Rust file returns a named diagnostic, not an empty result | Integration | P1 | FR-013-AC-3 | ✅ |
+| TC-136 | Declaration-structure error returns `Ok` with a diagnostic naming the line, not an empty result | Integration | P1 | FR-013-AC-3 | ✅ |
 | TC-137 | Every compiled-in language loads its grammar | Unit | P2 | FR-013-CON-3 | ✅ |
 | TC-138 | A `rust`-only build has exactly one `Language` variant | Unit | P1 | FR-013-CON-3 | ✅ |
-| TC-139 | Every `ParseError` variant's accessors return a file and a line | Unit | P1 | FR-013-AC-3 | ✅ |
-| TC-140 | Syntax-error message renders the file and line | Unit | P2 | FR-013-AC-3 | ✅ |
+| TC-139 | `ParseError`'s accessors return the file and a line | Unit | P1 | FR-013-AC-11 | ✅ |
+| TC-140 | `ParseError::NoTree`'s message renders the file and line | Unit | P2 | FR-013-AC-11 | ✅ |
 | TC-141 | `ParsedFile` borrows the source rather than cloning it | Unit | P1 | FR-013-AC-2 | ✅ |
 | TC-142 | Identical input yields a byte-identical tree, checked two ways | Unit | P1 | FR-013-AC-5 | ✅ |
 | TC-143 | Parsing never panics on empty, punctuation-only or NUL-byte input | Unit | P1 | FR-013-AC-6 | ✅ |
@@ -242,15 +242,30 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-145 | `ParsedFile` is `Sync` (compiled static assertion) — corrected 2026-09-20, see Coverage Notes | Static | P1 | FR-013-AC-7 | ✅ |
 | TC-146 | Consumer parses Python and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
 | TC-147 | Consumer parses TypeScript and TSX and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
-| TC-148 | Syntax-error Python file returns a named diagnostic too | Integration | P2 | FR-013-AC-3 | ✅ |
+| TC-148 | Declaration-structure error returns `Ok` with a diagnostic for Python too | Integration | P2 | FR-013-AC-3 | ✅ |
 | TC-149 | Two independent parses of identical bytes render identical trees | Integration | P1 | FR-013-AC-5 | ✅ |
 | TC-150 | The parsed source outlives the call, across a function boundary | Integration | P1 | FR-013-AC-2 | ✅ |
-| TC-151 | A body-local syntax error, sibling declaration intact, returns `Ok` with a walkable tree | Integration | P1 | FR-013-AC-10 | ✅ |
+| TC-151 | A body-local syntax error, sibling declaration intact, returns `Ok` with a walkable tree and no diagnostic | Integration | P1 | FR-013-AC-10 | ✅ |
 | TC-152 | A body-local error does not trip the declaration-structure check, even though `has_error()` is true | Unit | P1 | FR-013-AC-10 | ✅ |
 | TC-153 | A top-level item tree-sitter could not resolve as a declaration trips the declaration-structure check | Unit | P1 | FR-013-AC-3 | ✅ |
-| TC-154 | `Err(ParseError::Syntax)` carries the tree tree-sitter produced despite the error | Integration | P1 | FR-013-AC-9 | ✅ |
+| TC-154 | `Ok(ParsedFile)` carries the tree tree-sitter produced despite the error even when `diagnostic()` is `Some` | Integration | P1 | FR-013-AC-9 | ✅ |
 | TC-155 | Tree structure matches a golden fixture committed to the repo, catching drift across process/version boundaries, not only within one test run | Integration | P2 | FR-013-AC-5 | ✅ |
 | TC-156 | Property test: no `&str` generated over arbitrary Unicode input causes a panic, across 256 cases per run | Property | P2 | FR-013-AC-6 | ✅ |
+| TC-157 | A declaration missing its own name, nested one level inside a `mod`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-158 | A body-local error nested inside a `mod`'s declaration stays `Ok` with no diagnostic (FND-001) | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-159 | A Python method missing its own name, nested inside a `class`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-160 | A TypeScript function with a malformed parameter list, nested inside a `namespace`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-161 | A declaration-structure error attaches a `Diagnostic` to `Ok(ParsedFile)` | Unit | P1 | FR-013-AC-9 | ✅ |
+| TC-162 | A struct field tree-sitter could not resolve, nested inside a `mod`, trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-163 | A body-local error inside a method nested inside a `class` stays `Ok` with no diagnostic (FND-001) | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-164 | A body-local error inside a function nested inside a `namespace` stays `Ok` with no diagnostic (FND-001) | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-165 | A broken `impl` method (missing its own name) trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-166 | Garbage two `mod`s deep trips the structural check — depth alone is not the discriminator (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-167 | A `mod` missing its closing brace trips the structural check | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-168 | An unresolvable class method inside a `namespace` trips the structural check (FND-001) | Integration | P1 | FR-013-AC-3 | ✅ |
+| TC-169 | `ParseError` is `'static` (compiled type-level assertion, not assumed from its shape) | Static | P1 | FR-013-AC-11 | ✅ |
+| TC-170 | A `ParseError` boxes as a `Box<dyn Error + 'static>` trait object | Unit | P1 | FR-013-AC-11 | ✅ |
+| TC-171 | Diagnostics from several files collect into one `Vec` that outlives any single file's own source buffer | Integration | P1 | FR-013-AC-11 | ✅ |
 
 ---
 
@@ -358,6 +373,38 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
   and shipped in the fourth place nobody re-read. The compiled static
   assertion this crate was required to write is what made the correct answer
   knowable at all; without it the folklore would still be standing.
+- **FND-001 (PR #22 second review round, 2026-09-20): the declaration-
+  structure predicate checked only the root's direct children, so every
+  matrix row for FR-013-AC-3/AC-10 passed while the shipped check missed a
+  declaration nested one level down.** TC-136/TC-148/TC-153 and TC-151/TC-152
+  all used top-level fixtures; none nested a declaration inside a `mod`,
+  `class` or `namespace`, so none could have caught it — a gap in fixture
+  coverage, not in what those tests each individually asserted. Because every
+  Python method sits at depth 2 inside `class_definition`, the depth-1 form
+  could not see a broken Python method at all: the exact PLAT-14 shape this
+  crate exists to end, reintroduced one layer down and quieter, since the
+  tree still returned. Fixed by walking to full depth and asking the
+  structural question again at every declaration-list-shaped body found,
+  however deep (see FR-013's own "Correction record: FND-001" section); TC-157
+  through TC-168 are the nested fixtures — Rust `mod`/`impl`/struct-field,
+  two `mod`s deep, a `mod` missing its closing brace, Python `class`, and
+  TypeScript `namespace`/`class` — that a depth-1 check would fail and the
+  full-depth one passes, covering all three grammars since the blind spot's
+  shape differed per grammar (Python attaches the error to `class_definition`
+  itself, not its body).
+- **FND-005 (PR #22 second review round): `ParseError` could not be
+  `'static`.** The shipped shape (`ParseError::Syntax` carrying the borrowed
+  `ParsedFile` tree-sitter produced despite the error) meant `ParseError`
+  itself always borrowed `'src`, so a consumer could not box it, convert it
+  with `anyhow`, or collect it across files into a `Vec` outliving any one
+  file's source buffer — a real cost to a binary walking a tree of files, the
+  exact shape `quire-rs` needs. Fixed by moving the declaration-structure
+  diagnostic onto `Ok(ParsedFile)` (`ParsedFile::diagnostic`, a plain
+  `Diagnostic` value with no borrow) and reserving `Err(ParseError::NoTree)`
+  for the rare, defensive case where no tree exists at all; `ParseError` now
+  owns its `file: String` and carries no lifetime parameter. TC-169/TC-170/
+  TC-171 back the `'static` claim and its two motivating uses (boxing,
+  cross-file collection) directly rather than by inspection alone.
 - Benchmark-verified criteria (TC-062..TC-065, TC-070) report measurements on
   every run and gate on threshold only in the performance lane, so that
   shared-runner variance does not make ordinary CI flaky.

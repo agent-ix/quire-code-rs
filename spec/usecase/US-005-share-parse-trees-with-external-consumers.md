@@ -60,26 +60,32 @@ cases and not verification criteria.
 
 ### [US-005-EX-3] A file whose declaration structure is unrecoverable fails loudly, not quietly — and the tree is not the price of saying so
 
-- **Given** a file whose top-level structure tree-sitter could not resolve at
-  all — a truncated declaration with nothing after it to resync against
+- **Given** a file whose structure tree-sitter could not resolve at some
+  point — a declaration, at any nesting depth, truncated with nothing after
+  it to resync against
 - **When** the consumer calls the parse API for it
-- **Then** the call returns a named error identifying the file and the line,
-  not a result indistinguishable from a file that legitimately declares
-  nothing — and that error still carries the tree tree-sitter produced, so the
-  consumer is never locked out of it just for having to acknowledge the
-  diagnostic
+- **Then** the call succeeds and returns the tree tree-sitter produced, with a
+  diagnostic attached to it identifying the line — not a result
+  indistinguishable from a file that legitimately declares nothing, and not a
+  diagnostic the consumer can only reach by giving up the tree it is about.
+  This holds regardless of how deep the unresolvable declaration sits: a
+  method inside a class, or a function inside a namespace, is caught exactly
+  as a top-level declaration is
 
-### [US-005-EX-4] A file mid-edit still yields its tree
+### [US-005-EX-4] A file mid-edit still yields its tree, at any nesting depth
 
 - **Given** a file an editor is saving mid-keystroke, carrying an incomplete
-  expression inside one declaration's body while every other declaration in
-  the file is intact
+  expression inside one declaration's own body — possibly nested inside a
+  class, a module or a namespace — while every other declaration in the file
+  is intact
 - **When** the consumer calls the parse API for it
-- **Then** the call succeeds with the full tree, because the broken
-  declaration's own kind, name and signature are still resolvable — a
-  consumer that wants to know the body itself has an error can see that
-  directly on the relevant node, through the same tree-sitter API the parse
-  API already hands back
+- **Then** the call succeeds with the full tree and no diagnostic attached,
+  because the broken declaration's own kind, name and signature are still
+  resolvable — a consumer that wants to know the body itself has an error can
+  see that directly on the relevant node, through the same tree-sitter API the
+  parse API already hands back. Nesting depth alone never counts as an
+  unresolvable declaration; only the declaration itself being unresolvable
+  does
 
 ### [US-005-EX-5] Selecting one language links one grammar
 
