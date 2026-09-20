@@ -1,4 +1,3 @@
-/target
 Cargo.lock.bak
 *.swp
 .DS_Store
@@ -20,3 +19,8 @@ __pycache__/
 
 # Test-run byproduct: the actual extraction written for golden-file diffs.
 tests/golden/fixture.actual.json
+
+target/
+*-target/
+target-*/
+.worktrees/
