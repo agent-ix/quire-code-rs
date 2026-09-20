@@ -20,3 +20,4 @@ description: "Index of artifacts in this directory."
 * [FR-010: Producer invocation contract](./FR-010-producer-invocation.md)
 * [FR-011: Versioned graph-quality observation schema](./FR-011-graph-quality-observation-schema.md)
 * [FR-012: Governed graph-quality measurement producer](./FR-012-governed-graph-quality-producer.md)
+* [FR-013: Borrowed parse-tree API for external consumers](./FR-013-borrowed-parse-tree-api.md)

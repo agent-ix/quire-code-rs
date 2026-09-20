@@ -29,13 +29,16 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Lint
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
-        run: cargo test
+        run: cargo test --workspace
 
       - name: Unsafe audit
         run: bash scripts/check_unsafe_comments.sh
+
+      - name: quire-code-parse single-grammar feature gate (FR-013-AC-4)
+        run: make check-single-grammar
 
   licenses:
     name: License Check

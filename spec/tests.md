@@ -42,7 +42,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | Stakeholder Req | Trace to US/FR | Test/Validation | Coverage Status |
 |---|---|---|---|
-| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002 | TC-001, TC-038, TC-054, TC-059 | ✅ Complete |
+| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-175 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
 | StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
@@ -54,6 +54,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 | US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
+| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-175 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -80,6 +81,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
+| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175 | ✅ |
 
 ### Measurement Plan Coverage
 
@@ -227,6 +229,47 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-132 | Recall has no threshold that relaxes precision | Static | P0 | FR-012-CON-1 | ✅ |
 | TC-133 | Measurement producer reads local filesystem inputs only | Static | P0 | FR-012-CON-2 | ✅ |
 | TC-134 | Measurement producer has no network dependency or request | Static | P0 | FR-012-CON-3 | ✅ |
+| TC-135 | Consumer parses Rust and walks the tree with no fact-model dependency | Integration | P1 | FR-013-AC-1 | ✅ |
+| TC-136 | Declaration-structure error returns `Ok` with a diagnostic naming the line, not an empty result | Integration | P1 | FR-013-AC-3 | ✅ |
+| TC-137 | Every compiled-in language loads its grammar | Unit | P2 | FR-013-CON-3 | ✅ |
+| TC-138 | A `rust`-only build has exactly one `Language` variant | Unit | P1 | FR-013-CON-3 | ✅ |
+| TC-139 | `ParseError`'s accessors return the file and a line | Unit | P1 | FR-013-AC-11 | ✅ |
+| TC-140 | `ParseError::NoTree`'s message renders the file and line | Unit | P2 | FR-013-AC-11 | ✅ |
+| TC-141 | `ParsedFile` borrows the source rather than cloning it | Unit | P1 | FR-013-AC-2 | ✅ |
+| TC-142 | Identical input yields a byte-identical tree, checked two ways | Unit | P1 | FR-013-AC-5 | ✅ |
+| TC-143 | Parsing never panics on empty, punctuation-only or NUL-byte input | Unit | P1 | FR-013-AC-6 | ✅ |
+| TC-144 | `ParsedFile` is `Send` (compiled static assertion) | Static | P1 | FR-013-AC-7 | ✅ |
+| TC-145 | `ParsedFile` is `Sync` (compiled static assertion) — corrected 2026-09-20, see Coverage Notes | Static | P1 | FR-013-AC-7 | ✅ |
+| TC-146 | Consumer parses Python and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
+| TC-147 | Consumer parses TypeScript and TSX and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
+| TC-148 | Declaration-structure error returns `Ok` with a diagnostic for Python too | Integration | P2 | FR-013-AC-3 | ✅ |
+| TC-149 | Two independent parses of identical bytes render identical trees | Integration | P1 | FR-013-AC-5 | ✅ |
+| TC-150 | The parsed source outlives the call, across a function boundary | Integration | P1 | FR-013-AC-2 | ✅ |
+| TC-151 | A body-local syntax error, sibling declaration intact, returns `Ok` with a walkable tree and no diagnostic | Integration | P1 | FR-013-AC-10 | ✅ |
+| TC-152 | A body-local error does not trip the declaration-structure check, even though `has_error()` is true | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-153 | A top-level item tree-sitter could not resolve as a declaration trips the declaration-structure check | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-154 | `Ok(ParsedFile)` carries the tree tree-sitter produced despite the error even when `diagnostic()` is `Some` | Integration | P1 | FR-013-AC-9 | ✅ |
+| TC-155 | Tree structure matches a golden fixture committed to the repo, catching drift across process/version boundaries, not only within one test run | Integration | P2 | FR-013-AC-5 | ✅ |
+| TC-156 | Property test: no `&str` generated over arbitrary Unicode input causes a panic, across 256 cases per run | Property | P2 | FR-013-AC-6 | ✅ |
+| TC-157 | A declaration missing its own name, nested one level inside a `mod`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-158 | A body-local error nested inside a `mod`'s declaration stays `Ok` with no diagnostic (FND-001) | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-159 | A Python method missing its own name, nested inside a `class`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-160 | A TypeScript function with a malformed parameter list, nested inside a `namespace`, still trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-161 | A declaration-structure error attaches a `Diagnostic` to `Ok(ParsedFile)` | Unit | P1 | FR-013-AC-9 | ✅ |
+| TC-162 | A struct field tree-sitter could not resolve, nested inside a `mod`, trips the structural check (FND-001, fixture corrected under FND-007 to actually exercise a field_declaration, not a direct-ERROR sibling) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-163 | A body-local error (assignment, followed by another statement in the same suite) inside a method nested inside a `class` stays `Ok` with no diagnostic (FND-001); a broken statement as the *last* statement in a suite reads as structural instead — see TC-174/TC-175 | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-164 | A body-local error inside a function nested inside a `namespace` stays `Ok` with no diagnostic (FND-001) | Unit | P1 | FR-013-AC-10 | ✅ |
+| TC-165 | A broken `impl` method (missing its own name) trips the structural check (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-166 | Garbage two `mod`s deep trips the structural check — depth alone is not the discriminator (FND-001) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-167 | A `mod` missing its closing brace trips the structural check | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-168 | An unresolvable class method inside a `namespace` trips the structural check (FND-001) | Integration | P1 | FR-013-AC-3 | ✅ |
+| TC-169 | `ParseError` is `'static` (compiled type-level assertion, not assumed from its shape) | Static | P1 | FR-013-AC-11 | ✅ |
+| TC-170 | A `ParseError` boxes as a `Box<dyn Error + 'static>` trait object | Unit | P1 | FR-013-AC-11 | ✅ |
+| TC-171 | Diagnostics (carrying `file`) from several files project into one `Vec` that outlives any single file's own source buffer (retargeted from FR-013-AC-11 to AC-3/AC-12, FND-012/FND-013) | Integration | P1 | FR-013-AC-3, FR-013-AC-12 | ✅ |
+| TC-172 | A malformed parameter list tree-sitter could not resolve trips the structural check (FND-008) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-173 | An enum variant tree-sitter could not resolve trips the structural check (FND-009) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-174 | A dangling `return`, as the last statement in its suite, recovers outside the function's `body` field and reads as structural — a disclosed mechanical consequence of the body-node rule, not a body-local error (FND-015: not `return`-specific, see TC-175) | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-175 | A dangling assignment, as the last statement in its suite, recovers outside the function's `body` field the same way TC-174's `return` does, pinning suite position — not statement kind — as the real trigger (FND-015) | Unit | P1 | FR-013-AC-3 | ✅ |
 
 ---
 
@@ -308,7 +351,141 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
   construction rather than as an overclaim. TC-061 is an `Analysis`: the
   dependency closure holds no network client (TC-059) and extraction reads no
   ambient state (TC-060), so an offline run and an online run are the same run
-  — there is no second condition to compare against.
+  — there is no second condition to compare against. FR-013-AC-8,
+  FR-013-CON-1, FR-013-CON-2 and FR-013-CON-4 are the same shape: whether
+  `Language`/`ParseError` are `#[non_exhaustive]`, whether ADR-002 binds this
+  crate, whether the crate depends on the fact model, and where classification
+  belongs are all read from the crate's own source and `Cargo.toml` rather
+  than exercised by a test symbol. FR-013-AC-4's dependency-graph half is the
+  same shape again, verified by `make check-single-grammar`'s `cargo tree`
+  inspection rather than any `#[test]` fn — no compiled Rust test can observe
+  what a sibling crate failed to link, only what is reachable from inside the
+  crate under test.
+- **TC-145's prose stated the opposite of its own test, and every mechanical
+  gate reported it backed anyway (corrected 2026-09-20, PR #22 review).** The
+  row read "`ParsedFile` is not `Sync`"; `parsed_file_is_sync` asserts
+  `assert_impl_all!(ParsedFile<'static>: Sync)` — the tree-sitter version this
+  crate pins (`0.26`) declares `Tree: Sync`, not only `Send`, contradicting
+  the "Send but not Sync" folklore that older tree-sitter releases held and
+  that PLAT-841's own ticket text, and PLAT-844's rationale, both repeated.
+  `quire coverage` marked the row ✅ correctly by its own rules: a real test,
+  tagged with the row's TC id, non-vacuous (the assertion genuinely fails if
+  the auto-trait is absent). Nothing in the pipeline reconciles a row's prose
+  against what its cited test actually asserts, so a description written from
+  the ticket's inherited assumption survived three corrections of that same
+  assumption elsewhere (the crate docs, this FR, and the ticket text itself)
+  and shipped in the fourth place nobody re-read. The compiled static
+  assertion this crate was required to write is what made the correct answer
+  knowable at all; without it the folklore would still be standing.
+- **FND-001 (PR #22 second review round, 2026-09-20): the declaration-
+  structure predicate checked only the root's direct children, so every
+  matrix row for FR-013-AC-3/AC-10 passed while the shipped check missed a
+  declaration nested one level down.** TC-136/TC-148/TC-153 and TC-151/TC-152
+  all used top-level fixtures; none nested a declaration inside a `mod`,
+  `class` or `namespace`, so none could have caught it — a gap in fixture
+  coverage, not in what those tests each individually asserted. Because every
+  Python method sits at depth 2 inside `class_definition`, the depth-1 form
+  could not see a broken Python method at all: the exact PLAT-14 shape this
+  crate exists to end, reintroduced one layer down and quieter, since the
+  tree still returned. Fixed by walking to full depth and asking the
+  structural question again at every declaration-list-shaped body found,
+  however deep (see FR-013's own "Correction record: FND-001" section); TC-157
+  through TC-168 are the nested fixtures — Rust `mod`/`impl`/struct-field,
+  two `mod`s deep, a `mod` missing its closing brace, Python `class`, and
+  TypeScript `namespace`/`class` — that a depth-1 check would fail and the
+  full-depth one passes, covering all three grammars since the blind spot's
+  shape differed per grammar (Python attaches the error to `class_definition`
+  itself, not its body).
+- **FND-005 (PR #22 second review round): `ParseError` could not be
+  `'static`.** The shipped shape (`ParseError::Syntax` carrying the borrowed
+  `ParsedFile` tree-sitter produced despite the error) meant `ParseError`
+  itself always borrowed `'src`, so a consumer could not box it, convert it
+  with `anyhow`, or collect it across files into a `Vec` outliving any one
+  file's source buffer — a real cost to a binary walking a tree of files, the
+  exact shape `quire-rs` needs. Fixed by moving the declaration-structure
+  diagnostic onto `Ok(ParsedFile)` (`ParsedFile::diagnostic`, a plain
+  `Diagnostic` value with no borrow) and reserving `Err(ParseError::NoTree)`
+  for the rare, defensive case where no tree exists at all; `ParseError` now
+  owns its `file: String` and carries no lifetime parameter. TC-169/TC-170
+  back the `'static` claim and its boxing use directly rather than by
+  inspection alone; TC-171 was originally cited here too but is retargeted
+  below (FND-012) since it never exercised `ParseError` at all.
+- **FND-007, FND-008, FND-009 (PR #22 third review round, 2026-09-20): the
+  FND-001 fix enumerated container kinds instead of stating the underlying
+  rule, and still missed a struct's own field list, a function's own
+  parameter list, and (absent the fix) would have missed an enum's own
+  variant list.** `pub struct S { a: , }` (FND-007), `pub fn f( -> u32 {}`
+  (FND-008) and an unresolvable enum variant (FND-009, which needed no
+  special case once the rule below was corrected) all sit inside a
+  declaration's own structural part, not inside any container body the
+  enumeration checked. TC-160/TC-168 had passed for TypeScript only because
+  that grammar's own recovery happened to land the error inside `class_body`,
+  a container kind the enumeration already covered — a per-grammar accident
+  the enumeration approach could not see past. Fixed by implementing the
+  rule FR-013-AC-10 already stated in prose directly: an error is body-local
+  iff it lies within a declaration's own body node; everything else in the
+  declaration is structural. TC-162's fixture was corrected in the same
+  round — its original fixture (`mod m { struct S { !!! } }`) was pure
+  garbage landing a direct `ERROR` child of `mod_item`, never actually
+  reaching the `field_declaration` case its own row claimed; the corrected
+  fixture (`struct S { a: , }`) does. TC-172 and TC-173 are the new FND-008/
+  FND-009 fixtures. See FR-013's own "Correction record: FND-007, FND-008,
+  FND-009" section for the rule statement and the propagation-bug regression
+  caught and fixed before this landed.
+- **FND-012 (PR #22 third review round): TC-171 was a tautology against the
+  claim it was cited for.** Its own comment conceded the test never touched
+  `ParseError`, only `Diagnostic` values that were never borrowing anything
+  an earlier, non-`'static` `ParseError` shape would have prevented either —
+  it would have passed identically against that earlier shape. Retargeted to
+  FR-013-AC-3 (the claim it actually exercises: collecting diagnostics across
+  a batch of files) and renamed
+  `diagnostics_from_several_files_project_into_one_vec_outliving_their_sources`.
+- **FND-013 (PR #22 third review round): `Diagnostic` did not carry `file`,**
+  though the hard requirement this FR implements is a diagnostic naming file
+  *and* line. A caller that copied a `Diagnostic` out of the loop that
+  produced it — exactly what TC-171's retargeted test now does — lost the
+  file identity and had to re-pair it by hand. Fixed by adding
+  `file: &'src str` (FR-013-AC-12); costs nothing, since `Diagnostic` is only
+  ever handed out from an already-borrowed `ParsedFile<'src>` carrying the
+  same lifetime, but does mean `Diagnostic` is no longer `'static` — a
+  deliberate difference from `ParseError`, which never borrows anything and
+  stays `'static`.
+- **FND-014 (PR #22 third review round): TC-169's tag bound to the wrong
+  declaration, and `quire coverage` reported it backed anyway.** In
+  `tests/thread_safety.rs`, the `// TC-169` comment sat directly above
+  `fn assert_static<T: 'static>() {}` — a bare helper, not a `#[test]` fn —
+  so the trace-tag scanner bound the tag to the helper instead of to
+  `parse_error_is_static` a few lines below. `quire coverage` still reported
+  the row backed, because AC-11 was independently covered by TC-139/TC-140/
+  TC-170, so nothing failed loudly. This is the third instance of the
+  TC-145 class of bug in this file's own history — a bare declaration
+  between a tag and the test it should bind to mints nothing for the tag to
+  attribute to — and this file's own module doc, written after the first
+  instance, warns about exactly this trap. It caught the person who
+  documented it. That is not a claim about carelessness; it is evidence the
+  failure mode is structural (a scanner binding to source order, not to test
+  identity) rather than personal, and that a warning in a doc comment does
+  not substitute for a check that would catch it mechanically. Fixed by
+  moving the tag onto `parse_error_is_static` directly.
+- **FND-015 (PR #22 fourth review round, 2026-09-20): the "Known
+  limitations" disclosure for Python's last-statement recovery shape named
+  the wrong trigger.** It read as a `return`-specific oddity against an
+  otherwise-silent norm; run against a wider matrix (assignment/`return`/
+  call/`if`, each both followed by another statement and as the last
+  statement in its suite), the real trigger is suite position — an error
+  that is the *last* statement in a suite recovers with the `ERROR` outside
+  `body` regardless of statement kind — and a Python body-local error
+  surfaces as structural often enough that "generally silent, with a
+  `return` exception" had the shape backwards. `TC-175` (a dangling
+  assignment as the last statement) pins this next to `TC-174` (the
+  original dangling-`return` case), so the claim is backed by two statement
+  kinds, not one. `FR-013-AC-3`, `AC-10` and "Known limitations" restated
+  accordingly. `FND-010` (TypeScript's own recovery for a broken declaration
+  nested inside a function body) is withdrawn in the same round: tree-sitter
+  emits no declaration node at all in that shape, only a bare `ERROR` inside
+  the enclosing `statement_block`, so there is genuinely nothing for the
+  body-node rule to reset on — its "Known limitations" entry is removed
+  rather than kept as a limitation with nothing behind it.
 - Benchmark-verified criteria (TC-062..TC-065, TC-070) report measurements on
   every run and gate on threshold only in the performance lane, so that
   shared-runner variance does not make ordinary CI flaky.
