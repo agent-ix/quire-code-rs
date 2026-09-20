@@ -56,19 +56,41 @@
 //! keep the source and the [`ParsedFile`] borrowing it, and this crate places
 //! no upper bound on that lifetime.
 //!
-//! ## A parse failure is loud
+//! ## A parse failure is loud — and the tree is never the price of saying so
 //!
-//! [`parse_file`] returns `Err` — a [`ParseError`] naming the file and a
-//! one-based line — when the produced tree contains an error, rather than an
-//! `Ok` value that looks the same whether the file parsed cleanly or fell
-//! apart. `ParseError` is `#[non_exhaustive]` and every variant carries
-//! `file` and `line`; there is no variant that omits either, so a caller
-//! cannot construct a diagnostic-shaped value that is silently missing one.
-//! This is a direct, structural response to PLAT-14: a hand-rolled Python
-//! scanner desynced mid-file and returned zero symbols for the file with
-//! nothing in its return type distinguishing that from "this file declares
-//! nothing" — 509 passing tests were invisible to coverage for as long as
-//! that distinction did not exist in a type.
+//! [`parse_file`] returns `Err` — a [`ParseError::Syntax`] naming the file
+//! and a one-based line — exactly when the tree's *declaration structure* is
+//! unrecoverable: the root, or one of its top-level children, is itself an
+//! `ERROR`/`MISSING` node, so tree-sitter could not resolve even the identity
+//! of a top-level item there. `ParseError` is `#[non_exhaustive]` and every
+//! variant carries `file` and `line`; there is no variant that omits either,
+//! so a caller cannot construct a diagnostic-shaped value that is silently
+//! missing one. This is a direct, structural response to PLAT-14: a
+//! hand-rolled Python scanner desynced mid-file and returned zero symbols for
+//! the file with nothing in its return type distinguishing that from "this
+//! file declares nothing" — 509 passing tests were invisible to coverage for
+//! as long as that distinction did not exist in a type.
+//!
+//! **The tree survives the error.** `ParseError::Syntax` carries the
+//! [`ParsedFile`] tree-sitter still produced — `Err` forces the caller to
+//! acknowledge the diagnostic via `Result`, but never locks it out of the
+//! tree that diagnostic is about. This split — loud diagnostic, tree never
+//! discarded — only works because the diagnostic fires on a narrower
+//! condition than "the tree contains an error anywhere": an error nested
+//! inside one declaration's own body (an incomplete expression, mid-edit)
+//! leaves that declaration's own kind, name and signature fully readable,
+//! and tree-sitter recovers it locally — verified empirically across all
+//! three grammars this crate loads, not assumed from either grammar's
+//! documentation. That case returns `Ok`, tree fully walkable; a caller that
+//! wants to know a body-local error exists can see it directly via
+//! tree-sitter's own [`Node::has_error`](tree_sitter::Node::has_error) on
+//! whatever node it is inspecting. Treating every error anywhere as a hard
+//! failure would mean `filament-ide-rs`'s live-editing use case — cited above
+//! as this crate's reason to exist — gets `Err` and no tree on essentially
+//! every keystroke, since mid-edit content almost always carries a body-local
+//! `ERROR` or `MISSING` node. It would also reproduce, one layer down, the
+//! exact defect this program exists to end: one `ERROR` node anywhere
+//! silently costing a whole file's worth of symbols.
 //!
 //! ## `tree_sitter` is re-exported, deliberately
 //!

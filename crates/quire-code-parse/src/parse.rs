@@ -51,7 +51,7 @@ use crate::language::Language;
 pub struct ParsedFile<'src> {
     tree: Tree,
     source: &'src str,
-    file: String,
+    file: &'src str,
     language: Language,
 }
 
@@ -61,6 +61,11 @@ impl<'src> ParsedFile<'src> {
     /// `tree-sitter` itself is re-exported by this crate (see the crate-level
     /// docs) rather than wrapped, so [`Tree`], [`Node`] and `TreeCursor` are
     /// tree-sitter's own types — this crate does not reimplement traversal.
+    ///
+    /// The tree is available here whether [`parse_file`] returned `Ok` or
+    /// [`Err(ParseError::Syntax)`](ParseError::Syntax) — a declaration-
+    /// structure error is a loud diagnostic, never a reason this crate
+    /// withholds the tree it already produced (FR-013-AC-3).
     pub fn tree(&self) -> &Tree {
         &self.tree
     }
@@ -76,9 +81,11 @@ impl<'src> ParsedFile<'src> {
         self.source
     }
 
-    /// The file identifier this parse was attributed to.
-    pub fn file(&self) -> &str {
-        &self.file
+    /// The file identifier this parse was attributed to, borrowed for the
+    /// same lifetime as [`source`](ParsedFile::source) rather than owned —
+    /// the caller already holds it, so this crate never allocates a copy.
+    pub fn file(&self) -> &'src str {
+        self.file
     }
 
     /// The language this tree was parsed as.
@@ -105,9 +112,24 @@ impl std::fmt::Debug for ParsedFile<'_> {
 ///
 /// # Errors
 ///
-/// Returns [`ParseError::Syntax`] naming `file` and the one-based line of the
-/// first error or missing node when the produced tree contains one, rather
-/// than an `Ok` value the caller has to inspect for silence (FR-013-AC-3).
+/// Returns [`ParseError::Syntax`] — naming `file` and the one-based line of
+/// the first error or missing node, and carrying the produced tree — when the
+/// tree's *declaration structure* is unrecoverable: the root, or one of its
+/// top-level children, is itself an `ERROR` or `MISSING` node, so tree-sitter
+/// could not resolve even the identity of a top-level item there
+/// (FR-013-AC-3). This is deliberately narrower than "the tree contains an
+/// error anywhere": an error nested inside a declaration's own body — a
+/// function whose expression is incomplete, mid-edit — leaves that
+/// declaration's own node kind, name and signature fully readable, and
+/// tree-sitter recovers it locally (verified empirically across all three
+/// grammars this crate loads). That case returns `Ok`, with the tree fully
+/// walkable and the error still visible to a caller that inspects
+/// [`Node::has_error`] itself — this crate states only the loud, structural
+/// case as its own diagnostic; a body-local error is not the failure PLAT-14
+/// named, and treating it as one would fail the exact use case
+/// (`filament-ide-rs` editing content mid-keystroke) this API exists to
+/// serve.
+///
 /// Returns [`ParseError::NoTree`] in the defensive case where tree-sitter
 /// accepts the language but produces no tree at all.
 ///
@@ -118,44 +140,71 @@ impl std::fmt::Debug for ParsedFile<'_> {
 /// (FR-013-AC-6).
 pub fn parse_file<'src>(
     language: Language,
-    file: &str,
+    file: &'src str,
     source: &'src str,
-) -> Result<ParsedFile<'src>, ParseError> {
+) -> Result<ParsedFile<'src>, ParseError<'src>> {
     let mut parser = Parser::new();
     parser
         .set_language(&language.grammar())
-        .map_err(|_| ParseError::NoTree {
-            file: file.to_string(),
-            line: 1,
-        })?;
+        .map_err(|_| ParseError::NoTree { file, line: 1 })?;
 
     let tree = parser
         .parse(source, None)
-        .ok_or_else(|| ParseError::NoTree {
-            file: file.to_string(),
-            line: 1,
-        })?;
+        .ok_or(ParseError::NoTree { file, line: 1 })?;
 
-    let root = tree.root_node();
-    if root.has_error() {
-        let (line, column) = first_error_position(root).unwrap_or((1, 0));
+    let parsed = ParsedFile {
+        tree,
+        source,
+        file,
+        language,
+    };
+
+    if has_declaration_structure_error(parsed.root_node()) {
+        let (line, column) = first_error_position(parsed.root_node()).unwrap_or((1, 0));
         return Err(ParseError::Syntax {
-            file: file.to_string(),
+            file,
             line,
             column,
+            parsed,
         });
     }
 
-    Ok(ParsedFile {
-        tree,
-        source,
-        file: file.to_string(),
-        language,
-    })
+    Ok(parsed)
+}
+
+/// Whether `root`'s own declaration structure is unrecoverable: `root`
+/// itself, or one of its direct (top-level) children, is an `ERROR` or
+/// `MISSING` node — meaning tree-sitter could not resolve even the identity
+/// of a top-level item there.
+///
+/// Deliberately narrower than [`Node::has_error`], which is also true for an
+/// ordinary, fully-identifiable declaration whose *body* contains an error
+/// several levels down. Empirically, across Rust, Python and TypeScript, a
+/// body-local error leaves the enclosing declaration's own node kind (e.g.
+/// `function_item`) intact with `is_error() == false`, even though
+/// `has_error()` is `true`; only a top-level item tree-sitter could not
+/// resolve *as a declaration at all* becomes a top-level `ERROR` node itself.
+/// Checking only top-level child kinds, rather than walking for any error
+/// anywhere, is what keeps this a purely structural check — it never asks
+/// what kind of declaration a node is, only what kind of node it is.
+fn has_declaration_structure_error(root: Node<'_>) -> bool {
+    if root.is_error() || root.is_missing() {
+        return true;
+    }
+    let mut cursor = root.walk();
+    for child in root.children(&mut cursor) {
+        if child.is_error() || child.is_missing() {
+            return true;
+        }
+    }
+    false
 }
 
 /// One-based line and zero-based column of the first error or missing node in
-/// `root`'s subtree, if any. Independent of quire-code-rs's own equivalent
+/// `root`'s subtree, if any — searched to full depth so the reported position
+/// is the most precise one available, even though
+/// [`has_declaration_structure_error`] only inspects the top level to decide
+/// *whether* to report at all. Independent of quire-code-rs's own equivalent
 /// (this crate depends on nothing there — see FR-013-CON-2): the two exist in
 /// separate crates by design, not by omission.
 fn first_error_position(root: Node<'_>) -> Option<(u32, u32)> {
@@ -164,12 +213,7 @@ fn first_error_position(root: Node<'_>) -> Option<(u32, u32)> {
     while let Some(node) = stack.pop() {
         if node.is_error() || node.is_missing() {
             let pos = node.start_position();
-            // `saturating_add`, not `+`: this crate promises never to panic
-            // on any input (FR-013-AC-6), and `row` is tree-sitter's `usize`
-            // — a `+ 1` that overflowed `u32` in debug would be exactly the
-            // panic that promise forbids, for input no more adversarial than
-            // an unreasonably large file.
-            return Some(((pos.row as u32).saturating_add(1), pos.column as u32));
+            return Some((line_number(pos.row), column_number(pos.column)));
         }
         if node.has_error() {
             let children: Vec<_> = node.children(&mut cursor).collect();
@@ -181,16 +225,37 @@ fn first_error_position(root: Node<'_>) -> Option<(u32, u32)> {
     None
 }
 
+/// A one-based line number from tree-sitter's zero-based `usize` row.
+///
+/// `try_from` before the `+ 1`, not `as u32` — a bare cast truncates
+/// *silently*, so a row at `2^32` would report line 1: a confidently wrong
+/// answer, and a worse failure than the panic this guards against, since
+/// nothing signals it happened. `u32::MAX` is the reported line for a row
+/// this crate cannot represent, rather than a wrapped-around small number
+/// that reads as a normal position (FR-013-AC-6: this still never panics).
+fn line_number(row: usize) -> u32 {
+    u32::try_from(row)
+        .map(|row| row.saturating_add(1))
+        .unwrap_or(u32::MAX)
+}
+
+/// A zero-based column number from tree-sitter's `usize` column, with the
+/// same truncation guard as [`line_number`].
+fn column_number(column: usize) -> u32 {
+    u32::try_from(column).unwrap_or(u32::MAX)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     // FR-013-AC-1 and FR-013-AC-3 are covered end to end, as an external
     // consumer would exercise them, by `tests/integration.rs` (TC-135,
-    // TC-136) — that file links only this crate's public API, which is the
-    // more meaningful proof of the boundary than a same-crate unit test.
-    // These unit tests cover what an external test cannot see directly: the
-    // borrow's pointer identity and the tree's internal determinism.
+    // TC-136, TC-151) — that file links only this crate's public API, which
+    // is the more meaningful proof of the boundary than a same-crate unit
+    // test. These unit tests cover what an external test cannot see
+    // directly: the borrow's pointer identity and the tree's internal
+    // determinism.
 
     #[cfg(feature = "rust")]
     // TC-141, FR-013-AC-2: the returned value borrows the source for the
@@ -208,7 +273,7 @@ mod tests {
 
     #[cfg(feature = "rust")]
     // TC-142, FR-013-AC-5 / determinism: identical input yields a
-    // byte-identical tree on every call.
+    // byte-identical tree on every call, within this process.
     #[test]
     fn identical_input_yields_byte_identical_tree() {
         let source =
@@ -230,6 +295,67 @@ mod tests {
         for source in ["", "}}}}", "\u{0}\u{0}\u{0}", "// just a comment\n"] {
             let _ = parse_file(Language::Rust, "src/edge.rs", source);
         }
+    }
+
+    #[cfg(feature = "rust")]
+    proptest::proptest! {
+        #![proptest_config(proptest::prelude::ProptestConfig::with_cases(256))]
+
+        // TC-156, FR-013-AC-6: no `&str` a caller can construct causes a
+        // panic, checked over generated Unicode input (not only the four
+        // fixed cases TC-143 hand-picks) — the smoke test can miss a
+        // grammar-specific panic path that a wider search would find
+        // (PLAT-841 PR #22 review finding 8).
+        #[test]
+        fn never_panics_on_arbitrary_str_input(source in ".*") {
+            let _ = parse_file(Language::Rust, "src/fuzz.rs", &source);
+        }
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-152, FR-013-AC-3: a body-local error — the declaration's own kind,
+    // name and signature are still readable — does not trip
+    // `has_declaration_structure_error`, even though `has_error()` is true.
+    #[test]
+    fn body_local_error_does_not_count_as_a_declaration_structure_error() {
+        let source = "pub fn broken() -> u32 { 1 + }\npub fn intact() -> u32 { 2 }\n";
+        let parsed = parse_file(Language::Rust, "src/lib.rs", source).expect("parses cleanly");
+        assert!(parsed.root_node().has_error(), "the body error is present");
+        assert!(
+            !has_declaration_structure_error(parsed.root_node()),
+            "a body-local error must not read as a declaration-structure error"
+        );
+        let mut cursor = parsed.root_node().walk();
+        let kinds: Vec<&str> = parsed
+            .root_node()
+            .children(&mut cursor)
+            .map(|n| n.kind())
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["function_item", "function_item"],
+            "both declarations keep their own recognizable kind"
+        );
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-153, FR-013-AC-3: an item tree-sitter could not resolve as a
+    // declaration at all (truncated mid-declaration, nothing after it to
+    // resync against) trips the structural check.
+    #[test]
+    fn unresolvable_top_level_item_counts_as_a_declaration_structure_error() {
+        let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
+        let parsed_err = match parse_file(Language::Rust, "src/broken.rs", source) {
+            Err(ParseError::Syntax { parsed, .. }) => parsed,
+            other => panic!("expected ParseError::Syntax, got {other:?}"),
+        };
+        let mut cursor = parsed_err.root_node().walk();
+        let kinds: Vec<&str> = parsed_err
+            .root_node()
+            .children(&mut cursor)
+            .map(|n| n.kind())
+            .collect();
+        assert_eq!(kinds, vec!["ERROR"]);
     }
 
     /// Every node's kind and byte span, in traversal order — a determinism

@@ -9,6 +9,17 @@ members = [".", "crates/quire-code-parse"]
 default-members = ["."]
 resolver = "2"
 
+# Single-sourced across the workspace (PLAT-841 finding 5): quire-code-parse's
+# own crate docs promise one pinned tree-sitter version for every consumer of
+# this workspace, so that promise has to hold inside the workspace first.
+# Both this package and crates/quire-code-parse reference these via
+# `<crate>.workspace = true` rather than repeating the version string.
+[workspace.dependencies]
+tree-sitter = "0.26"
+tree-sitter-rust = "0.24.2"
+tree-sitter-typescript = "0.23.2"
+tree-sitter-python = "0.25.0"
+
 [package]
 name = "quire-code-rs"
 version = "0.1.0"
@@ -44,10 +55,10 @@ jsonschema = { version = "0.18.3", default-features = false, features = ["draft2
 sha2 = "^0.10"
 thiserror = "^2"
 regex = "^1"
-tree-sitter = "0.26"
-tree-sitter-rust = "0.24.2"
-tree-sitter-typescript = "0.23.2"
-tree-sitter-python = "0.25.0"
+tree-sitter = { workspace = true }
+tree-sitter-rust = { workspace = true }
+tree-sitter-typescript = { workspace = true }
+tree-sitter-python = { workspace = true }
 
 [dev-dependencies]
 serde_json = "^1"

@@ -1,0 +1,9 @@
+pub struct Store {
+    pub n: u32,
+}
+
+impl Store {
+    pub fn n(&self) -> u32 {
+        self.n
+    }
+}

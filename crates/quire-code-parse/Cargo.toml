@@ -22,20 +22,29 @@ python = ["dep:tree-sitter-python"]
 typescript = ["dep:tree-sitter-typescript"]
 
 [dependencies]
-# Re-exported deliberately (see crate docs): pinning and re-exporting here,
-# rather than wrapping Node/TreeCursor, single-sources the tree-sitter version
-# across every consumer of this crate instead of each pinning its own.
-tree-sitter = "0.26"
-tree-sitter-rust = { version = "0.24.2", optional = true }
-tree-sitter-typescript = { version = "0.23.2", optional = true }
-tree-sitter-python = { version = "0.25.0", optional = true }
+# Re-exported deliberately (see crate docs): re-exporting `tree_sitter` here,
+# rather than wrapping Node/TreeCursor, single-sources the version across
+# every consumer of this crate instead of each pinning its own. The versions
+# themselves are pinned once, in the workspace root's `[workspace.dependencies]`
+# — not repeated here — so this crate and its root-package sibling cannot
+# drift apart on the version whose single-sourcing this crate's own docs
+# promise (PLAT-841 finding 5).
+tree-sitter = { workspace = true }
+tree-sitter-rust = { workspace = true, optional = true }
+tree-sitter-typescript = { workspace = true, optional = true }
+tree-sitter-python = { workspace = true, optional = true }
 thiserror = "^2"
 
 [dev-dependencies]
-# Dev-only: proves the Send/!Sync claim in the crate docs by compiling a
+# Dev-only: proves the Send/Sync claim in the crate docs by compiling a
 # static assertion instead of asserting it in prose (PLAT-841). Never reaches
 # a consumer's dependency graph.
 static_assertions = "1"
+# Dev-only: backs FR-013-AC-6 ("no input panics") with a property test over
+# generated `&str` input instead of only the fixed-case smoke test
+# (PLAT-841 PR #22 review finding 8). Never reaches a consumer's dependency
+# graph.
+proptest = "1"
 
 [lints.rust]
 unsafe_code = "forbid"
