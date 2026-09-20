@@ -22,4 +22,5 @@ tests/golden/fixture.actual.json
 
 target/
 *-target/
+target-*/
 .worktrees/
