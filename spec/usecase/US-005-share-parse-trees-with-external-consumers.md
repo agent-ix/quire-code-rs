@@ -133,6 +133,16 @@ hand-roll or vendor its own parser, each with its own gaps.
 This library's own extraction pipeline is not required to consume this API in
 this story's scope; nothing about its own pipeline changes here.
 
+Handing a consumer a diagnostic instead of a silent `None` only closes the
+gap at this layer; a consumer that reads it and then does not surface it in
+its own reporting reopens the same gap one layer up. `quire-rs`
+(`ix://agent-ix/quire-rs`), this API's first consumer, is under its own,
+separately-landed requirement to close that:
+`ix://agent-ix/quire-rs/FR-051-AC-9` (PLAT-842) requires its per-file
+reporting to name a file and line for exactly this condition. See
+[FR-013](../functional/FR-013-borrowed-parse-tree-api.md)'s own "Consumer
+obligation" section for the full statement.
+
 ## Traceability (Informative)
 
 This story traces to the single-engine stakeholder need

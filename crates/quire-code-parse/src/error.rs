@@ -71,20 +71,38 @@ impl ParseError {
 /// never itself the return type, because withholding the tree is never the
 /// price of reporting this (FR-013-AC-3, FR-013-AC-9).
 ///
-/// Every field here is a plain value (no borrow), so a caller can copy this
-/// out of a `ParsedFile` and keep it independently of the tree's own
-/// lifetime — unlike `ParseError`, nothing about this type needed to be
-/// `'static` to make that true, since it never carries the tree.
+/// Carries `file`, not only `line`/`column`: the original hard requirement
+/// this crate implements is a diagnostic naming *file and line*, and a
+/// `Diagnostic` a caller has copied out of its `ParsedFile` — to log it, to
+/// collect it alongside diagnostics from other files — should not have to be
+/// re-paired with the file identifier by hand, or worse, paired with the
+/// wrong one after being moved out of the loop that produced it (PLAT-841 PR
+/// #22 review round 3, finding FND-013). `file: &'src str` costs nothing to
+/// add: `Diagnostic` is only ever handed out from a borrowed `ParsedFile`,
+/// which already carries the same `'src` borrow, so this adds no new
+/// lifetime the type did not already sit behind. It does mean `Diagnostic`
+/// is not `'static` — unlike `ParseError`, which is, precisely because it
+/// never carries a `Diagnostic` or anything else borrowed (see the module
+/// docs); the two types have different constraints for a reason, not by
+/// oversight.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
-pub struct Diagnostic {
+pub struct Diagnostic<'src> {
+    /// The file this diagnostic names, borrowed from the same source the
+    /// [`ParsedFile`](crate::ParsedFile) it was read from borrows.
+    pub file: &'src str,
     /// One-based line of the first declaration-structure error.
     pub line: u32,
     /// Zero-based column of the first declaration-structure error.
     pub column: u32,
 }
 
-impl Diagnostic {
+impl<'src> Diagnostic<'src> {
+    /// The file this diagnostic names.
+    pub fn file(&self) -> &'src str {
+        self.file
+    }
+
     /// One-based line of the first declaration-structure error.
     pub fn line(&self) -> u32 {
         self.line
@@ -144,9 +162,12 @@ mod tests {
         assert!(boxed.to_string().contains("src/lib.rs"));
     }
 
-    // TC-161, FR-013-AC-9: a declaration-structure error attaches a
-    // `Diagnostic` to `Ok(ParsedFile)` — the tree and the diagnostic are
-    // never in tension, since neither costs the caller the other.
+    // TC-161, FR-013-AC-9, FR-013-AC-12 (FND-013): a declaration-structure
+    // error attaches a `Diagnostic` to `Ok(ParsedFile)`, carrying the file
+    // identifier alongside the line — the tree and the diagnostic are never
+    // in tension, since neither costs the caller the other, and the
+    // diagnostic never costs the caller having to re-pair it with the file
+    // by hand either.
     #[cfg(feature = "rust")]
     #[test]
     fn syntax_error_file_returns_ok_with_a_diagnostic_naming_the_line() {
@@ -156,6 +177,7 @@ mod tests {
         let diagnostic = parsed
             .diagnostic()
             .expect("declaration structure is unrecoverable");
+        assert_eq!(diagnostic.file(), "src/broken.rs");
         assert!(
             diagnostic.line() >= 1,
             "line is one-based and always present"

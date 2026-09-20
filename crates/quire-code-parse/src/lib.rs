@@ -1,7 +1,11 @@
 //! `quire-code-parse` — a shared tree-sitter parse layer.
 //!
-//! One function, [`parse_file`], and one borrowing type, [`ParsedFile`]: a
-//! syntax tree plus the source text it was parsed from. Nothing else.
+//! One function, [`parse_file`]; one borrowing type, [`ParsedFile`], holding
+//! a syntax tree and the source text it was parsed from; and the diagnostic
+//! that comes back attached to it, [`Diagnostic`], when the tree's
+//! declaration structure could not be trusted — see "A parse failure is
+//! loud" below for what that means and why it is not `Err`. [`ParseError`]
+//! is reserved for the separate, rare case where no tree exists at all.
 //!
 //! ## What this crate is for
 //!
@@ -60,22 +64,32 @@
 //!
 //! [`parse_file`] returns `Ok(ParsedFile)` whenever tree-sitter produces a
 //! tree at all — essentially always — and [`ParsedFile::diagnostic`] returns
-//! `Some(Diagnostic)`, naming a one-based line and zero-based column, exactly
-//! when the tree's *declaration structure* is unrecoverable: the root, or a
-//! declaration-list-shaped body nested at *any* depth (a `mod`/`impl`/`trait`
-//! body in Rust, a `class` body in Python, a `class`/`namespace` body in
-//! TypeScript), has a direct child that is itself an `ERROR`/`MISSING` node,
-//! so tree-sitter could not resolve even the identity of a declaration there.
-//! Checking only the root's own direct children — an earlier shape of this
-//! predicate — missed every declaration nested one level down; since every
-//! Python method sits at depth 2 inside `class_definition`, that earlier
-//! shape structurally could not see a broken Python method at all (PLAT-841
-//! PR #22 review finding FND-001) — the exact PLAT-14 shape this crate exists
-//! to end, reintroduced one layer down. This is a direct, structural response
-//! to PLAT-14: a hand-rolled Python scanner desynced mid-file and returned
-//! zero symbols for the file with nothing in its return type distinguishing
-//! that from "this file declares nothing" — 509 passing tests were invisible
-//! to coverage for as long as that distinction did not exist in a type.
+//! `Some(Diagnostic)`, naming a file, one-based line and zero-based column,
+//! exactly when the tree's *declaration structure* is unrecoverable. The rule
+//! is one sentence, not a per-container enumeration: an error is body-local,
+//! and does not count, if and only if it lies within a declaration's own
+//! *executable body* node (the `body` a function, method or closure's code
+//! actually lives in); everything else inside a declaration — its name, its
+//! parameters, its type, its field list, its variant list — is structural,
+//! and so is the body of a non-executable container (`mod`, `impl`, `trait`,
+//! `class`, `namespace`), at any nesting depth. Checking only the root's own
+//! direct children — an earlier shape of this predicate — missed every
+//! declaration nested one level down; since every Python method sits at
+//! depth 2 inside `class_definition`, that earlier shape structurally could
+//! not see a broken Python method at all (PLAT-841 PR #22 review finding
+//! FND-001). A later shape fixed that by enumerating container *kinds* whose
+//! direct children got checked, but still missed a broken struct field, enum
+//! variant or parameter list sitting *inside* a declaration rather than
+//! inside a container (PLAT-841 PR #22 review findings FND-007, FND-008,
+//! FND-009); the body-node rule above subsumes all of these without a new
+//! special case, because it asks the same question everywhere — is this
+//! error inside the one node a declaration's own executable code lives in,
+//! or is it somewhere else in the declaration. Any of these misses is the
+//! exact PLAT-14 shape this crate exists to end, reintroduced one layer down:
+//! a hand-rolled Python scanner desynced mid-file and returned zero symbols
+//! for the file with nothing in its return type distinguishing that from
+//! "this file declares nothing" — 509 passing tests were invisible to
+//! coverage for as long as that distinction did not exist in a type.
 //!
 //! **The tree is never gated behind `Err`.** An earlier shape of this crate
 //! put the declaration-structure diagnostic on `Err(ParseError::Syntax)`,
@@ -94,13 +108,21 @@
 //! shape made them look that way.
 //!
 //! This diagnostic fires on a narrower condition than "the tree contains an
-//! error anywhere": an error nested inside one declaration's own body (an
-//! incomplete expression, mid-edit) leaves that declaration's own kind, name
-//! and signature fully readable, and tree-sitter recovers it locally —
-//! verified empirically across all three grammars this crate loads, not
-//! assumed from either grammar's documentation, and re-verified at every
-//! nesting depth after FND-001, not only at the top level. That case returns
-//! `Ok` with `diagnostic()` returning `None`, tree fully walkable; a caller
+//! error anywhere": an error nested inside one declaration's own *executable
+//! body* (an incomplete expression, mid-edit) leaves that declaration's own
+//! kind, name and signature fully readable, and tree-sitter recovers it
+//! locally in the shapes this crate's fixture suite exercises for each
+//! grammar — checked directly against those fixtures, not assumed from
+//! either grammar's documentation, and re-checked at every nesting depth
+//! after FND-001, not only at the top level. One shape does not honor this
+//! cleanly: Python's own recovery for a dangling `return <expr> +` attaches
+//! the resulting `ERROR` as a sibling of `function_definition` rather than
+//! nesting it inside the function's `body` field, so it reads as structural
+//! under this rule even though it sits, informally, "inside the function" —
+//! a disclosed, known limitation of the mechanical rule, not a silently
+//! different answer; see FR-013's "Known limitations" section and `TC-174`.
+//! Outside that one shape, that case returns `Ok` with `diagnostic()`
+//! returning `None`, tree fully walkable; a caller
 //! that wants to know a body-local error exists can see it directly via
 //! tree-sitter's own [`Node::has_error`](tree_sitter::Node::has_error) on
 //! whatever node it is inspecting. Treating every error anywhere as a
@@ -110,6 +132,18 @@
 //! a body-local `ERROR` or `MISSING` node. It would also reproduce, one layer
 //! down, the exact defect this program exists to end: one `ERROR` node
 //! anywhere silently costing a whole file's worth of symbols.
+//!
+//! ## Consumer obligation
+//!
+//! Returning `Some(Diagnostic)` instead of `Err` only avoids one silent
+//! failure; it opens a second one if a consumer reads `diagnostic()` and
+//! then does not surface what it found. `ix://agent-ix/quire-rs`'s own
+//! per-file reporting is required to name a file and line for exactly this
+//! condition (`ix://agent-ix/quire-rs/FR-051-AC-9`, landed under PLAT-842);
+//! this crate is the layer that condition is discovered at, so a consumer
+//! that drops `diagnostic()` on the floor reintroduces PLAT-14 one layer up
+//! instead of one layer down. See FR-013's own "Consumer obligation" section
+//! for the full statement and its relationship to FR-051.
 //!
 //! ## `tree_sitter` is re-exported, deliberately
 //!

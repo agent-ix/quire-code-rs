@@ -53,7 +53,7 @@ pub struct ParsedFile<'src> {
     source: &'src str,
     file: &'src str,
     language: Language,
-    diagnostic: Option<Diagnostic>,
+    diagnostic: Option<Diagnostic<'src>>,
 }
 
 impl<'src> ParsedFile<'src> {
@@ -112,7 +112,11 @@ impl<'src> ParsedFile<'src> {
     /// declares nothing". Checking this accessor is how a consumer attaches
     /// its own file-level diagnostic to that same position without
     /// re-deriving it from the tree by hand.
-    pub fn diagnostic(&self) -> Option<Diagnostic> {
+    #[must_use = "a Some diagnostic means the tree's declaration structure is \
+        unrecoverable at the position it names; a consumer that reports \
+        symbols from this tree without surfacing this reintroduces a silent \
+        zero-symbol result, one layer up (FR-013-AC-3, FR-051-AC-9)"]
+    pub fn diagnostic(&self) -> Option<Diagnostic<'src>> {
         self.diagnostic
     }
 }
@@ -133,6 +137,27 @@ impl std::fmt::Debug for ParsedFile<'_> {
 ///
 /// No I/O: the caller supplies bytes already in memory and a [`Language`];
 /// this crate never reads a path from disk or the network.
+///
+/// # Examples
+///
+/// ```
+/// use quire_code_parse::{parse_file, Language};
+///
+/// let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
+/// let parsed = parse_file(Language::Rust, "src/broken.rs", source)
+///     .expect("tree-sitter still produces a tree even here");
+///
+/// // The tree is available either way; `diagnostic()` is how a caller
+/// // finds out whether its declaration structure can be trusted.
+/// if let Some(diagnostic) = parsed.diagnostic() {
+///     assert_eq!(diagnostic.file(), "src/broken.rs");
+///     assert_eq!(diagnostic.line(), 1);
+///     // A consumer's own reporting is obligated to surface this, not
+///     // discard it silently — see FR-013's "Consumer obligation" section.
+/// } else {
+///     unreachable!("this source's declaration structure is unrecoverable");
+/// }
+/// ```
 ///
 /// # Errors
 ///
@@ -198,7 +223,7 @@ pub fn parse_file<'src>(
 
     let diagnostic = if has_declaration_structure_error(tree.root_node()) {
         let (line, column) = first_error_position(tree.root_node()).unwrap_or((1, 0));
-        Some(Diagnostic { line, column })
+        Some(Diagnostic { file, line, column })
     } else {
         None
     };
@@ -213,16 +238,15 @@ pub fn parse_file<'src>(
 }
 
 /// Whether `root`'s own declaration structure is unrecoverable anywhere in
-/// the tree, not only at the top level: `root` itself, or a declaration-list-
-/// shaped body nested at any depth — a `mod`/`impl`/`trait` body in Rust, a
-/// `class` body in Python, a `class`/`namespace` body in TypeScript — has a
-/// direct child that is itself an `ERROR` or `MISSING` node, meaning
-/// tree-sitter could not resolve even the identity of a declaration there.
+/// the tree, not only at the top level: `root` itself, or any node that is
+/// not *inside* a declaration's own executable body, has a direct child that
+/// is itself an `ERROR` or `MISSING` node, meaning tree-sitter could not
+/// resolve even the identity of a declaration there.
 ///
 /// Deliberately narrower than [`Node::has_error`], which is also true for an
 /// ordinary, fully-identifiable declaration whose *body* — the executable
-/// statements inside a function or method, not a further list of
-/// declarations — contains an error several levels down.
+/// statements inside a function or method, not its name, parameters, return
+/// type, field list or variant list — contains an error several levels down.
 ///
 /// This asks the structural question at *every* nesting level, not only the
 /// root's direct children. An earlier, depth-1-only form of this check
@@ -231,20 +255,29 @@ pub fn parse_file<'src>(
 /// Python method sits at depth 2 inside `class_definition`, that earlier form
 /// structurally could not see a broken Python method at all: the exact
 /// PLAT-14 shape ("a genuinely broken file reports nothing") this crate
-/// exists to end, reintroduced one layer down. [`is_declaration_container`]
-/// is what makes the question well-posed at every depth: it asks, for the
-/// node actually containing the error, whether that node is a
-/// declaration-list-shaped body (so an `ERROR`/`MISSING` direct child there
-/// means an unresolvable declaration) or an ordinary executable body that
-/// merely happens to share a node kind with one (so an error inside it is
-/// body-local, and does not count) — matching FR-013-AC-10's semantic rule
-/// ("its own node kind, name and signature remain resolvable") rather than
-/// the position-only rule the depth-1 form implemented.
+/// exists to end, reintroduced one layer down. A second, still-too-narrow
+/// form (PLAT-841 PR #22 review round 3, findings FND-007/FND-008/FND-009)
+/// enumerated declaration-list *container* kinds (`declaration_list`,
+/// `class_body`, and so on) rather than asking the question FR-013-AC-10
+/// already states — "its own node kind, name **and signature** remain
+/// resolvable" — so it missed a struct field, an enum variant and a
+/// malformed parameter list, each of which sits inside a declaration's own
+/// signature, not its body, and each of which needed its own kind added to
+/// the enumeration to be caught (and TypeScript's `class_body` case passed
+/// only because that grammar happens to land its `ERROR` there directly, an
+/// empirically-fitted rather than principled agreement). [`scan_for_declaration_structure_error`]
+/// implements the rule directly instead: is a given node *inside the
+/// executable body* of a declaration that has one (a function, a method), or
+/// is it anything else — a name, parameters, a return type, a field list, a
+/// variant list, a class's or module's own list of further declarations, or
+/// a fresh declaration nested inside a body? Only the first is exempt from
+/// the direct-child check; everything else gets it, by default, with no
+/// further enumeration needed.
 fn has_declaration_structure_error(root: Node<'_>) -> bool {
     if root.is_error() || root.is_missing() {
         return true;
     }
-    node_has_declaration_structure_error(root)
+    scan_for_declaration_structure_error(root, false)
 }
 
 /// `node.has_error()` is `false` for a subtree with no error anywhere
@@ -252,19 +285,31 @@ fn has_declaration_structure_error(root: Node<'_>) -> bool {
 /// — the same property [`first_error_position`] already relies on to search
 /// to full depth cheaply.
 ///
-/// Where an error does exist somewhere below `node`: if `node` is itself a
-/// declaration container ([`is_declaration_container`]), its direct children
-/// are checked for `ERROR`/`MISSING` — the structural question, asked again
-/// at this level. Every child is still walked afterward regardless, since a
-/// declaration can be nested inside a non-container body too (Rust, Python
-/// and TypeScript all allow a `mod`, `class` or function to be defined inside
-/// a function), so a nested container several levels down a body that is
-/// itself not one must still be found.
-fn node_has_declaration_structure_error(node: Node<'_>) -> bool {
+/// `inside_executable_body` is `true` while the recursion is anywhere inside
+/// a declaration's own executable body — not only at the body node itself,
+/// but at every descendant of it, all the way down, since a body-local error
+/// is not a direct child of the body node in general (an incomplete
+/// expression's `MISSING` token is nested inside the expression, which is
+/// nested inside the body). Propagating this flag through the whole
+/// subtree — rather than exempting only the body node itself and then
+/// re-deciding fresh at each descendant, which is what an earlier form of
+/// this function did and which is why it flagged an ordinary body-local
+/// error as structural — is what makes that distinction hold at every depth
+/// inside the body, not only immediately beneath it.
+///
+/// The flag resets to a fresh (non-`Some`) decision at a *nested
+/// declaration* ([`is_declaration_node`]) even while already inside a body,
+/// since Rust, Python and TypeScript all allow a `mod`, `class`, `impl` or
+/// function to be declared inside a function body, and that nested
+/// declaration's own name, signature and (if it is itself executable) body
+/// are each subject to the same rule again, independent of the body they
+/// happen to sit inside.
+fn scan_for_declaration_structure_error(node: Node<'_>, inside_executable_body: bool) -> bool {
     if !node.has_error() {
         return false;
     }
-    if is_declaration_container(node) {
+    let is_declaration = is_declaration_node(node);
+    if is_declaration || !inside_executable_body {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.is_error() || child.is_missing() {
@@ -272,64 +317,87 @@ fn node_has_declaration_structure_error(node: Node<'_>) -> bool {
             }
         }
     }
+    let executable_body = is_declaration
+        .then(|| executable_body_field(node))
+        .flatten();
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        if node_has_declaration_structure_error(child) {
+        let child_inside_body = if is_declaration {
+            Some(child) == executable_body
+        } else {
+            inside_executable_body
+        };
+        if scan_for_declaration_structure_error(child, child_inside_body) {
             return true;
         }
     }
     false
 }
 
-/// Whether `node` is itself a declaration-list-shaped body: a container whose
-/// direct children are meant to be resolvable declarations, not the
-/// executable statements of one declaration's own body.
+/// Whether `node` is itself a declaration this rule re-evaluates from
+/// scratch: a function, method, or a `mod`/`impl`/`trait`/`struct`/`enum`/
+/// `class`/`namespace` that holds further declarations. Used only to decide
+/// where [`scan_for_declaration_structure_error`] resets its "inside a body"
+/// state, not to decide the structural check itself — that check applies to
+/// every node by default regardless of this list, matching FR-013-AC-10's
+/// rule directly rather than approximating it.
+fn is_declaration_node(node: Node<'_>) -> bool {
+    matches!(
+        node.kind(),
+        "function_item"
+            | "function_signature_item"
+            | "mod_item"
+            | "impl_item"
+            | "trait_item"
+            | "struct_item"
+            | "enum_item"
+            | "union_item"
+            | "function_definition"
+            | "class_definition"
+            | "function_declaration"
+            | "function_expression"
+            | "generator_function_declaration"
+            | "generator_function"
+            | "method_definition"
+            | "arrow_function"
+            | "class_declaration"
+            | "class"
+            | "internal_module"
+    )
+}
+
+/// `node`'s `body` field, when `node` is a declaration kind whose body
+/// *executes* — a function's or method's own statements — as opposed to a
+/// `mod`/`impl`/`trait`/`struct`/`enum`/`class`/`namespace`'s own list of
+/// further declarations. `None` for the latter, so their own `body` gets the
+/// structural check like everything else rather than being treated as an
+/// opaque zone.
 ///
-/// Verified empirically against Rust, Python and TypeScript's actual
-/// grammars (via `to_sexp()` on nested fixtures, not assumed) — including
-/// where tree-sitter's error recovery attaches the `ERROR`/`MISSING` node
-/// somewhere other than the naive guess:
-///
-/// - **Unambiguous by node kind alone.** Every one of the three grammars'
-///   own root kinds (`source_file`, `module`, `program`); Rust's
-///   `declaration_list`, the body kind `mod_item`, `impl_item` and
-///   `trait_item` all share, and `field_declaration_list`, a `struct`'s own
-///   field list — a struct has no separate executable body to distinguish
-///   from its signature the way a function does, so a field tree-sitter
-///   could not resolve is exactly as structural as a top-level item it
-///   could not resolve; and TypeScript's `class_body`, a distinct kind from
-///   a function's or method's own body kind, unlike Python's class body.
-/// - **`class_definition` itself, not only its `block`.** A Python method
-///   tree-sitter cannot resolve at all (e.g. missing its own name) does not
-///   reliably surface as an `ERROR`/`MISSING` child of the class's `block`;
-///   empirically, recovery instead attaches it as a direct child of
-///   `class_definition` itself, alongside — not inside — `body`. Checking
-///   only `block` would miss exactly the case this exists to catch.
-/// - **Ambiguous by node kind — resolved by the parent's kind.** Python
-///   also reuses `block` for a `function_definition`'s, `if_statement`'s,
-///   etc. own (executable) body; TypeScript reuses `statement_block` for
-///   both an `internal_module` (a `namespace`) and a `function_declaration`
-///   or `method_definition`. The child node's own kind cannot tell these
-///   apart — only the parent's kind can, so this checks that instead, for
-///   `block`/`statement_block` specifically, as a defensive second check
-///   alongside `class_definition` above rather than a replacement for it.
-///   (TypeScript's `declare module "..."` ambient-module spelling is not
-///   covered here: only `namespace` was verified against the actual
-///   grammar.)
-fn is_declaration_container(node: Node<'_>) -> bool {
-    match node.kind() {
-        "source_file"
-        | "module"
-        | "program"
-        | "declaration_list"
-        | "class_body"
-        | "field_declaration_list"
-        | "class_definition" => true,
-        "block" | "statement_block" => node
-            .parent()
-            .is_some_and(|parent| matches!(parent.kind(), "class_definition" | "internal_module")),
-        _ => false,
+/// All three grammars use the *same* node kind, and the *same* field name
+/// (`body`), for both a declaration's executable body and (Python,
+/// TypeScript) a `class`'s or `namespace`'s own list of further
+/// declarations — verified empirically via `to_sexp()` on nested fixtures,
+/// not assumed — so the child's kind alone cannot tell them apart; only
+/// `node`'s own kind can, hence the explicit list here rather than a check
+/// on the field value's kind. (TypeScript's `declare module "..."`
+/// ambient-module spelling was not separately verified; see FR-013's "Known
+/// limitations" for why this rule is nonetheless expected to cover it, and
+/// FND-010 for a shape it does not.)
+fn executable_body_field(node: Node<'_>) -> Option<Node<'_>> {
+    if !matches!(
+        node.kind(),
+        "function_item"
+            | "function_definition"
+            | "function_declaration"
+            | "function_expression"
+            | "generator_function_declaration"
+            | "generator_function"
+            | "method_definition"
+            | "arrow_function"
+    ) {
+        return None;
     }
+    node.child_by_field_name("body")
 }
 
 /// One-based line and zero-based column of the first error or missing node in
@@ -540,13 +608,18 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-162, FR-013-AC-3 (FND-001): a struct field tree-sitter could not
-    // resolve at all trips the structural check — a struct has no separate
-    // executable body to distinguish its signature from, so a field is
-    // exactly as structural as a top-level item.
+    // TC-162, FR-013-AC-3 (FND-001, FND-007): a struct field tree-sitter
+    // could not resolve — a name given but no type — trips the structural
+    // check; a struct has no separate executable body to distinguish its
+    // signature from, so a field is exactly as structural as a top-level
+    // item. `struct S { a: , }` (a `MISSING type_identifier` inside the
+    // `field_declaration` for `a`) is the fixture this row's own text
+    // claims; the original fixture (bare `!!!` garbage) landed as a direct
+    // `ERROR` child regardless of which check ran, so it never actually
+    // exercised the field-declaration case the row describes.
     #[test]
     fn unresolvable_struct_field_counts_as_a_declaration_structure_error() {
-        let source = "mod m {\n    struct S {\n        !!!\n    }\n}\n";
+        let source = "mod m {\n    struct S {\n        a: ,\n    }\n}\n";
         let parsed =
             parse_file(Language::Rust, "src/mod_struct.rs", source).expect("tree still produced");
         assert!(
@@ -605,14 +678,44 @@ mod tests {
     #[cfg(feature = "python")]
     // TC-163, FR-013-AC-10 (FND-001): a body-local error inside a method
     // nested inside a class stays `Ok` with no diagnostic — nesting alone
-    // does not trip the check, only an unresolvable declaration does.
+    // does not trip the check, only an unresolvable declaration does. An
+    // assignment with a dangling operator (`x = 1 +`) is used rather than a
+    // dangling `return`: Python's grammar recovers a broken `return`
+    // statement by attaching the resulting `ERROR` as an extra sibling of
+    // `function_definition` itself (outside its `body` field), which the
+    // body-node rule correctly reads as structural — that shape is
+    // documented separately (see the `return`-specific note below this
+    // test) rather than folded into this one, which exercises the ordinary
+    // case: an error genuinely nested inside the body node.
     #[test]
     fn body_local_error_in_a_method_nested_in_a_class_stays_ok_with_no_diagnostic() {
-        let source = "class Foo:\n    def broken(self):\n        return 1 +\n    def intact(self):\n        return 2\n";
+        let source = "class Foo:\n    def broken(self):\n        x = 1 +\n        return x\n    def intact(self):\n        return 2\n";
         let parsed = parse_file(Language::Python, "x.py", source).expect("parses cleanly");
         assert!(
             parsed.diagnostic().is_none(),
             "a body-local error inside a class method must not trip the structural check"
+        );
+    }
+
+    #[cfg(feature = "python")]
+    // TC-174, FR-013-AC-3: a dangling `return` (as opposed to a dangling
+    // assignment, TC-163) is a documented case where the body-node rule and
+    // intuition disagree. Python's grammar recovers `return 1 +` by
+    // attaching the resulting `ERROR` as an extra child of
+    // `function_definition` itself — a sibling of `body`, not inside it —
+    // even though the function's own kind, name and parameters are fully
+    // resolvable. The body-node rule reads this as structural, mechanically
+    // and consistently (it is, literally, not inside the body node); this is
+    // a documented known limitation, not a bug — FR-013's "Known
+    // limitations" section names it, rather than this test asserting the
+    // intuitive answer silently.
+    #[test]
+    fn dangling_return_recovers_outside_the_body_node_and_reads_as_structural() {
+        let source = "class Foo:\n    def broken(self):\n        return 1 +\n    def intact(self):\n        return 2\n";
+        let parsed = parse_file(Language::Python, "x.py", source).expect("tree still produced");
+        assert!(
+            parsed.diagnostic().is_some(),
+            "documents that this specific recovery shape reads as structural, not a claim that it should"
         );
     }
 
@@ -646,6 +749,41 @@ mod tests {
         assert!(
             parsed.diagnostic().is_some(),
             "a function with a malformed parameter list, nested inside a namespace, must still be caught"
+        );
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-172, FR-013-AC-3 (FND-008): a malformed parameter list — the `ERROR`/
+    // `MISSING` sits inside `parameters`, the declaration's own signature,
+    // not its executable body — trips the structural check even though the
+    // function's own `body` block is syntactically intact. The body-node
+    // rule catches this with no enumeration of `parameters` as a special
+    // case: `parameters` was never a declaration's executable body, so its
+    // direct children get the structural check by default.
+    #[test]
+    fn malformed_parameter_list_counts_as_a_declaration_structure_error() {
+        let source = "pub fn f( -> u32 {}\n";
+        let parsed =
+            parse_file(Language::Rust, "src/bad_params.rs", source).expect("tree still produced");
+        assert!(
+            parsed.diagnostic().is_some(),
+            "a malformed parameter list must be caught even though the function body is intact"
+        );
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-173, FR-013-AC-3 (FND-009): an enum variant tree-sitter could not
+    // resolve — a discriminant value missing after `=` — trips the
+    // structural check; an `enum_variant` has no executable body either, so
+    // it needs no special case, the same as `field_declaration` above.
+    #[test]
+    fn unresolvable_enum_variant_counts_as_a_declaration_structure_error() {
+        let source = "pub enum E {\n    A = ,\n    B,\n}\n";
+        let parsed =
+            parse_file(Language::Rust, "src/bad_enum.rs", source).expect("tree still produced");
+        assert!(
+            parsed.diagnostic().is_some(),
+            "an enum variant tree-sitter could not resolve must be caught"
         );
     }
 

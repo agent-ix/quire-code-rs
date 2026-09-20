@@ -7,35 +7,46 @@
 //! error, so the error itself could never be `'static` (PLAT-841 PR #22
 //! review finding FND-005). `quire-rs` walking a tree of files and
 //! collecting every file's outcome is exactly the shape that needed this.
+//!
+//! `ParseError`'s `'static`-ness is tested directly in `src/error.rs`
+//! (TC-169, a compiled type-level assertion) and `tests/thread_safety.rs`
+//! (TC-170, boxing as `Box<dyn Error + 'static>`) — both against
+//! `ParseError` itself, constructed directly, since `ParseError::NoTree` is
+//! a defensive case this crate's own inputs do not reach through
+//! `parse_file` (see `ParseError`'s own docs). This file originally tried to
+//! back the same claim (FR-013-AC-11) with a *different* test — collecting
+//! per-file outcomes into a `Vec<String>` across a loop — but that test
+//! never touched `ParseError` at all: it collected `Diagnostic`s read off
+//! `Ok(ParsedFile)`, which were never borrowing anything an earlier,
+//! non-`'static` `ParseError` shape would have prevented either (its own
+//! comment said so). It would have passed identically against the old
+//! shape, so it proved nothing about `'static`-ness and has been retargeted
+//! below (PLAT-841 PR #22 review round 3, finding FND-012).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use quire_code_parse::{parse_file, Language};
 
-// `ParseError::NoTree`'s struct-shaped variant is `#[non_exhaustive]`
-// (FR-013-AC-8), so it cannot be constructed with a struct literal from
-// outside this crate — the boxing test for it (TC-170) lives in
-// `src/error.rs`'s own `#[cfg(test)]` module instead, where that
-// construction is allowed. This file only exercises what a real external
-// consumer can reach: `parse_file` and `ParsedFile::diagnostic`.
-
 #[cfg(feature = "rust")]
-// TC-171, FR-013-AC-11: a consumer walking several files collects each
-// file's outcome into one `Vec` that outlives any single file's own source
-// buffer — the shape `quire-rs` needs when a batch of files is parsed and
-// only the errors, not the sources, are kept around afterward.
+// TC-171, FR-013-AC-3, FR-013-AC-12: a consumer walking several files reads each file's
+// `Diagnostic` — itself borrowed from that file's own `ParsedFile`, per
+// FND-013 now carrying `file` alongside `line` — and projects it into an
+// owned `String` before the loop moves to the next file, so the borrow never
+// has to outlive the iteration that produced it. This is the realistic shape
+// `quire-rs` needs (collect outcomes across a batch, not sources), and it is
+// `Diagnostic`'s per-file borrow discipline being exercised, not
+// `ParseError`'s `'static`-ness — see the module docs for why this row no
+// longer cites AC-11.
 #[test]
-fn errors_from_several_files_collect_into_one_vec_outliving_their_sources() {
+fn diagnostics_from_several_files_project_into_one_vec_outliving_their_sources() {
     fn diagnostics_for(files: &[(&str, &str)]) -> Vec<String> {
         let mut out = Vec::new();
         for (name, source) in files {
-            // Each `source` borrow ends when this loop iteration does; only
-            // the `Diagnostic`'s owned `line`/`column` values, read while the
-            // borrow is alive, are carried out — proving the point at the
-            // `ParsedFile`/`Diagnostic` level, which never needed `ParseError`
-            // to be `'static` in the first place (it never borrows the tree).
             let parsed = parse_file(Language::Rust, name, source).expect("tree still produced");
             if let Some(diagnostic) = parsed.diagnostic() {
-                out.push(format!("{name}:{}", diagnostic.line()));
+                // `diagnostic.file()`, not the loop's own `name` — proving the
+                // diagnostic carries its own file identity (FND-013) rather
+                // than the caller having to re-pair it from context.
+                out.push(format!("{}:{}", diagnostic.file(), diagnostic.line()));
             }
         }
         out

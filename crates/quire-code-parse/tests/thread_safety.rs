@@ -39,14 +39,20 @@ fn parsed_file_is_sync() {
     static_assertions::assert_impl_all!(ParsedFile<'static>: Sync);
 }
 
+fn assert_static<T: 'static>() {}
+
 // TC-169, FR-013-AC-11: `ParseError` is `'static` — compiled, not asserted in
 // prose. An earlier shape of this crate carried a borrowed `ParsedFile<'src>`
 // inside `ParseError::Syntax`, which could never satisfy this bound (`E0597`
 // on any attempt); `ParseError` no longer carries the tree at all (PLAT-841
 // PR #22 review finding FND-005), and owns its `file: String` rather than
-// borrowing it, which is what makes this compile.
-fn assert_static<T: 'static>() {}
-
+// borrowing it, which is what makes this compile. The tag sits directly
+// above this `#[test]` fn, not above the `assert_static` helper a few lines
+// up — this file's own module doc (above) warns that a bare declaration
+// between a tag and its test mints nothing for the tag to bind to, and the
+// tag here originally sat above the helper, catching exactly that trap
+// (PLAT-841 PR #22 review finding FND-014; see `spec/tests.md`'s Coverage
+// Notes for the record).
 #[test]
 fn parse_error_is_static() {
     assert_static::<quire_code_parse::ParseError>();
