@@ -54,13 +54,18 @@ impl Language {
         }
     }
 
-    /// The tree-sitter grammar for this language.
-    pub(crate) fn grammar(self) -> tree_sitter::Language {
+    /// This language's counterpart in `quire_code_parse::Language` — the
+    /// shared parse layer this crate's own pipeline is routed through
+    /// (PLAT-849). The one place this crate crosses from its own `Language`
+    /// enum to the parse crate's; `src/parse.rs` calls this rather than
+    /// naming a tree-sitter grammar directly, which is what keeps this
+    /// crate off the list `tests/dependency_boundary.rs` checks.
+    pub(crate) fn parse_language(self) -> quire_code_parse::Language {
         match self {
-            Language::Rust => tree_sitter_rust::LANGUAGE.into(),
-            Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            Language::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
-            Language::Python => tree_sitter_python::LANGUAGE.into(),
+            Language::Rust => quire_code_parse::Language::Rust,
+            Language::TypeScript => quire_code_parse::Language::TypeScript,
+            Language::Tsx => quire_code_parse::Language::Tsx,
+            Language::Python => quire_code_parse::Language::Python,
         }
     }
 
@@ -422,7 +427,10 @@ impl LanguageConfig {
     /// callers are asking. Two ancestor guards used the narrow set for a
     /// release and stopped at a different set of declarations than the walker
     /// did.
-    pub(crate) fn decl_for_node(&self, node: tree_sitter::Node<'_>) -> Option<&DeclKind> {
+    pub(crate) fn decl_for_node(
+        &self,
+        node: quire_code_parse::tree_sitter::Node<'_>,
+    ) -> Option<&DeclKind> {
         self.decls.iter().find(|d| {
             d.node == node.kind()
                 && (d.value_kinds.is_empty()
@@ -474,18 +482,39 @@ mod tests {
         assert_eq!(Language::from_path("no-extension"), None);
     }
 
+    // PLAT-849: this crate no longer owns a tree-sitter `Parser` to load a
+    // grammar into directly — that lives entirely behind
+    // `quire_code_parse::parse_file` now. What this crate still owns is the
+    // mapping from its own `Language` to `quire_code_parse::Language`; this
+    // pins that every variant maps to the *right* one, not merely to one
+    // that parses. An empty-string fixture (an earlier shape of this test,
+    // PR #27 review N4) would pass unchanged even if all four arms of
+    // `parse_language` mapped to `Language::Rust` — every grammar accepts
+    // empty input — which is exactly the risk on a PR where these four match
+    // arms were hand-written for the first time, `Tsx`/`TypeScript` being the
+    // obvious transposition. Each snippet below is real, minimal source that
+    // is syntactically clean under its *own* grammar; asserting
+    // `!has_error()` on the actual mapped result is what a swapped arm trips.
     #[test]
-    fn every_grammar_loads() {
-        for lang in [
-            Language::Rust,
-            Language::TypeScript,
-            Language::Tsx,
-            Language::Python,
-        ] {
-            let mut parser = tree_sitter::Parser::new();
-            parser
-                .set_language(&lang.grammar())
-                .expect("grammar loads for the configured language");
+    fn every_language_maps_to_its_own_parseable_quire_code_parse_language() {
+        let cases: &[(Language, &str)] = &[
+            (Language::Rust, "fn r() {}\n"),
+            (Language::TypeScript, "function t(): void {}\n"),
+            // JSX: valid under the Tsx grammar, a parse error under plain
+            // TypeScript's — this is what actually catches a Tsx/TypeScript
+            // transposition, since ordinary TypeScript source parses cleanly
+            // under either grammar and so cannot catch that swap on its own.
+            (Language::Tsx, "const x = <div />;\n"),
+            (Language::Python, "def p():\n    pass\n"),
+        ];
+        for (lang, source) in cases {
+            let parsed = quire_code_parse::parse_file(lang.parse_language(), "t", source)
+                .unwrap_or_else(|error| panic!("{lang:?} produced no tree at all: {error}"));
+            assert!(
+                !parsed.root_node().has_error(),
+                "{lang:?} maps to a quire_code_parse::Language that could not parse this \
+                 language's own snippet cleanly — check parse_language's match arms"
+            );
         }
     }
 }
