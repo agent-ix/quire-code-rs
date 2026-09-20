@@ -1,3 +1,14 @@
+[workspace]
+# The root package stays the workspace default-member: existing tooling that
+# runs bare `cargo build`/`cargo test` from the repo root keeps building
+# exactly what it built before this crate existed. `quire-code-parse` is a
+# member so `cargo test --workspace` and CI exercise it too, but it is never
+# implicitly selected on its own (PLAT-841: purely additive, no change to this
+# package's own pipeline).
+members = [".", "crates/quire-code-parse"]
+default-members = ["."]
+resolver = "2"
+
 [package]
 name = "quire-code-rs"
 version = "0.1.0"

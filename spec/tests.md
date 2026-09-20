@@ -42,7 +42,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | Stakeholder Req | Trace to US/FR | Test/Validation | Coverage Status |
 |---|---|---|---|
-| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002 | TC-001, TC-038, TC-054, TC-059 | ✅ Complete |
+| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-150 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
 | StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
@@ -54,6 +54,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 | US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
+| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-150 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -80,6 +81,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
+| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-150 | ✅ |
 
 ### Measurement Plan Coverage
 
@@ -227,6 +229,22 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-132 | Recall has no threshold that relaxes precision | Static | P0 | FR-012-CON-1 | ✅ |
 | TC-133 | Measurement producer reads local filesystem inputs only | Static | P0 | FR-012-CON-2 | ✅ |
 | TC-134 | Measurement producer has no network dependency or request | Static | P0 | FR-012-CON-3 | ✅ |
+| TC-135 | Consumer parses Rust and walks the tree with no fact-model dependency | Integration | P1 | FR-013-AC-1 | ✅ |
+| TC-136 | Syntax-error Rust file returns a named diagnostic, not an empty result | Integration | P1 | FR-013-AC-3 | ✅ |
+| TC-137 | Every compiled-in language loads its grammar | Unit | P2 | FR-013-AC-4 | ✅ |
+| TC-138 | A `rust`-only build has exactly one `Language` variant | Unit | P1 | FR-013-CON-3 | ✅ |
+| TC-139 | Every `ParseError` variant's accessors return a file and a line | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-140 | Syntax-error message renders the file and line | Unit | P2 | FR-013-AC-3 | ✅ |
+| TC-141 | `ParsedFile` borrows the source rather than cloning it | Unit | P1 | FR-013-AC-2 | ✅ |
+| TC-142 | Identical input yields a byte-identical tree, checked two ways | Unit | P1 | FR-013-AC-5 | ✅ |
+| TC-143 | Parsing never panics on empty, punctuation-only or NUL-byte input | Unit | P1 | FR-013-AC-6 | ✅ |
+| TC-144 | `ParsedFile` is `Send` (compiled static assertion) | Static | P1 | FR-013-AC-7 | ✅ |
+| TC-145 | `ParsedFile` is not `Sync` (compiled static assertion) | Static | P1 | FR-013-AC-7 | ✅ |
+| TC-146 | Consumer parses Python and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
+| TC-147 | Consumer parses TypeScript and TSX and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
+| TC-148 | Syntax-error Python file returns a named diagnostic too | Integration | P2 | FR-013-AC-3 | ✅ |
+| TC-149 | Two independent parses of identical bytes render identical trees | Integration | P1 | FR-013-AC-5 | ✅ |
+| TC-150 | The parsed source outlives the call, across a function boundary | Integration | P1 | FR-013-AC-2 | ✅ |
 
 ---
 
@@ -308,7 +326,12 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
   construction rather than as an overclaim. TC-061 is an `Analysis`: the
   dependency closure holds no network client (TC-059) and extraction reads no
   ambient state (TC-060), so an offline run and an online run are the same run
-  — there is no second condition to compare against.
+  — there is no second condition to compare against. FR-013-AC-8,
+  FR-013-CON-1, FR-013-CON-2 and FR-013-CON-4 are the same shape: whether
+  `Language`/`ParseError` are `#[non_exhaustive]`, whether ADR-002 binds this
+  crate, whether the crate depends on the fact model, and where classification
+  belongs are all read from the crate's own source and `Cargo.toml` rather
+  than exercised by a test symbol.
 - Benchmark-verified criteria (TC-062..TC-065, TC-070) report measurements on
   every run and gate on threshold only in the performance lane, so that
   shared-runner variance does not make ordinary CI flaky.

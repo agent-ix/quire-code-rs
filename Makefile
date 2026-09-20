@@ -16,6 +16,7 @@ help:
 	@echo "  make deny             - cargo deny check licenses"
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make coverage         - Test Matrix rows vs the suite (quire coverage)"
+	@echo "  make check-single-grammar - quire-code-parse --features rust links one grammar (FR-013-AC-4)"
 	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
 	@echo "  make bench            - NFR-003 budget + NFR-004 corpus-scale recall (performance lane)"
 
@@ -33,11 +34,30 @@ fmt-check:
 
 .PHONY: lint
 lint:
-	$(CARGO) clippy --all-targets -- -D warnings
+	$(CARGO) clippy --workspace --all-targets -- -D warnings
 
 .PHONY: test
 test:
-	$(CARGO) test
+	$(CARGO) test --workspace
+
+# FR-013-AC-4: a consumer that compiles quire-code-parse with only the `rust`
+# feature links the Rust grammar and no other. Built as a real assertion
+# rather than a comment: the crate must both compile under this feature set
+# and the resolved dependency tree must not name the other grammars.
+.PHONY: check-single-grammar
+check-single-grammar:
+	$(CARGO) build -p quire-code-parse --no-default-features --features rust
+	$(CARGO) test -p quire-code-parse --no-default-features --features rust
+	@tree_output="$$($(CARGO) tree -p quire-code-parse --no-default-features --features rust)"; \
+	if echo "$$tree_output" | grep -q "tree-sitter-python"; then \
+		echo "FAIL: tree-sitter-python is reachable with only the rust feature enabled" >&2; \
+		exit 1; \
+	fi; \
+	if echo "$$tree_output" | grep -q "tree-sitter-typescript"; then \
+		echo "FAIL: tree-sitter-typescript is reachable with only the rust feature enabled" >&2; \
+		exit 1; \
+	fi; \
+	echo "check-single-grammar: only tree-sitter-rust is linked"
 
 .PHONY: build
 build:
@@ -88,4 +108,4 @@ bench:
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check lint test deny audit-unsafe coverage
+ci: fmt-check lint test deny audit-unsafe coverage check-single-grammar

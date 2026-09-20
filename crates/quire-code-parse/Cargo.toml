@@ -1,0 +1,49 @@
+[package]
+name = "quire-code-parse"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Shared tree-sitter parse layer: a borrowed syntax tree plus its source text, with no fact model, classification or analysis attached."
+authors = ["Peter Krenesky <kreneskyp@gmail.com>"]
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/agent-ix/quire-code-rs"
+
+[lib]
+name = "quire_code_parse"
+path = "src/lib.rs"
+
+[features]
+# Phase 1 (PLAT-843) needs only `rust`; a consumer that wants one grammar
+# should not link the other two (FR-013-CON-3). Default keeps the common case
+# — "just give me every language" — ergonomic.
+default = ["rust", "python", "typescript"]
+rust = ["dep:tree-sitter-rust"]
+python = ["dep:tree-sitter-python"]
+typescript = ["dep:tree-sitter-typescript"]
+
+[dependencies]
+# Re-exported deliberately (see crate docs): pinning and re-exporting here,
+# rather than wrapping Node/TreeCursor, single-sources the tree-sitter version
+# across every consumer of this crate instead of each pinning its own.
+tree-sitter = "0.26"
+tree-sitter-rust = { version = "0.24.2", optional = true }
+tree-sitter-typescript = { version = "0.23.2", optional = true }
+tree-sitter-python = { version = "0.25.0", optional = true }
+thiserror = "^2"
+
+[dev-dependencies]
+# Dev-only: proves the Send/!Sync claim in the crate docs by compiling a
+# static assertion instead of asserting it in prose (PLAT-841). Never reaches
+# a consumer's dependency graph.
+static_assertions = "1"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
