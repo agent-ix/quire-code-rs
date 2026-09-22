@@ -40,6 +40,9 @@ jobs:
       - name: quire-code-parse single-grammar feature gate (FR-013-AC-4)
         run: make check-single-grammar
 
+      - name: measurement lane (jsonschema behind the `measurement` feature)
+        run: make check-measurement
+
   licenses:
     name: License Check
     runs-on: ubuntu-24.04

@@ -17,6 +17,7 @@ help:
 	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make coverage         - Test Matrix rows vs the suite (quire coverage)"
 	@echo "  make check-single-grammar - quire-code-parse --features rust links one grammar (FR-013-AC-4)"
+	@echo "  make check-measurement - measurement lane, feature-gated (jsonschema stays out of the default build)"
 	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
 	@echo "  make bench            - NFR-003 budget + NFR-004 corpus-scale recall (performance lane)"
 
@@ -75,6 +76,15 @@ check-single-grammar:
 	fi; \
 	echo "check-single-grammar: tree-sitter-rust is linked and tree-sitter-python/typescript are not"
 
+# `measurement` is default-off (required-features on the bin and test target)
+# so a plain `make test`/`cargo test --workspace` silently skips both rather
+# than failing — this target is what actually exercises the lane.
+.PHONY: check-measurement
+check-measurement:
+	$(CARGO) clippy -p quire-code-rs --all-targets --features measurement -- -D warnings
+	$(CARGO) build --features measurement --bin measure_graph_quality
+	$(CARGO) test --features measurement --test measurement_pipeline
+
 .PHONY: build
 build:
 	$(CARGO) build --release
@@ -124,4 +134,4 @@ bench:
 # =============================================================================
 
 .PHONY: ci
-ci: fmt-check lint test deny audit-unsafe coverage check-single-grammar
+ci: fmt-check lint test deny audit-unsafe coverage check-single-grammar check-measurement
