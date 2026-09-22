@@ -13,7 +13,12 @@
 set -euo pipefail
 
 QUIRE="${QUIRE:-quire}"
-MODULES="${IX_FILAMENT_MODULES_PATH:-}"
+# Default to the same path quire's own Registry::from_env() falls back to.
+# An unset var isn't itself the risk — `totals["total"] == 0` below already
+# fails the run if nothing reconciled, empty var or not. The real risk is a
+# *missing* module install, which this checks directly instead of merely
+# asking the caller to have typed an env var.
+MODULES="${IX_FILAMENT_MODULES_PATH:-$HOME/.ix/filament/modules}"
 
 if ! command -v "$QUIRE" >/dev/null 2>&1; then
   echo "check_coverage: '$QUIRE' is not on PATH." >&2
@@ -21,12 +26,14 @@ if ! command -v "$QUIRE" >/dev/null 2>&1; then
   exit 127
 fi
 
-if [ -z "$MODULES" ]; then
-  echo "check_coverage: IX_FILAMENT_MODULES_PATH is unset." >&2
-  echo "  Without a module declaring a traceability model the run reports" >&2
-  echo "  0/0 rows backed and passes — a false green, so this is an error." >&2
+if [ ! -d "$MODULES" ]; then
+  echo "check_coverage: module path '$MODULES' does not exist." >&2
+  echo "  Install filament modules there, or set IX_FILAMENT_MODULES_PATH to" >&2
+  echo "  a directory that has them." >&2
   exit 2
 fi
+
+export IX_FILAMENT_MODULES_PATH="$MODULES"
 
 report="$(mktemp)"
 trap 'rm -f "$report"' EXIT
