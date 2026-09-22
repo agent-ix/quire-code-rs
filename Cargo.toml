@@ -51,11 +51,25 @@ path = "src/bin/extract_tree.rs"
 [[bin]]
 name = "measure_graph_quality"
 path = "src/bin/measure_graph_quality.rs"
+required-features = ["measurement"]
+
+[[test]]
+name = "measurement_pipeline"
+path = "tests/measurement_pipeline.rs"
+required-features = ["measurement"]
 
 [dependencies]
 serde = { version = "^1", features = ["derive"] }
 serde_json = "^1"
-jsonschema = { version = "0.18.3", default-features = false, features = ["draft202012"] }
+# Only `measure_graph_quality` and its test need this. `dev-dependencies`
+# can't gate it instead: `measure_graph_quality` is a real standalone binary
+# (built for `target/release/`, run outside `cargo test`), and Cargo never
+# links dev-deps into a normal `cargo build` or into a `[[bin]]` target — only
+# into `cargo test`/`bench`/`example` targets. A default-off feature is the
+# mechanism that keeps this out of every other consumer's build (e.g. a
+# filament-ide-rs pin bump), since `pub mod measurement` in lib.rs would
+# otherwise pull it in unconditionally.
+jsonschema = { version = "0.18.3", optional = true, default-features = false, features = ["draft202012"] }
 # Stable SHA-256 record ids, matching quire-rs canonical extraction conventions.
 sha2 = "^0.10"
 thiserror = "^2"
@@ -68,6 +82,9 @@ regex = "^1"
 # convention of pinning an unpublished crate by git rev (used by cross-repo
 # consumers like quire-rs, PLAT-843) does not apply here.
 quire-code-parse = { path = "crates/quire-code-parse" }
+
+[features]
+measurement = ["dep:jsonschema"]
 
 [dev-dependencies]
 serde_json = "^1"
