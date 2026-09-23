@@ -36,7 +36,7 @@
       "required": ["ref", "definition_version"],
       "properties": {
         "ref": { "const": "ix://agent-ix/quire-code-rs/MP-001" },
-        "definition_version": { "const": "quire-code.graph-quality-v1" }
+        "definition_version": { "const": "quire-code.graph-quality-v2" }
       },
       "additionalProperties": false
     },

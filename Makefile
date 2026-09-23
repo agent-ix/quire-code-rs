@@ -83,7 +83,7 @@ check-single-grammar:
 check-measurement:
 	$(CARGO) clippy -p quire-code-rs --all-targets --features measurement -- -D warnings
 	$(CARGO) build --features measurement --bin measure_graph_quality
-	$(CARGO) test --features measurement --test measurement_pipeline
+	$(CARGO) test -p quire-code-rs --features measurement --lib --bins --test measurement_pipeline
 
 .PHONY: build
 build:

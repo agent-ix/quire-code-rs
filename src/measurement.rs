@@ -16,7 +16,7 @@ use thiserror::Error;
 pub const SCHEMA: &str = include_str!("../schemas/graph-quality-observation-v1.schema.json");
 pub const PLAN_ID: &str = "MP-001";
 pub const PLAN_REF: &str = "ix://agent-ix/quire-code-rs/MP-001";
-pub const DEFINITION_VERSION: &str = "quire-code.graph-quality-v1";
+pub const DEFINITION_VERSION: &str = "quire-code.graph-quality-v2";
 pub const METRIC: &str = "graph_quality";
 
 type LanguageUnresolvedCounts = BTreeMap<String, (u64, u64)>;

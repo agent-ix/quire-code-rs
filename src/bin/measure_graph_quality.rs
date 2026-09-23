@@ -244,7 +244,12 @@ fn validate_plan_semantics(text: &str) -> Result<(), String> {
         format!("metric: {METRIC}"),
         format!("definition_version: {DEFINITION_VERSION}"),
         "  sampling: complete census with no sampling; preserve language, node-kind, relation-kind, and resolver-tier strata".into(),
-        "  decision_rule: reject a measured run with any wrong heuristic edge; report recall independently; treat non-measured states as no decision".into(),
+        "objective:".into(),
+        "  direction: zero".into(),
+        "  estimator: count".into(),
+        "  decision_rule:".into(),
+        "    comparator: eq".into(),
+        "    threshold: 0".into(),
     ] {
         if !frontmatter.lines().any(|line| line == expected) {
             return Err(format!("MP-001 semantic mismatch: expected `{expected}`"));
@@ -865,13 +870,13 @@ mod tests {
             ("status: active", "status: retired"),
             ("metric: graph_quality", "metric: other"),
             (
-                "definition_version: quire-code.graph-quality-v1",
+                "definition_version: quire-code.graph-quality-v2",
                 "definition_version: drifted",
             ),
-            (
-                "decision_rule: reject a measured run with any wrong heuristic edge",
-                "decision_rule: accept all measured runs",
-            ),
+            ("direction: zero", "direction: higher"),
+            ("estimator: count", "estimator: proportion"),
+            ("comparator: eq", "comparator: ge"),
+            ("threshold: 0", "threshold: 1"),
         ] {
             let bad = good.replace(from, to);
             assert!(validate_plan_semantics(&bad).is_err(), "accepted {to}");
