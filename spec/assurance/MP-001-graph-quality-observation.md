@@ -5,16 +5,20 @@ type: MeasurementPlan
 status: active
 owner: quire-code-rs-maintainers
 metric: graph_quality
-definition_version: quire-code.graph-quality-v1
+definition_version: quire-code.graph-quality-v2
 stage: gate
+objective:
+  direction: zero
 statistical_design:
   population: every declared supported source and truth relation in one pinned quire-corpus revision
   sampling: complete census with no sampling; preserve language, node-kind, relation-kind, and resolver-tier strata
   repetitions: 2
-  estimator: exact confusion-matrix counts and recall derived from the declared truth set
+  estimator: count
   error_model: corpus omissions, unreadable sources, unsupported languages, ambiguous bindings, and producer defects
   uncertainty: retain raw scorer output and per-dimension counts; do not synthesize an interval for a complete census
-  decision_rule: reject a measured run with any wrong heuristic edge; report recall independently; treat non-measured states as no decision
+  decision_rule:
+    comparator: eq
+    threshold: 0
 relationships:
   - target: ix://agent-ix/quire-code-rs/FR-012
     type: measures
@@ -32,6 +36,14 @@ diagnostic used to prioritize improvement; it does not offset a wrong edge and
 has no pass threshold in this plan.
 
 An `empty`, `unreadable`, or `unsupported` population makes no quality decision.
+
+## Decision Rule
+
+`statistical_design.estimator: count` computes `metric: graph_quality` as the
+number of wrong heuristic edges found in the measured population.
+`decision_rule` holds when that count equals zero (`comparator: eq`,
+`threshold: 0`), matching `objective.direction: zero`. Recall is reported
+alongside the count but is not part of the evaluated rule.
 
 ## Population
 
