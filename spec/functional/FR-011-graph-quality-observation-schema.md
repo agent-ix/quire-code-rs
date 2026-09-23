@@ -41,7 +41,7 @@ artifact rather than restating it:
   version, exactly the Python, Rust, TSX, and TypeScript parser grammar
   identities, configuration digest, corpus revision, and scorer revision.
 - `measurement_plan` names `ix://agent-ix/quire-code-rs/MP-001` and definition
-  `quire-code.graph-quality-v1`.
+  `quire-code.graph-quality-v2`.
 - `population` carries state, file counts, and sorted censuses for languages,
   node kinds, relation kinds, and resolver tiers.
 - A measured record carries sorted confusion matrices, unresolved and ambiguous

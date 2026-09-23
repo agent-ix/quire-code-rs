@@ -39,11 +39,13 @@ An `empty`, `unreadable`, or `unsupported` population makes no quality decision.
 
 ## Decision Rule
 
-`statistical_design.estimator: count` computes `metric: graph_quality` as the
-number of wrong heuristic edges found in the measured population.
-`decision_rule` holds when that count equals zero (`comparator: eq`,
-`threshold: 0`), matching `objective.direction: zero`. Recall is reported
-alongside the count but is not part of the evaluated rule.
+`statistical_design.estimator: count` is the number of wrong heuristic edges:
+the scorer's overall edge false-positive count across the whole census. The
+rule holds when that count equals zero (`comparator: eq`, `threshold: 0`),
+matching `objective.direction: zero`; the producer publishes the outcome as the
+`precision_decision` observation. The rule is evaluated only for a `measured`
+population; a non-measured state makes no decision rather than counting as
+zero. Recall is not part of the rule.
 
 ## Population
 
