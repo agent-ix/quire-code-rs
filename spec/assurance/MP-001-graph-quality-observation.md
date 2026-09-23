@@ -7,6 +7,7 @@ owner: quire-code-rs-maintainers
 metric: graph_quality
 definition_version: quire-code.graph-quality-v2
 stage: gate
+ground_truth_kind: human-labelled
 objective:
   direction: zero
 statistical_design:
@@ -19,6 +20,29 @@ statistical_design:
   decision_rule:
     comparator: eq
     threshold: 0
+protected_apparatus:
+  - Makefile
+  - src/bin/measure_graph_quality.rs
+  - src/measurement.rs
+  - schemas/graph-quality-observation-v1.schema.json
+negative_controls:
+  - kind: suppressed-observation
+    description: >-
+      the producer rejects a scorer report whose scored-case count does not
+      equal its complete case-digest map (`validate_complete_report`), so a
+      collection cannot drop an unfavourable case out of the census
+  - kind: apparatus-edit
+    description: >-
+      the producer binary, the module that turns the scorer report into the
+      observation and its decision-bound count, and the observation schema
+      are protected, so editing the grading logic alongside a change it
+      grades changes the recorded digests
+  - kind: stale-evidence
+    description: >-
+      the CLI refuses to run unless the source and corpus checkouts are
+      clean and pinned to the exact declared revisions
+      (`verify_clean_source`), so a result cannot be presented for a
+      revision it was not collected against
 relationships:
   - target: ix://agent-ix/quire-code-rs/FR-012
     type: measures
@@ -64,6 +88,28 @@ extractor's reported unresolved calls in the corpus's authored ambiguous-call
 cases; ambiguous counts are those cases' expected ambiguous call sites. Each is
 an exact marginal census of `call_site` / `calls` / `unresolved`, stratified by
 the case language.
+
+The corpus's expected nodes, relations, and ambiguous-call cases are
+hand-authored fixtures (`ground_truth_kind: human-labelled`), not derived
+mechanically from another oracle.
+
+## Protected Apparatus (PLAT-1008)
+
+`protected_apparatus` names the files that produce this plan's number: the
+producer binary (`src/bin/measure_graph_quality.rs`), the module that turns
+the scorer report into the observation and its decision-bound false-positive
+count (`src/measurement.rs`), the observation schema
+(`schemas/graph-quality-observation-v1.schema.json`), and the `Makefile`
+target (`check-measurement`) that builds and runs them. Editing one of these
+alongside a change it grades changes the recorded digests rather than earning
+silent credit.
+
+`negative_controls` declares the gaming scenarios this plan guards against:
+suppressing an unfavourable case (the producer refuses a scorer report whose
+scored-case count disagrees with its case-digest map), editing the protected
+apparatus alongside the change it grades, and presenting a result against a
+source or corpus revision it was not actually collected against
+(`verify_clean_source` refuses a dirty or mismatched checkout).
 
 ## Collection Procedure
 
