@@ -5,6 +5,16 @@ TypeScript/TSX, Python). Sibling of quire-rs and consumed by filament-ide-rs
 (issue agent-ix/filament-ide-rs#141) through the `filament_extraction::Extractor`
 seam. License: AGPL-3.0-or-later.
 
+## Hash / digest / pin antipattern: present, slated for removal
+
+This repository still contains hashes, digests, SHAs, pins, checksum catalogs and
+records that track files, versions or tools. That is an antipattern and it is slated
+for removal. Do not introduce any new use of it. When you touch code or specs that
+contain one, remove it as part of the change. The only hash that stays is a canonical
+identity digest that binds a proof to the exact content it proved. Package versions
+live in Cargo.toml / package.json and their lockfiles only; reports name the app
+version they ran.
+
 **Hard rules (mirror quire-rs):**
 - Filesystem only — no network dependencies, ever.
 - Deterministic output: identical input → byte-identical records (stable
@@ -31,9 +41,7 @@ carries `confidence` ∈ [0.0, 1.0], `reason` ∈ {`syntactic`, `path-resolved`,
 call-site count folded onto the single deduplicated edge.
 
 **The corpus grades this crate:** `src/bin/extract_tree.rs` is the producer
-`agent-ix/quire-corpus` invokes. Its flags and its stdout are a pinned contract
-(`producer_contract.version: 1`), so changing either invalidates every recorded
-observation — bump the version there rather than changing the shape here.
+`agent-ix/quire-corpus` invokes.
 
 **Traceability is gated:** `make coverage` reconciles `spec/tests.md` against
 the suite with `quire coverage`. Every row is backed by a tagged test or its
@@ -69,10 +77,4 @@ quire validate --scope . "spec/**/*.md"
 
 ## Safety scaffolding
 
-House kit from `agent-ix/rust-lib-cookiecutter` (originally backported from
-`agent-ix/ecaz`): `clippy.toml` (MSRV pin + complexity caps), `deny.toml`
-(permissive-only allow-list; AGPL permitted for this crate alone),
-`rustfmt.toml` (100-char, `StdExternalCrate` grouping), `rust-toolchain.toml`
-(stable + rustfmt + clippy), `scripts/check_unsafe_comments.sh`, and
-`.github/workflows/ci.yml` (fmt / clippy / test / license / unsafe audit).
 Unlike filament-ide-rs, **CI runs here** — PRs gate themselves.
