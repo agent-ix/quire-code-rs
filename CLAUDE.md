@@ -31,9 +31,7 @@ carries `confidence` ∈ [0.0, 1.0], `reason` ∈ {`syntactic`, `path-resolved`,
 call-site count folded onto the single deduplicated edge.
 
 **The corpus grades this crate:** `src/bin/extract_tree.rs` is the producer
-`agent-ix/quire-corpus` invokes. Its flags and its stdout are a pinned contract
-(`producer_contract.version: 1`), so changing either invalidates every recorded
-observation — bump the version there rather than changing the shape here.
+`agent-ix/quire-corpus` invokes.
 
 **Traceability is gated:** `make coverage` reconciles `spec/tests.md` against
 the suite with `quire coverage`. Every row is backed by a tagged test or its
@@ -58,7 +56,12 @@ make lint           # clippy with -D warnings
 make test           # cargo test
 make deny           # cargo deny check licenses
 make audit-unsafe   # every `unsafe {` needs a // SAFETY: comment
-make ci             # fmt-check + lint + test + deny + audit-unsafe
+make coverage       # spec/tests.md rows vs the suite (quire coverage)
+make check-single-grammar  # quire-code-parse --features rust links one grammar
+make check-measurement     # measurement lane, feature-gated
+make bench          # NFR-003 budget + NFR-004 recall (outside make ci)
+make ci             # fmt-check + lint + test + deny + audit-unsafe + coverage
+                    #   + check-single-grammar + check-measurement
 ```
 
 Spec validation after any `spec/` edit:

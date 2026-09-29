@@ -14,11 +14,12 @@ help:
 	@echo "  make build            - Release build"
 	@echo "  make clean            - cargo clean"
 	@echo "  make deny             - cargo deny check licenses"
-	@echo "  make audit-unsafe     - Enforce // SAFETY: comments on unsafe blocks"
+	@echo "  make cargo-audit      - cargo audit (RustSec advisories)"
+	@echo "  make audit-unsafe     -Enforce // SAFETY: comments on unsafe blocks"
 	@echo "  make coverage         - Test Matrix rows vs the suite (quire coverage)"
 	@echo "  make check-single-grammar - quire-code-parse --features rust links one grammar (FR-013-AC-4)"
 	@echo "  make check-measurement - measurement lane, feature-gated (jsonschema stays out of the default build)"
-	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe)"
+	@echo "  make ci               - All CI gates locally (fmt-check + lint + test + deny + audit-unsafe + coverage + check-single-grammar + check-measurement)"
 	@echo "  make bench            - NFR-003 budget + NFR-004 corpus-scale recall (performance lane)"
 
 # =============================================================================

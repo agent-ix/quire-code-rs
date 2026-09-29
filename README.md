@@ -46,8 +46,8 @@ an example, not part of the crate:
 cargo run --release --bin extract_tree -- --org agent-ix --repo demo path/to/tree
 ```
 
-`agent-ix/quire-corpus` pins that invocation as `producer_contract.version: 1`
-and scores the output against hand-authored truth:
+`agent-ix/quire-corpus` runs that invocation and scores the output against
+hand-authored truth:
 
 ```bash
 cd ../quire-corpus
