@@ -11,7 +11,7 @@ ground_truth_kind: human-labelled
 objective:
   direction: zero
 statistical_design:
-  population: every declared supported source and truth relation in one quire-corpus checkout
+  population: every declared supported source and truth relation in one pinned quire-corpus revision
   sampling: complete census with no sampling; preserve language, node-kind, relation-kind, and resolver-tier strata
   repetitions: 2
   estimator: count
@@ -35,7 +35,7 @@ negative_controls:
   - kind: stale-evidence
     description: >-
       the CLI refuses to run unless the source and corpus checkouts are
-      clean at the declared revisions
+      clean and pinned to the exact declared revisions
       (`verify_clean_source`), so a result cannot be presented for a
       revision it was not collected against
 relationships:
@@ -49,8 +49,8 @@ relationships:
 
 ## Decision Use
 
-The observation determines whether the extractor preserves the
-zero-wrong-heuristic-edge invariant on the corpus. Recall is a separate
+The observation determines whether a pinned extractor revision preserves the
+zero-wrong-heuristic-edge invariant on the pinned corpus. Recall is a separate
 diagnostic used to prioritize improvement; it does not offset a wrong edge and
 has no pass threshold in this plan.
 
@@ -69,8 +69,8 @@ zero. Recall is not part of the rule.
 ## Population
 
 The population is the complete declared set of supported source files, expected
-nodes, expected relations, and negative or ambiguous cases in one
-quire-corpus checkout. No source or truth record is sampled out.
+nodes, expected relations, and negative or ambiguous cases in one pinned
+quire-corpus revision. No source or truth record is sampled out.
 
 The census is stratified by language, node kind, relation kind, and resolver
 tier. Files outside the supported language set remain visible in the population
@@ -107,11 +107,13 @@ source or corpus revision it was not actually collected against
 
 ## Collection Procedure
 
-1. Run the corpus scorer twice with the same inputs in an isolated filesystem
-   environment, once after reversing tracked-file creation order.
-2. Retain each raw scorer output.
-3. Compare the two canonical observation records byte for byte.
-4. Validate the record against
+1. Record the exact extractor, producer contract, parser grammar, configuration,
+   source, corpus, scorer, and measurement-definition revisions.
+2. Run the corpus scorer twice with those pinned inputs in an isolated filesystem
+   environment, once after reversing tracked-file creation order..
+3. Retain each raw scorer output by relative path and content digest.
+4. Compare the two canonical observation records byte for byte.
+5. Validate the record against
    [FR-011](../functional/FR-011-graph-quality-observation-schema.md) and validate
    this plan with Quire before handing the observation to Quoin.
 
