@@ -66,7 +66,12 @@ make lint           # clippy with -D warnings
 make test           # cargo test
 make deny           # cargo deny check licenses
 make audit-unsafe   # every `unsafe {` needs a // SAFETY: comment
-make ci             # fmt-check + lint + test + deny + audit-unsafe
+make coverage       # spec/tests.md rows vs the suite (quire coverage)
+make check-single-grammar  # quire-code-parse --features rust links one grammar
+make check-measurement     # measurement lane, feature-gated
+make bench          # NFR-003 budget + NFR-004 recall (outside make ci)
+make ci             # fmt-check + lint + test + deny + audit-unsafe + coverage
+                    #   + check-single-grammar + check-measurement
 ```
 
 Spec validation after any `spec/` edit:
