@@ -692,7 +692,7 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quire-code-parse"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proptest",
  "static_assertions",
@@ -705,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "quire-code-rs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "jsonschema",
  "quire-code-parse",
