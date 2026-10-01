@@ -1,6 +1,6 @@
 [package]
 name = "quire-code-parse"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 rust-version = "1.75"
 description = "Shared tree-sitter parse layer: a borrowed syntax tree plus its source text, with no fact model, classification or analysis attached."
