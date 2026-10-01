@@ -78,7 +78,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | NFR-003 | NFR-003-AC-1, NFR-003-AC-2, NFR-003-AC-3, NFR-003-AC-4, NFR-003-AC-5 | TC-062, TC-063, TC-064, TC-065, TC-077 | ✅ |
 | NFR-004 | NFR-004-AC-1, NFR-004-AC-2, NFR-004-AC-3, NFR-004-AC-4, NFR-004-AC-5 | TC-066, TC-067, TC-068, TC-069, TC-070 | ✅ |
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5 | TC-101, TC-102, TC-103, TC-104, TC-105 | ✅ |
-| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
+| FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
 | FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175 | ✅ |
@@ -204,21 +204,23 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-107 | One declaration shape resolves at one tier in every language | Integration | P1 | FR-008-AC-13 | ✅ |
 | TC-108 | Supported population retains all dimensioned quality observations | Integration | P0 | StR-003-VC-1, US-004-EX-1 | ✅ |
 | TC-109 | Non-measured populations cannot become measured zeros | Property | P0 | StR-003-VC-2, US-004-EX-2 | ✅ |
+| TC-110 | Measured observation pins the complete producer tuple | Unit | P0 | StR-003-VC-3 | ✅ |
 | TC-111 | Raw output, schema, and MeasurementPlan validate together | Integration | P0 | StR-003-VC-4 | ✅ |
 | TC-112 | Valid measured observation passes schema version 1 | Unit | P0 | FR-011-AC-1 | ✅ |
 | TC-113 | Measured record covers all four dimensions and overall | Property | P0 | FR-011-AC-2 | ✅ |
 | TC-114 | Population-state conditional schema rejects result lies | Property | P0 | FR-011-AC-3 | ✅ |
-| TC-115 | Missing or malformed grammar and plan identities fail | Property | P0 | FR-011-AC-4 | ✅ |
+| TC-115 | Missing or malformed provenance and plan identities fail | Property | P0 | FR-011-AC-4 | ✅ |
+| TC-116 | Raw scorer output path and digest are strict | Property | P0 | FR-011-AC-5 | ✅ |
 | TC-117 | Closed vocabulary and unknown-field rejection | Property | P0 | FR-011-AC-6 | ✅ |
 | TC-118 | Real supported corpus emits a governed observation | Integration | P0 | FR-012-AC-1 | ✅ |
 | TC-119 | Producer emits exact census and four-dimension results | Integration | P0 | FR-012-AC-2 | ✅ |
 | TC-120 | Zero wrong edges and incomplete recall remain separate | Integration | P0 | FR-012-AC-3, US-004-EX-3 | ✅ |
 | TC-121 | False-positive heuristic edge fails regardless of recall | Integration | P0 | FR-012-AC-4 | ✅ |
 | TC-122 | Empty, unreadable, and unsupported populations fail non-measured | Property | P0 | FR-012-AC-5 | ✅ |
-| TC-123 | Missing required input emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
-| TC-124 | Repetitions produce identical records | Integration | P0 | FR-012-AC-7 | ✅ |
+| TC-123 | Missing revision or configuration emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
+| TC-124 | Pinned repetitions produce identical record and raw digest | Integration | P0 | FR-012-AC-7 | ✅ |
 | TC-125 | Invalid plan or observation is rejected before Quoin intake | Integration | P0 | FR-012-AC-8 | ✅ |
-| TC-126 | Two repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | ✅ |
+| TC-126 | Two pinned repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | ✅ |
 | TC-127 | Filesystem order permutation changes no canonical byte | Property | P0 | NFR-005-AC-2 | ✅ |
 | TC-128 | Record contains no host-specific or run-time identity | Static | P0 | NFR-005-AC-3 | ✅ |
 | TC-129 | Active MeasurementPlan governs population and decision rule | Integration | P0 | MP-001 | ✅ |
@@ -301,7 +303,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 
 | Integration ID | Purpose | Target Project | Type | Test Cases | Status |
 |---|---|---|---|---|---|
-| INT-001 | Read population and truth records | quire-corpus | service | TC-118, TC-119, TC-124 | ✅ |
+| INT-001 | Read pinned population and truth records | quire-corpus | service | TC-118, TC-119, TC-124 | ✅ |
 | INT-002 | Validate MP-001 and authored observation contract | quire-rs | service | TC-111, TC-125, TC-129 | ✅ |
 | INT-003 | Retain and render engine-agnostic observations | quoin | service | TC-111, TC-125 | ✅ |
 
@@ -309,9 +311,9 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 
 | Test Case | Integration | Scenario | Input | Expected | Priority |
 |---|---|---|---|---|---|
-| TC-118 | INT-001 | Complete supported population | Corpus and truth | Schema-valid measured observation | P0 |
+| TC-118 | INT-001 | Complete supported population | Pinned corpus and truth | Schema-valid measured observation | P0 |
 | TC-119 | INT-001 | Dimensioned complete census | Truth across four dimensions | Exact matrices and censuses | P0 |
-| TC-124 | INT-001 | Repeated collection | Same corpus, reversed creation order | Identical bytes | P0 |
+| TC-124 | INT-001 | Repeated pinned collection | Same corpus, reversed creation order | Identical bytes and raw digest | P0 |
 | TC-129 | INT-002 | Measurement governance | Active MP-001 | Quire-valid plan and enforced decision rule | P0 |
 | TC-125 | INT-002, INT-003 | Invalid plan or record | Malformed governed input | Rejected before evidence intake | P0 |
 | TC-111 | INT-002, INT-003 | End-to-end retained observation | Valid measured record and raw output | Quoin retains inspectable dimensions | P0 |
@@ -325,6 +327,8 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | EC-003 | Population has only unsupported files | FR-012 | TC-122 | Unsupported work appears measured |
 | EC-004 | One wrong heuristic edge with full recall | FR-012 | TC-121 | Recall masks a precision invariant failure |
 | EC-005 | Zero wrong edges with incomplete recall | FR-012 | TC-120 | Precision and recall collapse into one score |
+| EC-006 | Missing grammar or corpus revision | FR-011 | TC-115 | Incomparable observations appear equivalent |
+| EC-007 | Absolute raw-output path | FR-011 | TC-116 | Host identity leaks into evidence and breaks determinism |
 
 ---
 
