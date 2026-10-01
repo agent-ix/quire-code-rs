@@ -10,13 +10,13 @@ default-members = ["."]
 resolver = "2"
 
 # Single-sourced across the workspace (PLAT-841 finding 5): quire-code-parse's
-# own crate docs promise one pinned tree-sitter version for every consumer of
+# own crate docs promise one tree-sitter version for every consumer of
 # this workspace, so that promise has to hold inside the workspace first.
 # crates/quire-code-parse references these via `<crate>.workspace = true`
 # rather than repeating the version string. As of PLAT-849 this package no
 # longer references them directly at all — it reaches tree-sitter only
 # through the `quire-code-parse` dependency below, which is what
-# `tests/dependency_boundary.rs` enforces — but the pins stay here so that if
+# `tests/dependency_boundary.rs` enforces — but the versions stay here so that if
 # this package ever needed a workspace-shared crate again, the version would
 # still be single-sourced rather than redeclared.
 [workspace.dependencies]
@@ -41,7 +41,7 @@ path = "src/lib.rs"
 crate-type = ["rlib"]
 
 # The producer `agent-ix/quire-corpus` invokes. Its flags and its stdout are a
-# pinned contract (`producer_contract.version: 1`), so it is a bin rather than an
+# versioned contract (`producer_contract.version: 1`), so it is a bin rather than an
 # example: an example cannot be executed by an integration test, and an
 # unexecutable contract is an unverified one (FR-010).
 [[bin]]
@@ -67,7 +67,7 @@ serde_json = "^1"
 # links dev-deps into a normal `cargo build` or into a `[[bin]]` target — only
 # into `cargo test`/`bench`/`example` targets. A default-off feature is the
 # mechanism that keeps this out of every other consumer's build (e.g. a
-# filament-ide-rs pin bump), since `pub mod measurement` in lib.rs would
+# filament-ide-rs dependency bump), since `pub mod measurement` in lib.rs would
 # otherwise pull it in unconditionally.
 jsonschema = { version = "0.18.3", optional = true, default-features = false, features = ["draft202012"] }
 # Stable SHA-256 record ids, matching quire-rs canonical extraction conventions.
@@ -77,10 +77,7 @@ regex = "^1"
 # The shared tree-sitter parse layer (PLAT-841). This package's own
 # fact/edge pipeline is routed through it (PLAT-849): `crates/quire-code-parse`
 # is the one place in this workspace allowed to name `tree-sitter` directly,
-# enforced by `tests/dependency_boundary.rs`. A path dependency, not a git-rev
-# pin — `quire-code-parse` lives in this same repo/workspace, so the org
-# convention of pinning an unpublished crate by git rev (used by cross-repo
-# consumers like quire-rs, PLAT-843) does not apply here.
+# enforced by `tests/dependency_boundary.rs`. A path dependency: `quire-code-parse` lives in this same repo/workspace.
 quire-code-parse = { path = "crates/quire-code-parse" }
 
 [features]

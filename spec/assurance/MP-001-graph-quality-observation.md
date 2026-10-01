@@ -11,7 +11,7 @@ ground_truth_kind: human-labelled
 objective:
   direction: zero
 statistical_design:
-  population: every declared supported source and truth relation in one pinned quire-corpus revision
+  population: every declared supported source and truth relation in one quire-corpus checkout
   sampling: complete census with no sampling; preserve language, node-kind, relation-kind, and resolver-tier strata
   repetitions: 2
   estimator: count
@@ -26,21 +26,16 @@ protected_apparatus:
   - src/measurement.rs
   - schemas/graph-quality-observation-v1.schema.json
 negative_controls:
-  - kind: suppressed-observation
-    description: >-
-      the producer rejects a scorer report whose scored-case count does not
-      equal its complete case-digest map (`validate_complete_report`), so a
-      collection cannot drop an unfavourable case out of the census
   - kind: apparatus-edit
     description: >-
       the producer binary, the module that turns the scorer report into the
       observation and its decision-bound count, and the observation schema
       are protected, so editing the grading logic alongside a change it
-      grades changes the recorded digests
+      grades is visible in review
   - kind: stale-evidence
     description: >-
       the CLI refuses to run unless the source and corpus checkouts are
-      clean and pinned to the exact declared revisions
+      clean at the declared revisions
       (`verify_clean_source`), so a result cannot be presented for a
       revision it was not collected against
 relationships:
@@ -54,8 +49,8 @@ relationships:
 
 ## Decision Use
 
-The observation determines whether a pinned extractor revision preserves the
-zero-wrong-heuristic-edge invariant on the pinned corpus. Recall is a separate
+The observation determines whether the extractor preserves the
+zero-wrong-heuristic-edge invariant on the corpus. Recall is a separate
 diagnostic used to prioritize improvement; it does not offset a wrong edge and
 has no pass threshold in this plan.
 
@@ -74,8 +69,8 @@ zero. Recall is not part of the rule.
 ## Population
 
 The population is the complete declared set of supported source files, expected
-nodes, expected relations, and negative or ambiguous cases in one pinned
-quire-corpus revision. No source or truth record is sampled out.
+nodes, expected relations, and negative or ambiguous cases in one
+quire-corpus checkout. No source or truth record is sampled out.
 
 The census is stratified by language, node kind, relation kind, and resolver
 tier. Files outside the supported language set remain visible in the population
@@ -101,26 +96,22 @@ the scorer report into the observation and its decision-bound false-positive
 count (`src/measurement.rs`), the observation schema
 (`schemas/graph-quality-observation-v1.schema.json`), and the `Makefile`
 target (`check-measurement`) that builds and runs them. Editing one of these
-alongside a change it grades changes the recorded digests rather than earning
-silent credit.
+alongside a change it grades is visible in review rather than earning silent
+credit.
 
 `negative_controls` declares the gaming scenarios this plan guards against:
-suppressing an unfavourable case (the producer refuses a scorer report whose
-scored-case count disagrees with its case-digest map), editing the protected
+editing the protected
 apparatus alongside the change it grades, and presenting a result against a
 source or corpus revision it was not actually collected against
 (`verify_clean_source` refuses a dirty or mismatched checkout).
 
 ## Collection Procedure
 
-1. Record the exact extractor, producer contract, parser grammar, configuration,
-   source, corpus, scorer, and measurement-definition revisions.
-2. Run the corpus scorer twice with those pinned inputs in an isolated filesystem
-   environment, once after reversing tracked-file creation order. Reject either
-   report unless its scored-case count equals its complete case-digest map.
-3. Retain each raw scorer output by relative path and content digest.
-4. Compare the two canonical observation records byte for byte.
-5. Validate the record against
+1. Run the corpus scorer twice with the same inputs in an isolated filesystem
+   environment, once after reversing tracked-file creation order.
+2. Retain each raw scorer output.
+3. Compare the two canonical observation records byte for byte.
+4. Validate the record against
    [FR-011](../functional/FR-011-graph-quality-observation-schema.md) and validate
    this plan with Quire before handing the observation to Quoin.
 

@@ -3,13 +3,12 @@
 //!
 //! Implements FR-013-AC-7. This assertion is here *because* the obvious
 //! assumption about `tree_sitter::Tree` turned out to be wrong for the
-//! version this crate pins: folklore (and this crate's own original design
+//! version this crate uses: folklore (and this crate's own original design
 //! note) held that `Tree` is `Send` but not `Sync`, matching older
-//! tree-sitter releases. `tree-sitter = "0.26"` (the version pinned in
-//! `Cargo.toml`, single-sourced per the crate docs) instead declares
-//! `unsafe impl Sync for Tree {}` alongside `Send` — verified by reading
-//! `tree-sitter-0.26.11/binding_rust/lib.rs` directly, not by trusting either
-//! claim. `ParsedFile` adds no field of its own that narrows that: `&str`,
+//! tree-sitter releases. The `tree-sitter` version in `Cargo.toml` (single-sourced per the crate
+//! docs) instead declares `unsafe impl Sync for Tree {}` alongside `Send` —
+//! verified by reading its `binding_rust/lib.rs` directly, not by trusting
+//! either claim. `ParsedFile` adds no field of its own that narrows that: `&str`,
 //! `String` and `Language` are all `Send + Sync`. If a future tree-sitter
 //! upgrade changed `Tree`'s bound again, one of these two tests would stop
 //! compiling — a compile error here rather than a data race a consumer's
@@ -33,7 +32,7 @@ fn parsed_file_is_send() {
 // reached from two threads at once — concurrent read-only traversal of one
 // already-parsed tree from a pool of reader threads is sound, because this
 // crate exposes no `&mut` method on `ParsedFile` and tree-sitter's own `Tree`
-// is `Sync` at the pinned version.
+// is `Sync` at the version in use.
 #[test]
 fn parsed_file_is_sync() {
     static_assertions::assert_impl_all!(ParsedFile<'static>: Sync);

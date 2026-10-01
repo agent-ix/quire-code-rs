@@ -22,11 +22,11 @@ use crate::language::Language;
 /// # Thread safety
 ///
 /// `ParsedFile` is both [`Send`] **and** [`Sync`] at the `tree-sitter`
-/// version this crate pins (`0.26`) — inherited from
+/// version this crate uses — inherited from
 /// [`tree_sitter::Tree`], which declares both. This is verified by a
 /// compiled static assertion in `tests/thread_safety.rs`, not asserted from
 /// memory: `Tree` was widely known as `Send`-only in older tree-sitter
-/// releases, and that folklore does not hold for the pinned version, so it is
+/// releases, and that folklore does not hold for the version in use, so it is
 /// stated here as a checked fact rather than repeated as received wisdom.
 /// Neither `ParsedFile` nor `Language` add a field that would narrow either
 /// bound.

@@ -16,7 +16,7 @@ relationships:
 ## Story
 
 **As an** assurance practitioner comparing extractor revisions
-**I want** each corpus run to retain dimensioned raw observations and exact input identities
+**I want** each corpus run to retain dimensioned raw observations
 **So that** I can distinguish precision, recall, ambiguity, and unavailable measurement conditions before using the result in a decision.
 
 ## Context
@@ -30,10 +30,10 @@ The same view must expose whether the population was actually measurable.
 
 ### [US-004-EX-1] Measured population remains decomposable
 
-- **Given** a supported non-empty corpus with pinned truth
+- **Given** a supported non-empty corpus with declared truth
 - **When** the practitioner inspects its observation
 - **Then** the population census, dimensioned confusion matrices, unresolved
-  counts, ambiguous counts, revisions, and raw scorer output are visible together
+  counts, ambiguous counts, and raw scorer output are visible together
 
 ### [US-004-EX-2] Empty input is not perfect quality
 

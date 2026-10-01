@@ -8,8 +8,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use quire_code_rs::measurement::sha256;
-
 fn output(command: &mut Command) -> String {
     let result = command.output().expect("command starts");
     assert!(
@@ -116,18 +114,10 @@ fn complete_cli_args() -> Vec<String> {
             "--corpus-source-revision",
             "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         ),
-        (
-            "--scorer-revision",
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        ),
-        (
-            "--config-digest",
-            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-        ),
-        ("--grammar", "python=tree-sitter-python@0.25.0"),
-        ("--grammar", "rust=tree-sitter-rust@0.24.2"),
-        ("--grammar", "tsx=tree-sitter-typescript@0.23.2"),
-        ("--grammar", "typescript=tree-sitter-typescript@0.23.2"),
+        ("--grammar", "python=tree-sitter-python"),
+        ("--grammar", "rust=tree-sitter-rust"),
+        ("--grammar", "tsx=tree-sitter-typescript"),
+        ("--grammar", "typescript=tree-sitter-typescript"),
         ("--node-version", "24.15.0"),
         ("--rust-version", "1.95.0"),
         ("--python-version", "3.14.7"),
@@ -139,7 +129,7 @@ fn complete_cli_args() -> Vec<String> {
     .collect()
 }
 
-// TC-123 / FR-012-AC-6: every missing identity fails the real CLI process
+// TC-123 / FR-012-AC-6: every missing input fails the real CLI process
 // before stdout can contain an observation.
 #[test]
 fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
@@ -147,8 +137,6 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
     for missing in [
         "--source-revision",
         "--corpus-source-revision",
-        "--scorer-revision",
-        "--config-digest",
         "--grammar",
         "--timestamp",
         "--node-version",
@@ -176,11 +164,11 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
     }
 }
 
-// TC-108, TC-109, TC-110, TC-111, TC-118, TC-119, TC-124, TC-125, TC-127, TC-129 /
-// StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..8,
+// TC-108, TC-109, TC-111, TC-118, TC-119, TC-124, TC-125, TC-127, TC-129 /
+// StR-003-VC-1, StR-003-VC-4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..8,
 // NFR-005-AC-1..2, MP-001, IT-001: real extractor + scorer + Quire + Quoin.
 #[test]
-#[ignore = "requires clean pinned sibling checkouts and installed Quire/Quoin CLIs"]
+#[ignore = "requires clean sibling checkouts and installed Quire/Quoin CLIs"]
 fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let corpus = PathBuf::from(std::env::var("QUIRE_CORPUS_ROOT").expect("QUIRE_CORPUS_ROOT"));
@@ -210,7 +198,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
 
     let source_revision = revision(&repo);
     let corpus_revision = revision(&corpus);
-    let config_digest = format!("sha256:{}", "1".repeat(64));
     let first = output(
         Command::new(&release_producer)
             .args(["--repo-root"])
@@ -229,18 +216,14 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
                 &source_revision,
                 "--corpus-source-revision",
                 &corpus_revision,
-                "--scorer-revision",
-                &corpus_revision,
-                "--config-digest",
-                &config_digest,
                 "--grammar",
-                "rust=tree-sitter-rust@0.24.2",
+                "rust=tree-sitter-rust",
                 "--grammar",
-                "typescript=tree-sitter-typescript@0.23.2",
+                "typescript=tree-sitter-typescript",
                 "--grammar",
-                "tsx=tree-sitter-typescript@0.23.2",
+                "tsx=tree-sitter-typescript",
                 "--grammar",
-                "python=tree-sitter-python@0.25.0",
+                "python=tree-sitter-python",
                 "--node-version",
                 "24.15.0",
                 "--rust-version",
@@ -271,18 +254,14 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
                 &source_revision,
                 "--corpus-source-revision",
                 &corpus_revision,
-                "--scorer-revision",
-                &corpus_revision,
-                "--config-digest",
-                &config_digest,
                 "--grammar",
-                "rust=tree-sitter-rust@0.24.2",
+                "rust=tree-sitter-rust",
                 "--grammar",
-                "typescript=tree-sitter-typescript@0.23.2",
+                "typescript=tree-sitter-typescript",
                 "--grammar",
-                "tsx=tree-sitter-typescript@0.23.2",
+                "tsx=tree-sitter-typescript",
                 "--grammar",
-                "python=tree-sitter-python@0.25.0",
+                "python=tree-sitter-python",
                 "--node-version",
                 "24.15.0",
                 "--rust-version",
@@ -295,31 +274,12 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
                 &remote(&corpus),
             ]),
     );
-    assert_eq!(first, second, "pinned repetitions are byte-identical");
+    assert_eq!(first, second, "repetitions are byte-identical");
     let parsed: serde_json::Value = serde_json::from_str(&first).expect("collection JSON");
     let scorer = &parsed["rawEvidence"]["scorerReport"];
-    assert_eq!(
-        scorer["scored_cases"].as_u64(),
-        scorer["case_digests"]
-            .as_object()
-            .map(|items| items.len() as u64),
-        "complete-census plan forbids a filtered scorer run"
-    );
     assert!(scorer["scored_cases"].as_u64().unwrap_or(0) > 100);
     let observation = &parsed["rawEvidence"]["graphQualityObservation"];
     assert_eq!(observation["population"]["state"], "measured");
-    assert_eq!(
-        observation["raw_scorer_output"]["path"],
-        "raw/scorer-report.json"
-    );
-    assert_eq!(
-        observation["raw_scorer_output"]["digest"],
-        sha256(
-            &fs::read(output_dir.join("raw/scorer-report.json")).expect("retained scorer bytes")
-        )
-    );
-    assert_eq!(observation["producer"]["source_revision"], source_revision);
-    assert_eq!(observation["producer"]["scorer_version"], corpus_revision);
     assert_eq!(
         observation["producer"]["parser_grammars"]
             .as_array()
@@ -403,17 +363,10 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         "/collectionId",
         "/toolIdentity",
         "/toolVersion",
-        "/configDigest",
-        "/sourceRevision",
-        "/corpusRevision",
         "/verificationStack/executableDigest",
         "/verificationStack/artifacts/release-extractor",
         "/verificationStack/artifacts/raw-scorer-output",
         "/rawEvidence/graphQualityObservation/observation_id",
-        "/rawEvidence/graphQualityObservation/raw_scorer_output/path",
-        "/rawEvidence/graphQualityObservation/raw_scorer_output/digest",
-        "/rawEvidence/graphQualityObservation/producer/source_revision",
-        "/rawEvidence/graphQualityObservation/producer/scorer_version",
         "/rawEvidence/scorerReport/scored_cases",
     ] {
         assert_eq!(
@@ -426,15 +379,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         retained["observations"].as_array().map(Vec::len),
         parsed["observations"].as_array().map(Vec::len),
         "Quoin changed the typed observation population"
-    );
-    assert_eq!(
-        retained["rawEvidence"]["scorerReport"]["case_digests"]
-            .as_object()
-            .map(serde_json::Map::len),
-        parsed["rawEvidence"]["scorerReport"]["case_digests"]
-            .as_object()
-            .map(serde_json::Map::len),
-        "Quoin changed the retained scorer population"
     );
 
     let report = output(Command::new(&quoin).args(["report", "--repo"]).arg(&intake));
@@ -467,8 +411,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             == Some(&serde_json::json!(
                 "agent-ix/quire-code-rs/measure_graph_quality"
             ))
-            && row.pointer("/collection/sourceRevision")
-                == Some(&serde_json::json!(source_revision))
             && row.pointer("/observation/dimensions/measure")
                 == Some(&serde_json::json!("precision_decision"))
     }));

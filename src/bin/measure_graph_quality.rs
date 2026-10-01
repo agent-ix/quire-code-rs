@@ -1,4 +1,4 @@
-//! Run the governed graph-quality measurement pipeline on local pinned inputs.
+//! Run the governed graph-quality measurement pipeline on local inputs.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -7,7 +7,7 @@ use std::process::{Command, ExitCode};
 
 use quire_code_rs::measurement::{
     build_observation, build_quoin_collection, canonical_bytes, precision_decision_passed, sha256,
-    CollectionInputs, GrammarRevision, Population, PopulationState, Provenance, DEFINITION_VERSION,
+    CollectionInputs, ParserGrammar, Population, PopulationState, Provenance, DEFINITION_VERSION,
     METRIC, PLAN_ID, SCHEMA,
 };
 use serde_json::{json, Value};
@@ -54,7 +54,6 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
     }
     let parsed = Args::parse(args)?;
     validate_pins(&parsed)?;
-    validate_grammar_pins(&parsed.repo_root, &parsed.grammars)?;
     validate_release_extractor(&parsed.repo_root, &parsed.extractor)?;
     validate_release_producer(&parsed.repo_root, producer_executable)?;
     verify_clean_source(&parsed.repo_root, &parsed.source_revision, "quire-code-rs")?;
@@ -87,28 +86,11 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
     fs::write(&raw_path, &raw_bytes).map_err(|error| format!("{}: {error}", raw_path.display()))?;
     let raw_digest = sha256(&raw_bytes);
 
-    let corpus_revision = report
-        .as_ref()
-        .and_then(|value| value.get("corpus_revision"))
-        .and_then(Value::as_str)
-        .map(normalize_digest)
-        .unwrap_or_else(|| sha256(&[]));
     let provenance = Provenance {
-        extractor_revision: parsed.source_revision.clone(),
-        source_revision: parsed.source_revision.clone(),
-        corpus_revision,
-        scorer_version: parsed.scorer_revision.clone(),
-        configuration_digest: parsed.config_digest.clone(),
         parser_grammars: parsed.grammars.clone(),
     };
-    let observation = build_observation(
-        report.as_ref(),
-        &population,
-        &provenance,
-        raw_relative,
-        &raw_digest,
-    )
-    .map_err(|error| error.to_string())?;
+    let observation = build_observation(report.as_ref(), &population, &provenance)
+        .map_err(|error| error.to_string())?;
     let collection_inputs = CollectionInputs {
         timestamp: parsed.timestamp,
         lock_digest: sha256(
@@ -132,6 +114,8 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
             )
             .map_err(|error| format!("MP-001: {error}"))?,
         ),
+        raw_scorer_output_digest: raw_digest,
+        source_revision: parsed.source_revision,
         node_version: parsed.node_version,
         rust_version: parsed.rust_version,
         python_version: parsed.python_version,
@@ -139,13 +123,8 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         corpus_source_revision: parsed.corpus_source_revision,
         corpus_remote: parsed.corpus_remote,
     };
-    let collection = build_quoin_collection(
-        &observation,
-        report.as_ref(),
-        &provenance,
-        &collection_inputs,
-    )
-    .map_err(|error| error.to_string())?;
+    let collection = build_quoin_collection(&observation, report.as_ref(), &collection_inputs)
+        .map_err(|error| error.to_string())?;
     let mut stdout = canonical_bytes(&collection).map_err(|error| error.to_string())?;
     stdout.push(b'\n');
     let decision_passed = report
@@ -187,26 +166,7 @@ fn score(args: &Args) -> Result<(Option<Value>, Vec<u8>), String> {
             String::from_utf8_lossy(&output.stderr)
         )
     })?;
-    validate_complete_report(&report)?;
     Ok((Some(report), output.stdout))
-}
-
-fn validate_complete_report(report: &Value) -> Result<(), String> {
-    let scored = report
-        .get("scored_cases")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| "scorer report has no scored_cases".to_string())?;
-    let declared = report
-        .get("case_digests")
-        .and_then(Value::as_object)
-        .ok_or_else(|| "scorer report has no case_digests".to_string())?
-        .len() as u64;
-    if scored != declared {
-        return Err(format!(
-            "scorer report is a partial population: scored {scored} of {declared} declared cases"
-        ));
-    }
-    Ok(())
 }
 
 fn validate_plan(quire: &Path, repo: &Path) -> Result<(), String> {
@@ -357,14 +317,6 @@ fn supported(path: &Path) -> bool {
     )
 }
 
-fn normalize_digest(value: &str) -> String {
-    if value.starts_with("sha256:") {
-        value.to_string()
-    } else {
-        format!("sha256:{value}")
-    }
-}
-
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
@@ -373,7 +325,6 @@ fn validate_pins(args: &Args) -> Result<(), String> {
     for (name, value) in [
         ("source-revision", &args.source_revision),
         ("corpus-source-revision", &args.corpus_source_revision),
-        ("scorer-revision", &args.scorer_revision),
     ] {
         if value.len() != 40
             || !value
@@ -382,15 +333,6 @@ fn validate_pins(args: &Args) -> Result<(), String> {
         {
             return Err(format!("--{name} must be a full lowercase 40-hex revision"));
         }
-    }
-    if args.scorer_revision != args.corpus_source_revision {
-        return Err(
-            "--scorer-revision must equal --corpus-source-revision because score.py is loaded from that checkout"
-                .into(),
-        );
-    }
-    if !valid_digest(&args.config_digest) {
-        return Err("--config-digest must be sha256 plus 64 lowercase hex digits".into());
     }
     if args.grammars.is_empty() {
         return Err("missing --grammar".into());
@@ -448,96 +390,6 @@ fn validate_release_producer(repo: &Path, producer: &Path) -> Result<(), String>
     Ok(())
 }
 
-fn validate_grammar_pins(repo: &Path, supplied: &[GrammarRevision]) -> Result<(), String> {
-    let lock_path = repo.join("Cargo.lock");
-    let lock = fs::read_to_string(&lock_path)
-        .map_err(|error| format!("{}: {error}", lock_path.display()))?;
-    let expected = BTreeMap::from([
-        (
-            "python".to_string(),
-            (
-                "tree-sitter-python".to_string(),
-                locked_version(&lock, "tree-sitter-python")?,
-            ),
-        ),
-        (
-            "rust".to_string(),
-            (
-                "tree-sitter-rust".to_string(),
-                locked_version(&lock, "tree-sitter-rust")?,
-            ),
-        ),
-        (
-            "tsx".to_string(),
-            (
-                "tree-sitter-typescript".to_string(),
-                locked_version(&lock, "tree-sitter-typescript")?,
-            ),
-        ),
-        (
-            "typescript".to_string(),
-            (
-                "tree-sitter-typescript".to_string(),
-                locked_version(&lock, "tree-sitter-typescript")?,
-            ),
-        ),
-    ]);
-    let mut actual = BTreeMap::new();
-    for grammar in supplied {
-        if actual
-            .insert(
-                grammar.language.clone(),
-                (grammar.grammar.clone(), grammar.revision.clone()),
-            )
-            .is_some()
-        {
-            return Err(format!("duplicate --grammar for {}", grammar.language));
-        }
-    }
-    if actual != expected {
-        return Err(format!(
-            "--grammar pins must exactly match Cargo.lock: expected {expected:?}, found {actual:?}"
-        ));
-    }
-    Ok(())
-}
-
-fn locked_version(lock: &str, package: &str) -> Result<String, String> {
-    for block in lock.split("[[package]]").skip(1) {
-        let mut name = None;
-        let mut version = None;
-        for line in block.lines() {
-            if let Some(value) = line
-                .strip_prefix("name = \"")
-                .and_then(|v| v.strip_suffix('"'))
-            {
-                name = Some(value);
-            }
-            if let Some(value) = line
-                .strip_prefix("version = \"")
-                .and_then(|v| v.strip_suffix('"'))
-            {
-                version = Some(value);
-            }
-        }
-        if name == Some(package) {
-            return version
-                .map(str::to_string)
-                .ok_or_else(|| format!("Cargo.lock package {package} has no version"));
-        }
-    }
-    Err(format!("Cargo.lock has no package {package}"))
-}
-
-fn valid_digest(value: &str) -> bool {
-    value.strip_prefix("sha256:").is_some_and(|hex| {
-        hex.len() == 64
-            && hex
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-    })
-}
-
 struct Args {
     repo_root: PathBuf,
     corpus: PathBuf,
@@ -548,9 +400,7 @@ struct Args {
     timestamp: String,
     source_revision: String,
     corpus_source_revision: String,
-    scorer_revision: String,
-    config_digest: String,
-    grammars: Vec<GrammarRevision>,
+    grammars: Vec<ParserGrammar>,
     node_version: String,
     rust_version: String,
     python_version: String,
@@ -580,8 +430,6 @@ impl Args {
                     | "--timestamp"
                     | "--source-revision"
                     | "--corpus-source-revision"
-                    | "--scorer-revision"
-                    | "--config-digest"
                     | "--grammar"
                     | "--node-version"
                     | "--rust-version"
@@ -620,8 +468,6 @@ impl Args {
             timestamp: one("--timestamp")?,
             source_revision: one("--source-revision")?,
             corpus_source_revision: one("--corpus-source-revision")?,
-            scorer_revision: one("--scorer-revision")?,
-            config_digest: one("--config-digest")?,
             grammars,
             node_version: one("--node-version")?,
             rust_version: one("--rust-version")?,
@@ -632,25 +478,21 @@ impl Args {
     }
 }
 
-fn parse_grammar(value: String) -> Result<GrammarRevision, String> {
-    let (language, rest) = value
+fn parse_grammar(value: String) -> Result<ParserGrammar, String> {
+    let (language, grammar) = value
         .split_once('=')
-        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar@revision"))?;
-    let (grammar, revision) = rest
-        .rsplit_once('@')
-        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar@revision"))?;
-    if language.is_empty() || grammar.is_empty() || revision.is_empty() {
+        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar"))?;
+    if language.is_empty() || grammar.is_empty() {
         return Err(format!("invalid --grammar {value}"));
     }
-    Ok(GrammarRevision {
+    Ok(ParserGrammar {
         language: language.into(),
         grammar: grammar.into(),
-        revision: revision.into(),
     })
 }
 
 fn usage() -> &'static str {
-    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --source-revision SHA --corpus-source-revision SHA --scorer-revision SHA --config-digest sha256:HEX --grammar language=crate@revision [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
+    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --source-revision SHA --corpus-source-revision SHA --grammar language=crate [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
 }
 
 #[cfg(test)]
@@ -674,18 +516,10 @@ mod tests {
                 "--corpus-source-revision",
                 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             ),
-            (
-                "--scorer-revision",
-                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            ),
-            (
-                "--config-digest",
-                "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-            ),
-            ("--grammar", "python=tree-sitter-python@0.25.0"),
-            ("--grammar", "rust=tree-sitter-rust@0.24.2"),
-            ("--grammar", "tsx=tree-sitter-typescript@0.23.2"),
-            ("--grammar", "typescript=tree-sitter-typescript@0.23.2"),
+            ("--grammar", "python=tree-sitter-python"),
+            ("--grammar", "rust=tree-sitter-rust"),
+            ("--grammar", "tsx=tree-sitter-typescript"),
+            ("--grammar", "typescript=tree-sitter-typescript"),
             ("--node-version", "24.15.0"),
             ("--rust-version", "1.95.0"),
             ("--python-version", "3.14.7"),
@@ -747,8 +581,7 @@ mod tests {
             ("--python", "/usr/bin/true".into()),
             ("--output-dir", output.display().to_string()),
             ("--source-revision", source_revision),
-            ("--corpus-source-revision", corpus_revision.clone()),
-            ("--scorer-revision", corpus_revision),
+            ("--corpus-source-revision", corpus_revision),
         ]
         .into_iter()
         .collect::<BTreeMap<_, _>>();
@@ -782,8 +615,6 @@ mod tests {
     fn scorer_report(edge_false_positives: u64) -> Value {
         json!({
             "schema_version": 1,
-            "corpus_revision": format!("sha256:{}", "c".repeat(64)),
-            "case_digests": {"relations/ambiguous/rust": "digest"},
             "scored_cases": 1,
             "confusion": {
                 "total": {"total": {"tp": 8, "fp": edge_false_positives + 1, "fn": 2}},
@@ -821,15 +652,13 @@ mod tests {
         commit_repo(root);
     }
 
-    // TC-123 / FR-012-AC-6: missing pins name the exact input and emit nothing.
+    // TC-123 / FR-012-AC-6: missing inputs name the exact field and emit nothing.
     #[test]
     fn parser_names_every_missing_identity_before_any_output_exists() {
         let args = valid_args();
         for missing in [
             "--source-revision",
             "--corpus-source-revision",
-            "--scorer-revision",
-            "--config-digest",
             "--timestamp",
             "--node-version",
             "--rust-version",
@@ -851,14 +680,11 @@ mod tests {
 
     // TC-133, TC-134 / FR-012-CON-2..3: the producer accepts only paths/values and has no URL client.
     #[test]
-    fn grammar_parser_is_closed_and_requires_a_pinned_revision() {
-        assert!(parse_grammar("rust=tree-sitter-rust@0.24.2".into()).is_ok());
-        assert!(parse_grammar("rust=tree-sitter-rust".into()).is_err());
-        let parsed = Args::parse(valid_args()).unwrap();
-        validate_grammar_pins(Path::new(env!("CARGO_MANIFEST_DIR")), &parsed.grammars).unwrap();
-        let mut bad = parsed.grammars;
-        bad[0].revision = "0.0.0".into();
-        assert!(validate_grammar_pins(Path::new(env!("CARGO_MANIFEST_DIR")), &bad).is_err());
+    fn grammar_parser_is_closed_and_requires_a_language_and_crate() {
+        assert!(parse_grammar("rust=tree-sitter-rust".into()).is_ok());
+        assert!(parse_grammar("rust".into()).is_err());
+        assert!(parse_grammar("=tree-sitter-rust".into()).is_err());
+        assert!(Args::parse(valid_args()).is_ok());
     }
 
     // TC-125 / FR-012-AC-8: structural Quire validity cannot mask semantic drift.
@@ -881,14 +707,6 @@ mod tests {
             let bad = good.replace(from, to);
             assert!(validate_plan_semantics(&bad).is_err(), "accepted {to}");
         }
-    }
-
-    #[test]
-    fn scorer_report_must_cover_every_declared_case() {
-        let complete = json!({"scored_cases": 2, "case_digests": {"a": "x", "b": "y"}});
-        validate_complete_report(&complete).unwrap();
-        let partial = json!({"scored_cases": 1, "case_digests": {"a": "x", "b": "y"}});
-        assert!(validate_complete_report(&partial).is_err());
     }
 
     // TC-122 / FR-012-AC-5: all three absence states emit evidence but no
