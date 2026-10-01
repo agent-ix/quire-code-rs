@@ -75,7 +75,7 @@ guess, and every relationship it does emit carries the evidence that produced it
   separate an exported-surface change from a body-only change
   ([FR-009](./functional/FR-009-declaration-visibility-and-signature.md)).
 - Versioned governed graph-quality observations, including exact population,
-  confusion matrices, unresolved and ambiguous censuses, producer revisions,
+  confusion matrices, unresolved and ambiguous censuses,
   and retained raw scorer output
   ([FR-011](./functional/FR-011-graph-quality-observation-schema.md),
   [FR-012](./functional/FR-012-governed-graph-quality-producer.md)).
@@ -146,8 +146,8 @@ returns canonical node and edge records plus per-file diagnostics.
 ### 3.3 Intended Users
 
 Graph-indexing consumers — principally Filament IDE
-(`ix://agent-ix/filament-ide-rs/FR-072`) and analysis workers — that pin this
-library by git revision and call it in-process.
+(`ix://agent-ix/filament-ide-rs/FR-072`) and analysis workers — that call this
+library in-process.
 
 ## 4. Requirements Architecture
 
@@ -174,7 +174,7 @@ targets name the owning repository.
 |---|---|
 | [StR-001](./stakeholder/StR-001-single-deterministic-code-extraction-engine.md) | One deterministic extraction engine; no parser dependency in consumers |
 | [StR-002](./stakeholder/StR-002-requirement-code-test-traceability.md) | Traceability recovered from source, and trustworthy |
-| [StR-003](./stakeholder/StR-003-governed-extractor-quality-observations.md) | Governed extractor-quality observations preserve population, raw results, and revisions |
+| [StR-003](./stakeholder/StR-003-governed-extractor-quality-observations.md) | Governed extractor-quality observations preserve population and raw results |
 
 ### 5.2 User Stories
 
@@ -210,7 +210,7 @@ targets name the owning repository.
 | [NFR-002](./non-functional/NFR-002-filesystem-only-boundary.md) | No network, filesystem, environment or process access | Security |
 | [NFR-003](./non-functional/NFR-003-extraction-time-budget.md) | Extraction time budget for interactive reindexing | Performance efficiency |
 | [NFR-004](./non-functional/NFR-004-conservative-resolution-precision.md) | Zero wrong edges on known-binding corpora | Reliability |
-| [NFR-005](./non-functional/NFR-005-deterministic-quality-observations.md) | Byte-identical governed observations for pinned inputs | Reliability |
+| [NFR-005](./non-functional/NFR-005-deterministic-quality-observations.md) | Byte-identical governed observations for identical inputs | Reliability |
 
 ### 5.5 Measurement and Integration
 

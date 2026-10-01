@@ -160,17 +160,17 @@
 //!
 //! The consequence, accepted rather than hidden: every consumer of this
 //! crate — `quire-code-rs`, `quire-rs`, `filament-ide-rs`, and later a daemon
-//! — is pinned to the one `tree_sitter` version this crate's `Cargo.toml`
+//! — uses the one `tree_sitter` version this crate's `Cargo.toml`
 //! names. That is the intended effect, not a side effect: it single-sources
-//! the version across the ecosystem instead of each consumer pinning (and
+//! the version across the ecosystem instead of each consumer choosing (and
 //! drifting from) its own.
 //!
 //! ## Thread safety
 //!
 //! [`ParsedFile`] is [`Send`] **and** [`Sync`] at the `tree_sitter` version
-//! this crate pins — checked by a compiled static assertion in
+//! this crate uses — checked by a compiled static assertion in
 //! `tests/thread_safety.rs`, not assumed. (Older tree-sitter releases made
-//! `Tree` `Send`-only; that is no longer this pin's behavior, which is why
+//! `Tree` `Send`-only; that is no longer its behavior, which is why
 //! this is verified rather than stated from memory.) See [`ParsedFile`]'s own
 //! docs for the two sound fan-out patterns this enables when parsing a
 //! repository in parallel.

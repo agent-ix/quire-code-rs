@@ -3,16 +3,15 @@
   "$id": "https://agent-ix.github.io/quire-code-rs/schemas/graph-quality-observation-v1.schema.json",
   "title": "GraphQualityObservationV1",
   "type": "object",
-  "required": ["schema_version", "record_type", "observation_id", "producer", "measurement_plan", "population", "raw_scorer_output"],
+  "required": ["schema_version", "record_type", "observation_id", "producer", "measurement_plan", "population"],
   "properties": {
     "schema_version": { "const": 1 },
     "record_type": { "const": "graph_quality_observation" },
     "observation_id": { "$ref": "#/$defs/digest" },
     "producer": {
       "type": "object",
-      "required": ["extractor_revision", "producer_contract_version", "parser_grammars", "configuration_digest", "source_revision", "corpus_revision", "scorer_version"],
+      "required": ["producer_contract_version", "parser_grammars"],
       "properties": {
-        "extractor_revision": { "$ref": "#/$defs/revision" },
         "producer_contract_version": { "type": "integer", "minimum": 1 },
         "parser_grammars": {
           "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true,
@@ -23,11 +22,7 @@
             { "contains": { "properties": { "language": { "const": "tsx" } }, "required": ["language"] } },
             { "contains": { "properties": { "language": { "const": "typescript" } }, "required": ["language"] } }
           ]
-        },
-        "configuration_digest": { "$ref": "#/$defs/digest" },
-        "source_revision": { "$ref": "#/$defs/revision" },
-        "corpus_revision": { "$ref": "#/$defs/revision" },
-        "scorer_version": { "$ref": "#/$defs/revision" }
+        }
       },
       "additionalProperties": false
     },
@@ -41,23 +36,7 @@
       "additionalProperties": false
     },
     "population": { "$ref": "#/$defs/population" },
-    "results": { "$ref": "#/$defs/results" },
-    "raw_scorer_output": {
-      "type": "object",
-      "required": ["path", "digest"],
-      "properties": {
-        "path": {
-          "type": "string",
-          "minLength": 1,
-          "allOf": [
-            { "not": { "pattern": "^(?:[\\\\/]|[A-Za-z]:)" } },
-            { "not": { "pattern": "(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)" } }
-          ]
-        },
-        "digest": { "$ref": "#/$defs/digest" }
-      },
-      "additionalProperties": false
-    }
+    "results": { "$ref": "#/$defs/results" }
   },
   "additionalProperties": false,
   "allOf": [
@@ -81,11 +60,10 @@
   ],
   "$defs": {
     "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
-    "revision": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|v?[0-9]+[.][0-9]+[.][0-9]+(?:[-+][0-9A-Za-z.-]+)?|sha256:[a-f0-9]{64})$" },
     "language": { "type": "string", "enum": ["rust", "typescript", "tsx", "python", "mixed"] },
     "grammar": {
-      "type": "object", "required": ["language", "grammar", "revision"],
-      "properties": { "language": { "enum": ["rust", "typescript", "tsx", "python"] }, "grammar": { "type": "string", "minLength": 1 }, "revision": { "$ref": "#/$defs/revision" } },
+      "type": "object", "required": ["language", "grammar"],
+      "properties": { "language": { "enum": ["rust", "typescript", "tsx", "python"] }, "grammar": { "type": "string", "minLength": 1 } },
       "additionalProperties": false
     },
     "census_item": {

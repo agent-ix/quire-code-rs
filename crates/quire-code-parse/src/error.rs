@@ -37,7 +37,7 @@
 pub enum ParseError {
     /// tree-sitter accepted the requested language but produced no tree at
     /// all for this input, or the language itself could not be linked to the
-    /// parser (an ABI mismatch this crate's own pinned grammar crates should
+    /// parser (an ABI mismatch this crate's own grammar crates should
     /// never actually produce, but `Parser::set_language` returns a
     /// `Result`, so this crate has no path back to `unwrap`/`expect`/a panic
     /// if that ever stops being true).

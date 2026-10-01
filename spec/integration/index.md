@@ -8,4 +8,4 @@ description: "Index of artifacts in this directory."
 
 ## Contents
 
-* [IT-001: Pinned corpus observation is accepted by Quoin](./IT-001-corpus-observation-to-quoin.md)
+* [IT-001: Corpus observation is accepted by Quoin](./IT-001-corpus-observation-to-quoin.md)
