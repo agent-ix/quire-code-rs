@@ -567,10 +567,22 @@ mod tests {
                 "--config-digest",
                 "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             ),
-            ("--grammar", "python=tree-sitter-python@0.25.0"),
-            ("--grammar", "rust=tree-sitter-rust@0.24.2"),
-            ("--grammar", "tsx=tree-sitter-typescript@0.23.2"),
-            ("--grammar", "typescript=tree-sitter-typescript@0.23.2"),
+            (
+                "--grammar",
+                "python=synthetic-python@dddddddddddddddddddddddddddddddddddddddd",
+            ),
+            (
+                "--grammar",
+                "rust=synthetic-rust@dddddddddddddddddddddddddddddddddddddddd",
+            ),
+            (
+                "--grammar",
+                "tsx=synthetic-typescript@dddddddddddddddddddddddddddddddddddddddd",
+            ),
+            (
+                "--grammar",
+                "typescript=synthetic-typescript@dddddddddddddddddddddddddddddddddddddddd",
+            ),
             ("--node-version", "24.15.0"),
             ("--rust-version", "1.95.0"),
             ("--python-version", "3.14.7"),
@@ -734,8 +746,11 @@ mod tests {
     // TC-133, TC-134 / FR-012-CON-2..3: the producer accepts only paths/values and has no URL client.
     #[test]
     fn grammar_parser_is_closed_and_requires_a_revision() {
-        assert!(parse_grammar("rust=tree-sitter-rust@0.24.2".into()).is_ok());
-        assert!(parse_grammar("rust=tree-sitter-rust".into()).is_err());
+        assert!(parse_grammar(
+            "rust=synthetic-rust@dddddddddddddddddddddddddddddddddddddddd".into()
+        )
+        .is_ok());
+        assert!(parse_grammar("rust=synthetic-rust".into()).is_err());
         assert!(Args::parse(valid_args()).is_ok());
     }
 

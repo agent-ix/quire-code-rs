@@ -675,23 +675,23 @@ mod tests {
             parser_grammars: vec![
                 GrammarRevision {
                     language: "python".into(),
-                    grammar: "tree-sitter-python".into(),
-                    revision: "0.25.0".into(),
+                    grammar: "synthetic-python".into(),
+                    revision: "d".repeat(40),
                 },
                 GrammarRevision {
                     language: "rust".into(),
-                    grammar: "tree-sitter-rust".into(),
-                    revision: "0.24.2".into(),
+                    grammar: "synthetic-rust".into(),
+                    revision: "d".repeat(40),
                 },
                 GrammarRevision {
                     language: "tsx".into(),
-                    grammar: "tree-sitter-typescript".into(),
-                    revision: "0.23.2".into(),
+                    grammar: "synthetic-typescript".into(),
+                    revision: "d".repeat(40),
                 },
                 GrammarRevision {
                     language: "typescript".into(),
-                    grammar: "tree-sitter-typescript".into(),
-                    revision: "0.23.2".into(),
+                    grammar: "synthetic-typescript".into(),
+                    revision: "d".repeat(40),
                 },
             ],
         }
