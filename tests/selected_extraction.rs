@@ -36,7 +36,7 @@ fn two_module_manifest() -> SelectionManifest {
     manifest(vec![module("src/a.rs", A_SRC), module("src/b.rs", B_SRC)])
 }
 
-// TC-177 / FR-014-AC-1: Full only from the traversal, with exactly the selected records.
+// TC-177, FR-014-AC-1: Full only from the traversal, with exactly the selected records.
 #[test]
 fn full_selection_is_full_with_selected_records() {
     let outcome = extract_selected(
@@ -55,7 +55,7 @@ fn full_selection_is_full_with_selected_records() {
     );
 }
 
-// TC-178 / FR-014-AC-2
+// TC-178, FR-014-AC-2
 #[test]
 fn omitted_module_is_partial_with_it_missing() {
     let outcome = extract_selected(&two_module_manifest(), &[file("src/a.rs", A_SRC)]);
@@ -72,7 +72,7 @@ fn omitted_module_is_partial_with_it_missing() {
     );
 }
 
-// TC-179 / FR-014-AC-3
+// TC-179, FR-014-AC-3
 #[test]
 fn extra_file_is_listed_and_not_included() {
     let outcome = extract_selected(
@@ -93,7 +93,7 @@ fn extra_file_is_listed_and_not_included() {
         .all(|n| !n.name.contains("src/c.rs")));
 }
 
-// TC-180 / FR-014-AC-4
+// TC-180, FR-014-AC-4
 #[test]
 fn identity_mismatch_is_listed_and_not_included() {
     let changed = "pub fn alpha() {}\npub fn beta() {}\npub fn sneaked_in() {}\n";
@@ -125,7 +125,7 @@ fn identity_mismatch_is_listed_and_not_included() {
         .all(|n| !n.name.contains("src/a.rs")));
 }
 
-// TC-181 / FR-014-AC-5
+// TC-181, FR-014-AC-5
 #[test]
 fn unparsable_selected_file_is_partial_with_diagnostics() {
     let broken = "pub fn broken( {{{";
@@ -151,7 +151,7 @@ fn unparsable_selected_file_is_partial_with_diagnostics() {
         .all(|n| !n.name.contains("src/bad.rs")));
 }
 
-// TC-182 / FR-014-AC-6
+// TC-182, FR-014-AC-6
 #[test]
 fn degenerate_selections_are_unavailable() {
     // Names a module no supplied file provides.
@@ -198,7 +198,7 @@ fn degenerate_selections_are_unavailable() {
     );
 }
 
-// TC-183 / FR-014-AC-7
+// TC-183, FR-014-AC-7
 #[test]
 fn absent_function_is_partial_and_selection_identity_is_preserved() {
     let m = manifest(vec![
