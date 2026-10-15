@@ -25,6 +25,7 @@ pub mod naming;
 pub mod parse;
 pub mod records;
 pub mod resolve;
+pub mod selected;
 pub mod typeenv;
 
 pub use edges::{Edge, EdgeType, Evidence, Reason};
@@ -35,4 +36,8 @@ pub use mentions::{Mention, MentionKind};
 pub use parse::{parse_file, ParsedFile, SourceFile};
 pub use records::{EdgeRecord, NodeRecord};
 pub use resolve::{resolve_call, Resolution};
+pub use selected::{
+    content_identity, extract_selected, ExtractionOutcome, ExtractionScope, FileKey,
+    SelectedModule, SelectionManifest, UnaccountedCause, UnaccountedEntry, UnavailableReason,
+};
 pub use typeenv::{Corpus, RawBinding, TypeEnv, TypeSource};
