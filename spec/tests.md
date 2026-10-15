@@ -81,6 +81,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
+| FR-014 | FR-014-AC-1, FR-014-AC-2, FR-014-AC-3, FR-014-AC-4, FR-014-AC-5, FR-014-AC-6, FR-014-AC-7 | TC-177..TC-183 | ✅ |
 | FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175 | ✅ |
 
 ### Measurement Plan Coverage
@@ -229,6 +230,13 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-132 | Recall has no threshold that relaxes precision | Static | P0 | FR-012-CON-1 | ✅ |
 | TC-133 | Measurement producer reads local filesystem inputs only | Static | P0 | FR-012-CON-2 | ✅ |
 | TC-134 | Measurement producer has no network dependency or request | Static | P0 | FR-012-CON-3 | ✅ |
+| TC-177 | Full selection yields Full and exactly the selected files' records | Unit | P1 | FR-014-AC-1 | ✅ |
+| TC-178 | Omitted selected module yields Partial with it listed not supplied | Unit | P1 | FR-014-AC-2 | ✅ |
+| TC-179 | Extra file is listed and contributes no records | Unit | P1 | FR-014-AC-3 | ✅ |
+| TC-180 | Identity mismatch is listed with expected and actual identities | Unit | P1 | FR-014-AC-4 | ✅ |
+| TC-181 | Unparsable selected file yields Partial with its diagnostics | Unit | P1 | FR-014-AC-5 | ✅ |
+| TC-182 | Empty, duplicate or wholly unaccounted selection yields Unavailable | Unit | P1 | FR-014-AC-6 | ✅ |
+| TC-183 | Absent selected function yields Partial; selection identity preserved | Unit | P1 | FR-014-AC-7 | ✅ |
 | TC-135 | Consumer parses Rust and walks the tree with no fact-model dependency | Integration | P1 | FR-013-AC-1 | ✅ |
 | TC-136 | Declaration-structure error returns `Ok` with a diagnostic naming the line, not an empty result | Integration | P1 | FR-013-AC-3 | ✅ |
 | TC-137 | Every compiled-in language loads its grammar | Unit | P2 | FR-013-CON-3 | ✅ |

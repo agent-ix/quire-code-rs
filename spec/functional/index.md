@@ -21,3 +21,4 @@ description: "Index of artifacts in this directory."
 * [FR-011: Versioned graph-quality observation schema](./FR-011-graph-quality-observation-schema.md)
 * [FR-012: Governed graph-quality measurement producer](./FR-012-governed-graph-quality-producer.md)
 * [FR-013: Borrowed parse-tree API for external consumers](./FR-013-borrowed-parse-tree-api.md)
+* [FR-014: Selected-scope extraction against a typed manifest](./FR-014-selected-scope-extraction.md)
