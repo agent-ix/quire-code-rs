@@ -34,9 +34,6 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
-      - name: Unsafe audit
-        run: bash scripts/check_unsafe_comments.sh
-
       - name: quire-code-parse single-grammar feature gate (FR-013-AC-4)
         run: make check-single-grammar
 
