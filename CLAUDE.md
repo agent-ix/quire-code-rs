@@ -55,12 +55,11 @@ make fmt-check      # verify formatting (CI gate)
 make lint           # clippy with -D warnings
 make test           # cargo test
 make deny           # cargo deny check licenses
-make audit-unsafe   # every `unsafe {` needs a // SAFETY: comment
 make coverage       # spec/tests.md rows vs the suite (quire coverage)
 make check-single-grammar  # quire-code-parse --features rust links one grammar
 make check-measurement     # measurement lane, feature-gated
 make bench          # NFR-003 budget + NFR-004 recall (outside make ci)
-make ci             # fmt-check + lint + test + deny + audit-unsafe + coverage
+make ci             # fmt-check + lint + test + deny + coverage
                     #   + check-single-grammar + check-measurement
 ```
 
@@ -72,4 +71,6 @@ quire validate --scope . "spec/**/*.md"
 
 ## Safety scaffolding
 
-Unlike filament-ide-rs, **CI runs here** — PRs gate themselves.
+The root package inherits workspace Clippy `undocumented_unsafe_blocks`.
+The parser crate forbids unsafe code through its own Rust lint. Unlike
+filament-ide-rs, **CI runs here** — PRs gate themselves.
