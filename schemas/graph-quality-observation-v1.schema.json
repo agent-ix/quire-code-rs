@@ -77,11 +77,10 @@
   ],
   "$defs": {
     "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
-    "revision": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|v?[0-9]+[.][0-9]+[.][0-9]+(?:[-+][0-9A-Za-z.-]+)?|sha256:[a-f0-9]{64})$" },
     "language": { "type": "string", "enum": ["rust", "typescript", "tsx", "python", "mixed"] },
     "grammar": {
-      "type": "object", "required": ["language", "grammar", "revision"],
-      "properties": { "language": { "enum": ["rust", "typescript", "tsx", "python"] }, "grammar": { "type": "string", "minLength": 1 }, "revision": { "$ref": "#/$defs/revision" } },
+      "type": "object", "required": ["language", "grammar"],
+      "properties": { "language": { "enum": ["rust", "typescript", "tsx", "python"] }, "grammar": { "type": "string", "minLength": 1 } },
       "additionalProperties": false
     },
     "census_item": {

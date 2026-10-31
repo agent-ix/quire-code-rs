@@ -1,4 +1,4 @@
-//! Run the governed graph-quality measurement pipeline on local pinned inputs.
+//! Run the governed graph-quality measurement pipeline on local inputs.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -7,7 +7,7 @@ use std::process::{Command, ExitCode};
 
 use quire_code_rs::measurement::{
     build_observation, build_quoin_collection, canonical_bytes, precision_decision_passed, sha256,
-    CollectionInputs, GrammarRevision, Population, PopulationState, Provenance, DEFINITION_VERSION,
+    CollectionInputs, ParserGrammar, Population, PopulationState, Provenance, DEFINITION_VERSION,
     METRIC, PLAN_ID, SCHEMA,
 };
 use serde_json::{json, Value};
@@ -392,7 +392,7 @@ struct Args {
     output_dir: PathBuf,
     timestamp: String,
     config_digest: String,
-    grammars: Vec<GrammarRevision>,
+    grammars: Vec<ParserGrammar>,
     node_version: String,
     rust_version: String,
     python_version: String,
@@ -468,25 +468,21 @@ impl Args {
     }
 }
 
-fn parse_grammar(value: String) -> Result<GrammarRevision, String> {
-    let (language, rest) = value
+fn parse_grammar(value: String) -> Result<ParserGrammar, String> {
+    let (language, grammar) = value
         .split_once('=')
-        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar@revision"))?;
-    let (grammar, revision) = rest
-        .rsplit_once('@')
-        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar@revision"))?;
-    if language.is_empty() || grammar.is_empty() || revision.is_empty() {
+        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar"))?;
+    if language.is_empty() || grammar.is_empty() {
         return Err(format!("invalid --grammar {value}"));
     }
-    Ok(GrammarRevision {
+    Ok(ParserGrammar {
         language: language.into(),
         grammar: grammar.into(),
-        revision: revision.into(),
     })
 }
 
 fn usage() -> &'static str {
-    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --config-digest sha256:HEX --grammar language=crate@revision [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
+    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --config-digest sha256:HEX --grammar language=crate [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
 }
 
 #[cfg(test)]
@@ -506,22 +502,10 @@ mod tests {
                 "--config-digest",
                 "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
             ),
-            (
-                "--grammar",
-                "python=synthetic-python@dddddddddddddddddddddddddddddddddddddddd",
-            ),
-            (
-                "--grammar",
-                "rust=synthetic-rust@dddddddddddddddddddddddddddddddddddddddd",
-            ),
-            (
-                "--grammar",
-                "tsx=synthetic-typescript@dddddddddddddddddddddddddddddddddddddddd",
-            ),
-            (
-                "--grammar",
-                "typescript=synthetic-typescript@dddddddddddddddddddddddddddddddddddddddd",
-            ),
+            ("--grammar", "python=synthetic-python"),
+            ("--grammar", "rust=synthetic-rust"),
+            ("--grammar", "tsx=synthetic-typescript"),
+            ("--grammar", "typescript=synthetic-typescript"),
             ("--node-version", "24.15.0"),
             ("--rust-version", "1.95.0"),
             ("--python-version", "3.14.7"),
@@ -674,17 +658,6 @@ mod tests {
             run(Vec::new()).is_err(),
             "failed runs produce no stdout payload"
         );
-    }
-
-    // TC-133, TC-134 / FR-012-CON-2..3: the producer accepts only paths/values and has no URL client.
-    #[test]
-    fn grammar_parser_is_closed_and_requires_a_revision() {
-        assert!(parse_grammar(
-            "rust=synthetic-rust@dddddddddddddddddddddddddddddddddddddddd".into()
-        )
-        .is_ok());
-        assert!(parse_grammar("rust=synthetic-rust".into()).is_err());
-        assert!(Args::parse(valid_args()).is_ok());
     }
 
     // TC-125 / FR-012-AC-8: structural Quire validity cannot mask semantic drift.
