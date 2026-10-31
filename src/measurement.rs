@@ -42,16 +42,15 @@ pub enum MeasurementError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GrammarRevision {
+pub struct ParserGrammar {
     pub language: String,
     pub grammar: String,
-    pub revision: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Provenance {
     pub configuration_digest: String,
-    pub parser_grammars: Vec<GrammarRevision>,
+    pub parser_grammars: Vec<ParserGrammar>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,9 +104,7 @@ pub fn build_observation(
     raw_digest: &str,
 ) -> Result<Value, MeasurementError> {
     let mut grammars = provenance.parser_grammars.clone();
-    grammars.sort_by(|a, b| {
-        (&a.language, &a.grammar, &a.revision).cmp(&(&b.language, &b.grammar, &b.revision))
-    });
+    grammars.sort_by(|a, b| (&a.language, &a.grammar).cmp(&(&b.language, &b.grammar)));
 
     let (census, results) = match population.state {
         PopulationState::Measured => {
@@ -658,25 +655,21 @@ mod tests {
         Provenance {
             configuration_digest: format!("sha256:{}", "d".repeat(64)),
             parser_grammars: vec![
-                GrammarRevision {
+                ParserGrammar {
                     language: "python".into(),
                     grammar: "synthetic-python".into(),
-                    revision: "d".repeat(40),
                 },
-                GrammarRevision {
+                ParserGrammar {
                     language: "rust".into(),
                     grammar: "synthetic-rust".into(),
-                    revision: "d".repeat(40),
                 },
-                GrammarRevision {
+                ParserGrammar {
                     language: "tsx".into(),
                     grammar: "synthetic-typescript".into(),
-                    revision: "d".repeat(40),
                 },
-                GrammarRevision {
+                ParserGrammar {
                     language: "typescript".into(),
                     grammar: "synthetic-typescript".into(),
-                    revision: "d".repeat(40),
                 },
             ],
         }

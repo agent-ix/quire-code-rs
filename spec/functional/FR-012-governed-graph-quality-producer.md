@@ -20,10 +20,10 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 
 ## Inputs
 
-- A local quire-corpus root with a revision-pinned population manifest and truth
+- A local quire-corpus root with a population manifest and truth
   records.
 - The `extract_tree` producer and its declared producer-contract version.
-- Exact parser grammar revisions and a canonical extraction-configuration digest.
+- Parser grammar identities and a canonical extraction-configuration digest.
 - Active [MP-001](../assurance/MP-001-graph-quality-observation.md).
 - An output directory for raw scorer output and the canonical observation.
 

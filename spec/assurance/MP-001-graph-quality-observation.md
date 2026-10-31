@@ -11,7 +11,7 @@ ground_truth_kind: human-labelled
 objective:
   direction: zero
 statistical_design:
-  population: every declared supported source and truth relation in one pinned quire-corpus revision
+  population: every declared supported source and truth relation in the quire-corpus
   sampling: complete census with no sampling; preserve language, node-kind, relation-kind, and resolver-tier strata
   repetitions: 2
   estimator: count
@@ -48,8 +48,8 @@ relationships:
 
 ## Decision Use
 
-The observation determines whether a pinned extractor revision preserves the
-zero-wrong-heuristic-edge invariant on the pinned corpus. Recall is a separate
+The observation determines whether the extractor preserves the
+zero-wrong-heuristic-edge invariant on the corpus. Recall is a separate
 diagnostic used to prioritize improvement; it does not offset a wrong edge and
 has no pass threshold in this plan.
 
@@ -68,8 +68,8 @@ zero. Recall is not part of the rule.
 ## Population
 
 The population is the complete declared set of supported source files, expected
-nodes, expected relations, and negative or ambiguous cases in one pinned
-quire-corpus revision. No source or truth record is sampled out.
+nodes, expected relations, and negative or ambiguous cases in the
+quire-corpus. No source or truth record is sampled out.
 
 The census is stratified by language, node kind, relation kind, and resolver
 tier. Files outside the supported language set remain visible in the population
@@ -108,7 +108,7 @@ modified source or corpus checkout
 
 1. Record the producer contract, parser grammar, configuration, and
    measurement-definition identities.
-2. Run the corpus scorer twice with those pinned inputs in an isolated filesystem
+2. Run the corpus scorer twice with those inputs in an isolated filesystem
    environment, once after reversing tracked-file creation order..
 3. Retain each raw scorer output by relative path and content digest.
 4. Compare the two canonical observation records byte for byte.
