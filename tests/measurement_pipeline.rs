@@ -8,8 +8,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use quire_code_rs::measurement::sha256;
-
 fn output(command: &mut Command) -> String {
     let result = command.output().expect("command starts");
     assert!(
@@ -97,14 +95,6 @@ fn complete_cli_args() -> Vec<String> {
         ("--python", "python3"),
         ("--output-dir", "target/measurement"),
         ("--timestamp", "2026-08-31T00:00:00Z"),
-        (
-            "--config-digest",
-            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-        ),
-        ("--grammar", "python=synthetic-python"),
-        ("--grammar", "rust=synthetic-rust"),
-        ("--grammar", "tsx=synthetic-typescript"),
-        ("--grammar", "typescript=synthetic-typescript"),
         ("--node-version", "24.15.0"),
         ("--rust-version", "1.95.0"),
         ("--python-version", "3.14.7"),
@@ -122,8 +112,6 @@ fn complete_cli_args() -> Vec<String> {
 fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
     let complete = complete_cli_args();
     for missing in [
-        "--config-digest",
-        "--grammar",
         "--timestamp",
         "--node-version",
         "--rust-version",
@@ -182,7 +170,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
     )
     .expect("copy plan");
 
-    let config_digest = format!("sha256:{}", "1".repeat(64));
     let first = output(
         Command::new(&release_producer)
             .args(["--repo-root"])
@@ -197,16 +184,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             .args([
                 "--timestamp",
                 "2026-08-31T00:00:00.000Z",
-                "--config-digest",
-                &config_digest,
-                "--grammar",
-                "rust=synthetic-rust",
-                "--grammar",
-                "typescript=synthetic-typescript",
-                "--grammar",
-                "tsx=synthetic-typescript",
-                "--grammar",
-                "python=synthetic-python",
                 "--node-version",
                 "24.15.0",
                 "--rust-version",
@@ -233,16 +210,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             .args([
                 "--timestamp",
                 "2026-08-31T00:00:00.000Z",
-                "--config-digest",
-                &config_digest,
-                "--grammar",
-                "rust=synthetic-rust",
-                "--grammar",
-                "typescript=synthetic-typescript",
-                "--grammar",
-                "tsx=synthetic-typescript",
-                "--grammar",
-                "python=synthetic-python",
                 "--node-version",
                 "24.15.0",
                 "--rust-version",
@@ -255,7 +222,7 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
                 &remote(&corpus),
             ]),
     );
-    assert_eq!(first, second, "pinned repetitions are byte-identical");
+    assert_eq!(first, second, "repetitions are byte-identical");
     let parsed: serde_json::Value = serde_json::from_str(&first).expect("collection JSON");
     let scorer = &parsed["rawEvidence"]["scorerReport"];
     assert!(scorer["scored_cases"].as_u64().unwrap_or(0) > 100);
@@ -266,31 +233,14 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         "raw/scorer-report.json"
     );
     assert_eq!(
-        observation["raw_scorer_output"]["digest"],
-        sha256(
-            &fs::read(output_dir.join("raw/scorer-report.json")).expect("retained scorer bytes")
-        )
+        parsed.pointer("/verificationStack/artifacts"),
+        Some(&serde_json::json!([
+            "release-extractor",
+            "measurement-plan",
+            "observation-schema",
+            "raw-scorer-output"
+        ]))
     );
-    assert_eq!(
-        observation["producer"]["parser_grammars"]
-            .as_array()
-            .map(Vec::len),
-        Some(4)
-    );
-    for pointer in [
-        "/verificationStack/executableDigest",
-        "/verificationStack/artifacts/release-extractor",
-        "/verificationStack/artifacts/raw-scorer-output",
-    ] {
-        let digest = parsed
-            .pointer(pointer)
-            .and_then(serde_json::Value::as_str)
-            .unwrap();
-        assert!(
-            digest.starts_with("sha256:") && digest.len() == 71,
-            "invalid retained digest at {pointer}: {digest}"
-        );
-    }
     let observations = parsed["observations"].as_array().unwrap();
     let measures = observations
         .iter()
@@ -346,13 +296,9 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         "/collectionId",
         "/toolIdentity",
         "/toolVersion",
-        "/configDigest",
-        "/verificationStack/executableDigest",
-        "/verificationStack/artifacts/release-extractor",
-        "/verificationStack/artifacts/raw-scorer-output",
+        "/verificationStack/artifacts",
         "/rawEvidence/graphQualityObservation/observation_id",
         "/rawEvidence/graphQualityObservation/raw_scorer_output/path",
-        "/rawEvidence/graphQualityObservation/raw_scorer_output/digest",
         "/rawEvidence/scorerReport/scored_cases",
     ] {
         assert_eq!(

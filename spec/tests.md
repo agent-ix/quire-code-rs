@@ -210,16 +210,16 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-112 | Valid measured observation passes schema version 1 | Unit | P0 | FR-011-AC-1 | ✅ |
 | TC-113 | Measured record covers all four dimensions and overall | Property | P0 | FR-011-AC-2 | ✅ |
 | TC-114 | Population-state conditional schema rejects result lies | Property | P0 | FR-011-AC-3 | ✅ |
-| TC-115 | Missing or malformed provenance and plan identities fail | Property | P0 | FR-011-AC-4 | ✅ |
-| TC-116 | Raw scorer output path and digest are strict | Property | P0 | FR-011-AC-5 | ✅ |
+| TC-115 | Missing or malformed producer-contract version and plan identity fail | Property | P0 | FR-011-AC-4 | ✅ |
+| TC-116 | Raw scorer output path is strict | Property | P0 | FR-011-AC-5 | ✅ |
 | TC-117 | Closed vocabulary and unknown-field rejection | Property | P0 | FR-011-AC-6 | ✅ |
 | TC-118 | Real supported corpus emits a governed observation | Integration | P0 | FR-012-AC-1 | ✅ |
 | TC-119 | Producer emits exact census and four-dimension results | Integration | P0 | FR-012-AC-2 | ✅ |
 | TC-120 | Zero wrong edges and incomplete recall remain separate | Integration | P0 | FR-012-AC-3, US-004-EX-3 | ✅ |
 | TC-121 | False-positive heuristic edge fails regardless of recall | Integration | P0 | FR-012-AC-4 | ✅ |
 | TC-122 | Empty, unreadable, and unsupported populations fail non-measured | Property | P0 | FR-012-AC-5 | ✅ |
-| TC-123 | Missing configuration emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
-| TC-124 | Pinned repetitions produce identical record and raw digest | Integration | P0 | FR-012-AC-7 | ✅ |
+| TC-123 | Missing timestamp, version, or remote emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
+| TC-124 | Repetitions produce identical records | Integration | P0 | FR-012-AC-7 | ✅ |
 | TC-125 | Invalid plan or observation is rejected before Quoin intake | Integration | P0 | FR-012-AC-8 | ✅ |
 | TC-126 | Two pinned repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | ✅ |
 | TC-127 | Filesystem order permutation changes no canonical byte | Property | P0 | NFR-005-AC-2 | ✅ |
@@ -321,7 +321,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 |---|---|---|---|---|---|
 | TC-118 | INT-001 | Complete supported population | Pinned corpus and truth | Schema-valid measured observation | P0 |
 | TC-119 | INT-001 | Dimensioned complete census | Truth across four dimensions | Exact matrices and censuses | P0 |
-| TC-124 | INT-001 | Repeated pinned collection | Same corpus, reversed creation order | Identical bytes and raw digest | P0 |
+| TC-124 | INT-001 | Repeated collection | Same corpus, reversed creation order | Identical bytes | P0 |
 | TC-129 | INT-002 | Measurement governance | Active MP-001 | Quire-valid plan and enforced decision rule | P0 |
 | TC-125 | INT-002, INT-003 | Invalid plan or record | Malformed governed input | Rejected before evidence intake | P0 |
 | TC-111 | INT-002, INT-003 | End-to-end retained observation | Valid measured record and raw output | Quoin retains inspectable dimensions | P0 |
@@ -335,7 +335,6 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | EC-003 | Population has only unsupported files | FR-012 | TC-122 | Unsupported work appears measured |
 | EC-004 | One wrong heuristic edge with full recall | FR-012 | TC-121 | Recall masks a precision invariant failure |
 | EC-005 | Zero wrong edges with incomplete recall | FR-012 | TC-120 | Precision and recall collapse into one score |
-| EC-006 | Missing parser grammar or configuration digest | FR-011 | TC-115 | Incomparable observations appear equivalent |
 | EC-007 | Absolute raw-output path | FR-011 | TC-116 | Host identity leaks into evidence and breaks determinism |
 
 ---

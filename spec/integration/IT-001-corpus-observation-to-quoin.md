@@ -30,10 +30,9 @@ through its measurement and report surfaces.
 
 ## Preconditions
 
-The quire-code-rs source, quire-corpus checkout, extraction configuration, parser
-grammars, scorer, Quire, and Quoin are available locally at recorded exact
-revisions. The complete corpus is non-empty, readable, and includes truth for
-all required dimensions. An empty temporary output and Quoin store are
+The quire-code-rs source, quire-corpus checkout, extraction configuration,
+scorer, Quire, and Quoin are available locally. The complete corpus is
+non-empty, readable, and includes truth for all required dimensions. An empty temporary output and Quoin store are
 available.
 
 ## Inputs
@@ -51,14 +50,13 @@ available.
 2. Run the graph-quality producer twice over the pinned corpus after reversing
    fixture creation order.
    - IT-001-SC-02: both runs exit according to the zero-wrong-edge decision and
-     emit byte-identical observations with matching raw-output digests.
+     emit byte-identical observations.
 3. Validate each observation against the versioned JSON Schema.
    - IT-001-SC-03: both observations validate and name MP-001's exact definition
      version.
 4. Submit the emitted MeasurementCollection v2 to a real temporary Quoin
    measurement store.
-   - IT-001-SC-04: Quoin accepts the record and retains its content digest and
-     producer tuple.
+   - IT-001-SC-04: Quoin accepts the record and retains the collection.
 5. Render Quoin's report for the observation.
    - IT-001-SC-05: population state, precision result, recall, unresolved counts,
      ambiguous counts, raw-output reference, and all four dimensions remain

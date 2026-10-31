@@ -22,7 +22,6 @@ pub const METRIC: &str = "graph_quality";
 type LanguageUnresolvedCounts = BTreeMap<String, (u64, u64)>;
 type UnresolvedCounts = (u64, u64, LanguageUnresolvedCounts);
 
-const GRAMMAR_LANGUAGES: [&str; 4] = ["python", "rust", "tsx", "typescript"];
 const RESULT_DIMENSIONS: [&str; 5] = [
     "overall",
     "language",
@@ -39,18 +38,6 @@ pub enum MeasurementError {
     InvalidObservation(String),
     #[error("scorer report is invalid: {0}")]
     InvalidScorerReport(String),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ParserGrammar {
-    pub language: String,
-    pub grammar: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Provenance {
-    pub configuration_digest: String,
-    pub parser_grammars: Vec<ParserGrammar>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -74,11 +61,6 @@ pub struct Population {
 #[derive(Debug, Clone)]
 pub struct CollectionInputs {
     pub timestamp: String,
-    pub lock_digest: String,
-    pub producer_executable_digest: String,
-    pub extractor_executable_digest: String,
-    pub schema_digest: String,
-    pub plan_digest: String,
     pub node_version: String,
     pub rust_version: String,
     pub python_version: String,
@@ -99,13 +81,8 @@ pub fn canonical_bytes(value: &Value) -> Result<Vec<u8>, MeasurementError> {
 pub fn build_observation(
     report: Option<&Value>,
     population: &Population,
-    provenance: &Provenance,
     raw_path: &str,
-    raw_digest: &str,
 ) -> Result<Value, MeasurementError> {
-    let mut grammars = provenance.parser_grammars.clone();
-    grammars.sort_by(|a, b| (&a.language, &a.grammar).cmp(&(&b.language, &b.grammar)));
-
     let (census, results) = match population.state {
         PopulationState::Measured => {
             let report = report.ok_or_else(|| {
@@ -125,9 +102,7 @@ pub fn build_observation(
         "record_type": "graph_quality_observation",
         "observation_id": format!("sha256:{}", "0".repeat(64)),
         "producer": {
-            "producer_contract_version": 1,
-            "parser_grammars": grammars,
-            "configuration_digest": provenance.configuration_digest
+            "producer_contract_version": 1
         },
         "measurement_plan": {
             "ref": PLAN_REF,
@@ -141,7 +116,7 @@ pub fn build_observation(
             "unsupported_files": population.unsupported_files,
             "census": census
         },
-        "raw_scorer_output": { "path": raw_path, "digest": raw_digest }
+        "raw_scorer_output": { "path": raw_path }
     });
     if let Some(results) = results {
         observation["results"] = results;
@@ -177,18 +152,6 @@ pub fn validate_observation(value: &Value) -> Result<(), MeasurementError> {
         return Err(MeasurementError::InvalidObservation(format!(
             "observation_id mismatch: expected {expected}"
         )));
-    }
-    let grammar_languages = value
-        .pointer("/producer/parser_grammars")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|grammar| grammar.get("language").and_then(Value::as_str))
-        .collect::<BTreeSet<_>>();
-    if grammar_languages != BTreeSet::from(GRAMMAR_LANGUAGES) {
-        return Err(MeasurementError::InvalidObservation(
-            "parser_grammars must pin exactly python, rust, tsx, and typescript".into(),
-        ));
     }
     for pointer in [
         "/population/census/languages",
@@ -247,7 +210,6 @@ pub fn validate_observation(value: &Value) -> Result<(), MeasurementError> {
 pub fn build_quoin_collection(
     observation: &Value,
     scorer_report: Option<&Value>,
-    provenance: &Provenance,
     inputs: &CollectionInputs,
 ) -> Result<Value, MeasurementError> {
     validate_observation(observation)?;
@@ -263,7 +225,6 @@ pub fn build_quoin_collection(
         "scope": observation["population"].clone(),
         "toolIdentity": "agent-ix/quire-code-rs/measure_graph_quality",
         "toolVersion": env!("CARGO_PKG_VERSION"),
-        "configDigest": provenance.configuration_digest,
         "timestamp": inputs.timestamp,
         "environment": {
             "node": inputs.node_version,
@@ -272,8 +233,6 @@ pub fn build_quoin_collection(
         },
         "verificationStack": {
             "schemaVersion": "verification-stack-attestation-v1",
-            "lockDigest": inputs.lock_digest,
-            "executableDigest": inputs.producer_executable_digest,
             "buildProfile": "release",
             "toolchains": { "node": inputs.node_version, "rust": inputs.rust_version, "python": inputs.python_version },
             "sources": {
@@ -281,13 +240,7 @@ pub fn build_quoin_collection(
                 "quire-corpus": { "sourceState": "clean", "remote": inputs.corpus_remote }
             },
             "capabilities": ["graph-quality-observation-v1", "quire-corpus-scorer-v1"],
-            "artifacts": {
-                "configuration": provenance.configuration_digest,
-                "release-extractor": inputs.extractor_executable_digest,
-                "measurement-plan": inputs.plan_digest,
-                "observation-schema": inputs.schema_digest,
-                "raw-scorer-output": observation["raw_scorer_output"]["digest"]
-            }
+            "artifacts": ["release-extractor", "measurement-plan", "observation-schema", "raw-scorer-output"]
         },
         "observations": observations,
         "rawEvidence": { "graphQualityObservation": observation, "scorerReport": scorer_report }
@@ -635,7 +588,7 @@ mod tests {
 
     fn report() -> Value {
         json!({
-            "schema_version":1, "corpus_revision":format!("sha256:{}", "c".repeat(64)), "scored_cases":2,
+            "schema_version":1, "scored_cases":2,
             "confusion": {
                 "total":{"total":{"tp":8,"fp":0,"fn":2}},
                 "language":{"rust":{"tp":4,"fp":0,"fn":1},"python":{"tp":4,"fp":0,"fn":1}},
@@ -649,30 +602,6 @@ mod tests {
                 "relations/a/rust":{"kind_census":{"code_function":{"function":3}},"census":{}}
             }
         })
-    }
-
-    fn provenance() -> Provenance {
-        Provenance {
-            configuration_digest: format!("sha256:{}", "d".repeat(64)),
-            parser_grammars: vec![
-                ParserGrammar {
-                    language: "python".into(),
-                    grammar: "synthetic-python".into(),
-                },
-                ParserGrammar {
-                    language: "rust".into(),
-                    grammar: "synthetic-rust".into(),
-                },
-                ParserGrammar {
-                    language: "tsx".into(),
-                    grammar: "synthetic-typescript".into(),
-                },
-                ParserGrammar {
-                    language: "typescript".into(),
-                    grammar: "synthetic-typescript".into(),
-                },
-            ],
-        }
     }
 
     fn population(state: PopulationState) -> Population {
@@ -704,11 +633,6 @@ mod tests {
     fn collection_inputs() -> CollectionInputs {
         CollectionInputs {
             timestamp: "2026-08-31T00:00:00Z".into(),
-            lock_digest: format!("sha256:{}", "1".repeat(64)),
-            producer_executable_digest: format!("sha256:{}", "2".repeat(64)),
-            extractor_executable_digest: format!("sha256:{}", "3".repeat(64)),
-            schema_digest: format!("sha256:{}", "4".repeat(64)),
-            plan_digest: format!("sha256:{}", "5".repeat(64)),
             node_version: "24.15.0".into(),
             rust_version: "1.95.0".into(),
             python_version: "3.14.7".into(),
@@ -727,9 +651,7 @@ mod tests {
         let value = build_observation(
             Some(&report()),
             &population(PopulationState::Measured),
-            &provenance(),
             "raw/scorer.json",
-            &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
         validate_observation(&value).unwrap();
@@ -790,14 +712,7 @@ mod tests {
             PopulationState::Unreadable,
             PopulationState::Unsupported,
         ] {
-            let value = build_observation(
-                None,
-                &population(state),
-                &provenance(),
-                "raw/scorer.json",
-                &format!("sha256:{}", "e".repeat(64)),
-            )
-            .unwrap();
+            let value = build_observation(None, &population(state), "raw/scorer.json").unwrap();
             assert!(value.get("results").is_none());
             validate_observation(&value).unwrap();
         }
@@ -805,13 +720,11 @@ mod tests {
 
     // TC-115, TC-116, TC-117 / FR-011-AC-4..6.
     #[test]
-    fn schema_rejects_bad_provenance_paths_vocabularies_and_unknown_fields() {
+    fn schema_rejects_bad_paths_vocabularies_and_unknown_fields() {
         let good = build_observation(
             Some(&report()),
             &population(PopulationState::Measured),
-            &provenance(),
             "raw/scorer.json",
-            &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
         for mutate in [
@@ -821,7 +734,13 @@ mod tests {
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"\\server\share\raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"..\raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"C:raw.json"),
-            |v: &mut Value| v["producer"]["parser_grammars"][0]["language"] = json!("java"),
+            |v: &mut Value| v["producer"]["producer_contract_version"] = json!(0),
+            |v: &mut Value| {
+                v["producer"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("producer_contract_version");
+            },
             |v: &mut Value| {
                 v["measurement_plan"]["ref"] = json!("ix://agent-ix/quire-code-rs/MP-999")
             },
@@ -860,9 +779,7 @@ mod tests {
         let value = build_observation(
             Some(&report()),
             &population(PopulationState::Measured),
-            &provenance(),
             "raw/scorer.json",
-            &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
         assert!(precision_decision_passed(&report()).unwrap());
@@ -880,30 +797,24 @@ mod tests {
     // Quoin receives typed precision and the producer/extractor attestations
     // retain their distinct executable identities.
     #[test]
-    fn collection_exposes_precision_decision_and_both_executable_digests() {
+    fn collection_exposes_precision_decision_and_named_artifacts() {
         let scorer = report();
         let observation = build_observation(
             Some(&scorer),
             &population(PopulationState::Measured),
-            &provenance(),
             "raw/scorer.json",
-            &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
-        let collection = build_quoin_collection(
-            &observation,
-            Some(&scorer),
-            &provenance(),
-            &collection_inputs(),
-        )
-        .unwrap();
+        let collection =
+            build_quoin_collection(&observation, Some(&scorer), &collection_inputs()).unwrap();
         assert_eq!(
-            collection.pointer("/verificationStack/executableDigest"),
-            Some(&json!(format!("sha256:{}", "2".repeat(64))))
-        );
-        assert_eq!(
-            collection.pointer("/verificationStack/artifacts/release-extractor"),
-            Some(&json!(format!("sha256:{}", "3".repeat(64))))
+            collection.pointer("/verificationStack/artifacts"),
+            Some(&json!([
+                "release-extractor",
+                "measurement-plan",
+                "observation-schema",
+                "raw-scorer-output"
+            ]))
         );
         let measures = collection["observations"]
             .as_array()
@@ -921,9 +832,7 @@ mod tests {
         let first = build_observation(
             Some(&report()),
             &population(PopulationState::Measured),
-            &provenance(),
             "raw/scorer.json",
-            &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
         let mut second_report = report();
@@ -933,9 +842,7 @@ mod tests {
         let second = build_observation(
             Some(&second_report),
             &population(PopulationState::Measured),
-            &provenance(),
             "raw/scorer.json",
-            &format!("sha256:{}", "e".repeat(64)),
         )
         .unwrap();
         assert_eq!(

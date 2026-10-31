@@ -10,20 +10,9 @@
     "observation_id": { "$ref": "#/$defs/digest" },
     "producer": {
       "type": "object",
-      "required": ["producer_contract_version", "parser_grammars", "configuration_digest"],
+      "required": ["producer_contract_version"],
       "properties": {
-        "producer_contract_version": { "type": "integer", "minimum": 1 },
-        "parser_grammars": {
-          "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true,
-          "items": { "$ref": "#/$defs/grammar" },
-          "allOf": [
-            { "contains": { "properties": { "language": { "const": "python" } }, "required": ["language"] } },
-            { "contains": { "properties": { "language": { "const": "rust" } }, "required": ["language"] } },
-            { "contains": { "properties": { "language": { "const": "tsx" } }, "required": ["language"] } },
-            { "contains": { "properties": { "language": { "const": "typescript" } }, "required": ["language"] } }
-          ]
-        },
-        "configuration_digest": { "$ref": "#/$defs/digest" }
+        "producer_contract_version": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
     },
@@ -40,7 +29,7 @@
     "results": { "$ref": "#/$defs/results" },
     "raw_scorer_output": {
       "type": "object",
-      "required": ["path", "digest"],
+      "required": ["path"],
       "properties": {
         "path": {
           "type": "string",
@@ -49,8 +38,7 @@
             { "not": { "pattern": "^(?:[\\\\/]|[A-Za-z]:)" } },
             { "not": { "pattern": "(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)" } }
           ]
-        },
-        "digest": { "$ref": "#/$defs/digest" }
+        }
       },
       "additionalProperties": false
     }
@@ -78,11 +66,6 @@
   "$defs": {
     "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "language": { "type": "string", "enum": ["rust", "typescript", "tsx", "python", "mixed"] },
-    "grammar": {
-      "type": "object", "required": ["language", "grammar"],
-      "properties": { "language": { "enum": ["rust", "typescript", "tsx", "python"] }, "grammar": { "type": "string", "minLength": 1 } },
-      "additionalProperties": false
-    },
     "census_item": {
       "type": "object", "required": ["key", "count"],
       "properties": { "key": { "type": "string", "minLength": 1 }, "count": { "type": "integer", "minimum": 0 } },
