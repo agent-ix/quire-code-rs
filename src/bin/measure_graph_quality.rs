@@ -56,12 +56,8 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
     validate_pins(&parsed)?;
     validate_release_extractor(&parsed.repo_root, &parsed.extractor)?;
     validate_release_producer(&parsed.repo_root, producer_executable)?;
-    verify_clean_source(&parsed.repo_root, &parsed.source_revision, "quire-code-rs")?;
-    verify_clean_source(
-        &parsed.corpus,
-        &parsed.corpus_source_revision,
-        "quire-corpus",
-    )?;
+    verify_clean_source(&parsed.repo_root, "quire-code-rs")?;
+    verify_clean_source(&parsed.corpus, "quire-corpus")?;
     validate_plan(&parsed.quire, &parsed.repo_root)?;
 
     let population = inspect_population(&parsed.corpus)?;
@@ -86,17 +82,7 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
     fs::write(&raw_path, &raw_bytes).map_err(|error| format!("{}: {error}", raw_path.display()))?;
     let raw_digest = sha256(&raw_bytes);
 
-    let corpus_revision = report
-        .as_ref()
-        .and_then(|value| value.get("corpus_revision"))
-        .and_then(Value::as_str)
-        .map(normalize_digest)
-        .unwrap_or_else(|| sha256(&[]));
     let provenance = Provenance {
-        extractor_revision: parsed.source_revision.clone(),
-        source_revision: parsed.source_revision.clone(),
-        corpus_revision,
-        scorer_version: parsed.corpus_source_revision.clone(),
         configuration_digest: parsed.config_digest.clone(),
         parser_grammars: parsed.grammars.clone(),
     };
@@ -135,7 +121,6 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         rust_version: parsed.rust_version,
         python_version: parsed.python_version,
         source_remote: parsed.source_remote,
-        corpus_source_revision: parsed.corpus_source_revision,
         corpus_remote: parsed.corpus_remote,
     };
     let collection = build_quoin_collection(
@@ -238,19 +223,7 @@ fn validate_plan_semantics(text: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn verify_clean_source(root: &Path, expected: &str, name: &str) -> Result<(), String> {
-    let head = Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["rev-parse", "HEAD"])
-        .output()
-        .map_err(|error| format!("could not inspect {name} revision: {error}"))?;
-    let actual = String::from_utf8_lossy(&head.stdout).trim().to_string();
-    if !head.status.success() || actual != expected {
-        return Err(format!(
-            "{name} revision mismatch: expected {expected}, found {actual}"
-        ));
-    }
+fn verify_clean_source(root: &Path, name: &str) -> Result<(), String> {
     let status = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -337,31 +310,11 @@ fn supported(path: &Path) -> bool {
     )
 }
 
-fn normalize_digest(value: &str) -> String {
-    if value.starts_with("sha256:") {
-        value.to_string()
-    } else {
-        format!("sha256:{value}")
-    }
-}
-
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
 fn validate_pins(args: &Args) -> Result<(), String> {
-    for (name, value) in [
-        ("source-revision", &args.source_revision),
-        ("corpus-source-revision", &args.corpus_source_revision),
-    ] {
-        if value.len() != 40
-            || !value
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-        {
-            return Err(format!("--{name} must be a full lowercase 40-hex revision"));
-        }
-    }
     if !valid_digest(&args.config_digest) {
         return Err("--config-digest must be sha256 plus 64 lowercase hex digits".into());
     }
@@ -438,8 +391,6 @@ struct Args {
     python: PathBuf,
     output_dir: PathBuf,
     timestamp: String,
-    source_revision: String,
-    corpus_source_revision: String,
     config_digest: String,
     grammars: Vec<GrammarRevision>,
     node_version: String,
@@ -469,8 +420,6 @@ impl Args {
                     | "--python"
                     | "--output-dir"
                     | "--timestamp"
-                    | "--source-revision"
-                    | "--corpus-source-revision"
                     | "--config-digest"
                     | "--grammar"
                     | "--node-version"
@@ -508,8 +457,6 @@ impl Args {
             python: PathBuf::from(one("--python")?),
             output_dir: PathBuf::from(one("--output-dir")?),
             timestamp: one("--timestamp")?,
-            source_revision: one("--source-revision")?,
-            corpus_source_revision: one("--corpus-source-revision")?,
             config_digest: one("--config-digest")?,
             grammars,
             node_version: one("--node-version")?,
@@ -539,7 +486,7 @@ fn parse_grammar(value: String) -> Result<GrammarRevision, String> {
 }
 
 fn usage() -> &'static str {
-    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --source-revision SHA --corpus-source-revision SHA --config-digest sha256:HEX --grammar language=crate@revision [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
+    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --config-digest sha256:HEX --grammar language=crate@revision [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
 }
 
 #[cfg(test)]
@@ -555,14 +502,6 @@ mod tests {
             ("--python", "python3"),
             ("--output-dir", "target/measurement"),
             ("--timestamp", "2026-08-31T00:00:00Z"),
-            (
-                "--source-revision",
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            ),
-            (
-                "--corpus-source-revision",
-                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            ),
             (
                 "--config-digest",
                 "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -629,8 +568,6 @@ mod tests {
     }
 
     fn non_measured_args(repo: &Path, corpus: &Path, output: &Path) -> Vec<String> {
-        let source_revision = git(repo, &["rev-parse", "HEAD"]);
-        let corpus_revision = git(corpus, &["rev-parse", "HEAD"]);
         let replacements = [
             ("--repo-root", repo.display().to_string()),
             ("--corpus", corpus.display().to_string()),
@@ -643,8 +580,6 @@ mod tests {
             ("--quire", "/usr/bin/true".into()),
             ("--python", "/usr/bin/true".into()),
             ("--output-dir", output.display().to_string()),
-            ("--source-revision", source_revision),
-            ("--corpus-source-revision", corpus_revision),
         ]
         .into_iter()
         .collect::<BTreeMap<_, _>>();
@@ -721,8 +656,6 @@ mod tests {
     fn parser_names_every_missing_identity_before_any_output_exists() {
         let args = valid_args();
         for missing in [
-            "--source-revision",
-            "--corpus-source-revision",
             "--config-digest",
             "--timestamp",
             "--node-version",

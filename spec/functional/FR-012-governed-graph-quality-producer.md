@@ -24,7 +24,6 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
   records.
 - The `extract_tree` producer and its declared producer-contract version.
 - Exact parser grammar revisions and a canonical extraction-configuration digest.
-- Source, extractor, scorer, and corpus revisions.
 - Active [MP-001](../assurance/MP-001-graph-quality-observation.md).
 - An output directory for raw scorer output and the canonical observation.
 
@@ -45,9 +44,8 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL invoke the corpus's real `score.py --json` scorer with the
   real release `extract_tree` binary; neither scorer truth comparison nor
   extractor behavior may be reimplemented in the measurement producer.
-- The producer SHALL record the clean corpus checkout revision as the scorer
-  revision (the scorer is loaded from that checkout) and accept only the
-  checked-out `target/release` producer and extractor binaries.
+- The producer SHALL accept only the checked-out `target/release` producer and
+  extractor binaries.
 - The producer SHALL require MP-001 to be active and match the plan identifier,
   metric, definition version, complete-census sampling rule, and
   zero-wrong-heuristic-edge decision rule before emitting output.
@@ -72,7 +70,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
   an `unreadable` record without results and exit non-zero.
 - If the population contains no supported source file, then the producer SHALL
   emit an `unsupported` record without results and exit non-zero.
-- If the producer receives an incomplete revision tuple or configuration
+- If the producer receives an incomplete configuration
   identity, then the producer SHALL fail without an observation using a non-zero
   status that names the incomplete field.
 - When an observation is ready for emission, the producer SHALL validate it
@@ -83,7 +81,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL use a caller-supplied pinned collection timestamp and
   toolchain identities so Quoin's required envelope remains deterministic.
 - The producer SHALL emit a Quoin v2 verification-stack attestation containing
-  full clean source revisions, distinct release producer and extractor
+  clean source states, distinct release producer and extractor
   executable digests, the lock digest, pinned Node/Rust/Python identities, and
   content digests for the schema, plan, configuration, and retained raw scorer
   output.
@@ -105,7 +103,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 | FR-012-AC-3 | Zero false-positive heuristic edges passes the precision decision while observed recall is retained independently, including recall below one. | Test (TC-120) |
 | FR-012-AC-4 | A false-positive heuristic edge is retained in its matrix and makes the producer exit non-zero regardless of recall. | Test (TC-121) |
 | FR-012-AC-5 | Empty, unreadable, and unsupported fixtures emit their respective non-measured state, contain no results, and exit non-zero. | Test (TC-122) |
-| FR-012-AC-6 | Missing required revision or configuration identities produce no observation, exit non-zero, and name the missing input. | Test (TC-123) |
+| FR-012-AC-6 | Missing required configuration identities produce no observation, exit non-zero, and name the missing input. | Test (TC-123) |
 | FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations and matching raw-output digests. | Test (TC-124) |
 | FR-012-AC-8 | Invalid MeasurementPlan or observation data is rejected before a record is offered to Quoin. | Test (TC-125) |
 

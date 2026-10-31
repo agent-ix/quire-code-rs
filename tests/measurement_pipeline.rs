@@ -21,17 +21,6 @@ fn output(command: &mut Command) -> String {
     String::from_utf8(result.stdout).expect("UTF-8 stdout")
 }
 
-fn revision(root: &Path) -> String {
-    output(
-        Command::new("git")
-            .arg("-C")
-            .arg(root)
-            .args(["rev-parse", "HEAD"]),
-    )
-    .trim()
-    .to_string()
-}
-
 fn remote(root: &Path) -> String {
     output(
         Command::new("git")
@@ -109,14 +98,6 @@ fn complete_cli_args() -> Vec<String> {
         ("--output-dir", "target/measurement"),
         ("--timestamp", "2026-08-31T00:00:00Z"),
         (
-            "--source-revision",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        ),
-        (
-            "--corpus-source-revision",
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        ),
-        (
             "--config-digest",
             "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
         ),
@@ -153,8 +134,6 @@ fn complete_cli_args() -> Vec<String> {
 fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
     let complete = complete_cli_args();
     for missing in [
-        "--source-revision",
-        "--corpus-source-revision",
         "--config-digest",
         "--grammar",
         "--timestamp",
@@ -215,8 +194,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
     )
     .expect("copy plan");
 
-    let source_revision = revision(&repo);
-    let corpus_revision = revision(&corpus);
     let config_digest = format!("sha256:{}", "1".repeat(64));
     let first = output(
         Command::new(&release_producer)
@@ -232,10 +209,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             .args([
                 "--timestamp",
                 "2026-08-31T00:00:00.000Z",
-                "--source-revision",
-                &source_revision,
-                "--corpus-source-revision",
-                &corpus_revision,
                 "--config-digest",
                 &config_digest,
                 "--grammar",
@@ -272,10 +245,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             .args([
                 "--timestamp",
                 "2026-08-31T00:00:00.000Z",
-                "--source-revision",
-                &source_revision,
-                "--corpus-source-revision",
-                &corpus_revision,
                 "--config-digest",
                 &config_digest,
                 "--grammar",
@@ -314,20 +283,11 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             &fs::read(output_dir.join("raw/scorer-report.json")).expect("retained scorer bytes")
         )
     );
-    assert_eq!(observation["producer"]["scorer_version"], corpus_revision);
     assert_eq!(
         observation["producer"]["parser_grammars"]
             .as_array()
             .map(Vec::len),
         Some(4)
-    );
-    assert_eq!(
-        parsed["verificationStack"]["sources"]["quire-code-rs"]["revision"],
-        source_revision
-    );
-    assert_eq!(
-        parsed["verificationStack"]["sources"]["quire-corpus"]["revision"],
-        corpus_revision
     );
     for pointer in [
         "/verificationStack/executableDigest",
@@ -399,15 +359,12 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         "/toolIdentity",
         "/toolVersion",
         "/configDigest",
-        "/sourceRevision",
-        "/corpusRevision",
         "/verificationStack/executableDigest",
         "/verificationStack/artifacts/release-extractor",
         "/verificationStack/artifacts/raw-scorer-output",
         "/rawEvidence/graphQualityObservation/observation_id",
         "/rawEvidence/graphQualityObservation/raw_scorer_output/path",
         "/rawEvidence/graphQualityObservation/raw_scorer_output/digest",
-        "/rawEvidence/graphQualityObservation/producer/scorer_version",
         "/rawEvidence/scorerReport/scored_cases",
     ] {
         assert_eq!(
@@ -452,8 +409,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             == Some(&serde_json::json!(
                 "agent-ix/quire-code-rs/measure_graph_quality"
             ))
-            && row.pointer("/collection/sourceRevision")
-                == Some(&serde_json::json!(source_revision))
             && row.pointer("/observation/dimensions/measure")
                 == Some(&serde_json::json!("precision_decision"))
     }));

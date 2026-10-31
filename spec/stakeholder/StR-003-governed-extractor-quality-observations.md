@@ -37,7 +37,7 @@ Quoin compare results without importing extractor-specific logic.
 |----|----------|------------|
 | StR-003-VC-1 | A supported non-empty corpus produces dimensioned confusion matrices, unresolved and ambiguous censuses, and an exact population census. | Test (TC-108) |
 | StR-003-VC-2 | Empty, unreadable, and unsupported populations produce explicit non-measured states and no metric results. | Test (TC-109) |
-| StR-003-VC-3 | Every measured observation records extractor, grammar, configuration, scorer, and measurement-definition identities. | Test (TC-110) |
+| StR-003-VC-3 | Every measured observation records grammar, configuration, and measurement-definition identities. | Test (TC-110) |
 | StR-003-VC-4 | The observation retains raw scorer output and validates against its versioned schema and active MeasurementPlan. | Test (TC-111) |
 
 ## Stakeholders

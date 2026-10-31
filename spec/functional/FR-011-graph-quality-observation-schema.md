@@ -37,9 +37,9 @@ artifact rather than restating it:
   `graph_quality_observation`.
 - `observation_id` is the SHA-256 digest of canonical record bytes with the
   identifier field omitted.
-- `producer` records the extractor revision, producer-contract version,
+- `producer` records the producer-contract version,
   exactly the Python, Rust, TSX, and TypeScript parser grammar identities,
-  configuration digest, and scorer revision.
+  and configuration digest.
 - `measurement_plan` names `ix://agent-ix/quire-code-rs/MP-001` and definition
   `quire-code.graph-quality-v2`.
 - `population` carries state, file counts, and sorted censuses for languages,
@@ -81,7 +81,7 @@ artifact rather than restating it:
 | FR-011-AC-1 | A measured record with a supported file and complete results validates against schema version 1. | Test (TC-112) |
 | FR-011-AC-2 | A measured record contains census and result entries for language, node kind, relation kind, and resolver tier plus an overall result. | Test (TC-113) |
 | FR-011-AC-3 | `empty`, `unreadable`, and `unsupported` records reject a results block, while `measured` rejects its absence. | Test (TC-114) |
-| FR-011-AC-4 | Missing or malformed extractor or scorer revision; grammar identity; configuration digest; or measurement-plan identity fails validation. | Test (TC-115) |
+| FR-011-AC-4 | Missing or malformed grammar identity; configuration digest; or measurement-plan identity fails validation. | Test (TC-115) |
 | FR-011-AC-5 | Every record retains a relative raw-output path and SHA-256 digest; an absolute or parent-traversing path or malformed digest fails validation. | Test (TC-116) |
 | FR-011-AC-6 | Unknown fields, dimension names, population states, or language names fail validation. | Test (TC-117) |
 
