@@ -137,7 +137,6 @@ pub fn build_observation(
             "producer_contract_version": 1,
             "parser_grammars": grammars,
             "configuration_digest": provenance.configuration_digest,
-            "corpus_revision": provenance.corpus_revision,
             "scorer_version": provenance.scorer_version
         },
         "measurement_plan": {
