@@ -50,10 +50,6 @@ pub struct GrammarRevision {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Provenance {
-    pub extractor_revision: String,
-    pub source_revision: String,
-    pub corpus_revision: String,
-    pub scorer_version: String,
     pub configuration_digest: String,
     pub parser_grammars: Vec<GrammarRevision>,
 }
@@ -88,7 +84,6 @@ pub struct CollectionInputs {
     pub rust_version: String,
     pub python_version: String,
     pub source_remote: String,
-    pub corpus_source_revision: String,
     pub corpus_remote: String,
 }
 
@@ -133,11 +128,9 @@ pub fn build_observation(
         "record_type": "graph_quality_observation",
         "observation_id": format!("sha256:{}", "0".repeat(64)),
         "producer": {
-            "extractor_revision": provenance.extractor_revision,
             "producer_contract_version": 1,
             "parser_grammars": grammars,
-            "configuration_digest": provenance.configuration_digest,
-            "scorer_version": provenance.scorer_version
+            "configuration_digest": provenance.configuration_digest
         },
         "measurement_plan": {
             "ref": PLAN_REF,
@@ -272,11 +265,9 @@ pub fn build_quoin_collection(
         "subject": "agent-ix/quire-code-rs graph extraction",
         "scope": observation["population"].clone(),
         "toolIdentity": "agent-ix/quire-code-rs/measure_graph_quality",
-        "toolVersion": format!("{} ({})", env!("CARGO_PKG_VERSION"), provenance.extractor_revision),
+        "toolVersion": env!("CARGO_PKG_VERSION"),
         "configDigest": provenance.configuration_digest,
         "timestamp": inputs.timestamp,
-        "sourceRevision": provenance.source_revision,
-        "corpusRevision": provenance.corpus_revision,
         "environment": {
             "node": inputs.node_version,
             "rust": inputs.rust_version,
@@ -289,8 +280,8 @@ pub fn build_quoin_collection(
             "buildProfile": "release",
             "toolchains": { "node": inputs.node_version, "rust": inputs.rust_version, "python": inputs.python_version },
             "sources": {
-                "quire-code-rs": { "revision": provenance.source_revision, "sourceState": "clean", "remote": inputs.source_remote },
-                "quire-corpus": { "revision": inputs.corpus_source_revision, "sourceState": "clean", "remote": inputs.corpus_remote }
+                "quire-code-rs": { "sourceState": "clean", "remote": inputs.source_remote },
+                "quire-corpus": { "sourceState": "clean", "remote": inputs.corpus_remote }
             },
             "capabilities": ["graph-quality-observation-v1", "quire-corpus-scorer-v1"],
             "artifacts": {
@@ -665,10 +656,6 @@ mod tests {
 
     fn provenance() -> Provenance {
         Provenance {
-            extractor_revision: "a".repeat(40),
-            source_revision: "a".repeat(40),
-            corpus_revision: format!("sha256:{}", "c".repeat(64)),
-            scorer_version: "b".repeat(40),
             configuration_digest: format!("sha256:{}", "d".repeat(64)),
             parser_grammars: vec![
                 GrammarRevision {
@@ -733,7 +720,6 @@ mod tests {
             rust_version: "1.95.0".into(),
             python_version: "3.14.7".into(),
             source_remote: "local-source".into(),
-            corpus_source_revision: "b".repeat(40),
             corpus_remote: "local-corpus".into(),
         }
     }

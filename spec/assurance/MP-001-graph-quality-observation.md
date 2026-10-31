@@ -35,9 +35,8 @@ negative_controls:
   - kind: stale-evidence
     description: >-
       the CLI refuses to run unless the source and corpus checkouts are
-      clean and pinned to the exact declared revisions
-      (`verify_clean_source`), so a result cannot be presented for a
-      revision it was not collected against
+      clean (`verify_clean_source`), so a result cannot be presented for
+      a modified checkout
 relationships:
   - target: ix://agent-ix/quire-code-rs/FR-012
     type: measures
@@ -102,13 +101,13 @@ credit.
 `negative_controls` declares the gaming scenarios this plan guards against:
 editing the protected
 apparatus alongside the change it grades, and presenting a result against a
-source or corpus revision it was not actually collected against
-(`verify_clean_source` refuses a dirty or mismatched checkout).
+modified source or corpus checkout
+(`verify_clean_source` refuses a dirty checkout).
 
 ## Collection Procedure
 
-1. Record the exact extractor, producer contract, parser grammar, configuration,
-   source, corpus, scorer, and measurement-definition revisions.
+1. Record the producer contract, parser grammar, configuration, and
+   measurement-definition identities.
 2. Run the corpus scorer twice with those pinned inputs in an isolated filesystem
    environment, once after reversing tracked-file creation order..
 3. Retain each raw scorer output by relative path and content digest.

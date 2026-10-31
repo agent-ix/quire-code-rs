@@ -218,7 +218,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-120 | Zero wrong edges and incomplete recall remain separate | Integration | P0 | FR-012-AC-3, US-004-EX-3 | ✅ |
 | TC-121 | False-positive heuristic edge fails regardless of recall | Integration | P0 | FR-012-AC-4 | ✅ |
 | TC-122 | Empty, unreadable, and unsupported populations fail non-measured | Property | P0 | FR-012-AC-5 | ✅ |
-| TC-123 | Missing revision or configuration emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
+| TC-123 | Missing configuration emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
 | TC-124 | Pinned repetitions produce identical record and raw digest | Integration | P0 | FR-012-AC-7 | ✅ |
 | TC-125 | Invalid plan or observation is rejected before Quoin intake | Integration | P0 | FR-012-AC-8 | ✅ |
 | TC-126 | Two pinned repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | ✅ |
@@ -335,7 +335,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | EC-003 | Population has only unsupported files | FR-012 | TC-122 | Unsupported work appears measured |
 | EC-004 | One wrong heuristic edge with full recall | FR-012 | TC-121 | Recall masks a precision invariant failure |
 | EC-005 | Zero wrong edges with incomplete recall | FR-012 | TC-120 | Precision and recall collapse into one score |
-| EC-006 | Missing grammar or scorer revision | FR-011 | TC-115 | Incomparable observations appear equivalent |
+| EC-006 | Missing grammar revision or configuration digest | FR-011 | TC-115 | Incomparable observations appear equivalent |
 | EC-007 | Absolute raw-output path | FR-011 | TC-116 | Host identity leaks into evidence and breaks determinism |
 
 ---

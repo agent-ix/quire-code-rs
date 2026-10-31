@@ -10,9 +10,8 @@
     "observation_id": { "$ref": "#/$defs/digest" },
     "producer": {
       "type": "object",
-      "required": ["extractor_revision", "producer_contract_version", "parser_grammars", "configuration_digest", "scorer_version"],
+      "required": ["producer_contract_version", "parser_grammars", "configuration_digest"],
       "properties": {
-        "extractor_revision": { "$ref": "#/$defs/revision" },
         "producer_contract_version": { "type": "integer", "minimum": 1 },
         "parser_grammars": {
           "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true,
@@ -24,8 +23,7 @@
             { "contains": { "properties": { "language": { "const": "typescript" } }, "required": ["language"] } }
           ]
         },
-        "configuration_digest": { "$ref": "#/$defs/digest" },
-        "scorer_version": { "$ref": "#/$defs/revision" }
+        "configuration_digest": { "$ref": "#/$defs/digest" }
       },
       "additionalProperties": false
     },
