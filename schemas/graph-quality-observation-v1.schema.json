@@ -10,7 +10,7 @@
     "observation_id": { "$ref": "#/$defs/digest" },
     "producer": {
       "type": "object",
-      "required": ["extractor_revision", "producer_contract_version", "parser_grammars", "configuration_digest", "corpus_revision", "scorer_version"],
+      "required": ["extractor_revision", "producer_contract_version", "parser_grammars", "configuration_digest", "scorer_version"],
       "properties": {
         "extractor_revision": { "$ref": "#/$defs/revision" },
         "producer_contract_version": { "type": "integer", "minimum": 1 },
@@ -25,7 +25,6 @@
           ]
         },
         "configuration_digest": { "$ref": "#/$defs/digest" },
-        "corpus_revision": { "$ref": "#/$defs/revision" },
         "scorer_version": { "$ref": "#/$defs/revision" }
       },
       "additionalProperties": false
