@@ -23,7 +23,6 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - A local quire-corpus root with a population manifest and truth
   records.
 - The `extract_tree` producer and its declared producer-contract version.
-- Parser grammar identities and a canonical extraction-configuration digest.
 - Active [MP-001](../assurance/MP-001-graph-quality-observation.md).
 - An output directory for raw scorer output and the canonical observation.
 
@@ -34,7 +33,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
   scorer report; its typed `observations` expose precision, recall, unresolved,
   and ambiguous values without transcribing away their dimensions or population
   state.
-- Raw scorer output at the relative path and digest named by the observation.
+- Raw scorer output at the relative path named by the observation.
 - Non-zero process status when the population is not measured, validation fails,
   or a wrong heuristic edge violates the decision rule.
 
@@ -81,10 +80,9 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL use a caller-supplied pinned collection timestamp and
   toolchain identities so Quoin's required envelope remains deterministic.
 - The producer SHALL emit a Quoin v2 verification-stack attestation containing
-  clean source states, distinct release producer and extractor
-  executable digests, the lock digest, pinned Node/Rust/Python identities, and
-  content digests for the schema, plan, configuration, and retained raw scorer
-  output.
+  clean source states, Node/Rust/Python identities, and the names of the
+  release extractor, measurement plan, observation schema, and retained raw
+  scorer output artifacts.
 
 ## Constraints
 
@@ -104,7 +102,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 | FR-012-AC-4 | A false-positive heuristic edge is retained in its matrix and makes the producer exit non-zero regardless of recall. | Test (TC-121) |
 | FR-012-AC-5 | Empty, unreadable, and unsupported fixtures emit their respective non-measured state, contain no results, and exit non-zero. | Test (TC-122) |
 | FR-012-AC-6 | Missing required configuration identities produce no observation, exit non-zero, and name the missing input. | Test (TC-123) |
-| FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations and matching raw-output digests. | Test (TC-124) |
+| FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations. | Test (TC-124) |
 | FR-012-AC-8 | Invalid MeasurementPlan or observation data is rejected before a record is offered to Quoin. | Test (TC-125) |
 
 ## Dependencies

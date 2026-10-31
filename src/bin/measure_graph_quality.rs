@@ -6,9 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use quire_code_rs::measurement::{
-    build_observation, build_quoin_collection, canonical_bytes, precision_decision_passed, sha256,
-    CollectionInputs, ParserGrammar, Population, PopulationState, Provenance, DEFINITION_VERSION,
-    METRIC, PLAN_ID, SCHEMA,
+    build_observation, build_quoin_collection, canonical_bytes, precision_decision_passed,
+    CollectionInputs, Population, PopulationState, DEFINITION_VERSION, METRIC, PLAN_ID,
 };
 use serde_json::{json, Value};
 
@@ -53,7 +52,7 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         });
     }
     let parsed = Args::parse(args)?;
-    validate_pins(&parsed)?;
+    validate_inputs(&parsed)?;
     validate_release_extractor(&parsed.repo_root, &parsed.extractor)?;
     validate_release_producer(&parsed.repo_root, producer_executable)?;
     verify_clean_source(&parsed.repo_root, "quire-code-rs")?;
@@ -80,56 +79,19 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         (None, reason)
     };
     fs::write(&raw_path, &raw_bytes).map_err(|error| format!("{}: {error}", raw_path.display()))?;
-    let raw_digest = sha256(&raw_bytes);
 
-    let provenance = Provenance {
-        configuration_digest: parsed.config_digest.clone(),
-        parser_grammars: parsed.grammars.clone(),
-    };
-    let observation = build_observation(
-        report.as_ref(),
-        &population,
-        &provenance,
-        raw_relative,
-        &raw_digest,
-    )
-    .map_err(|error| error.to_string())?;
+    let observation = build_observation(report.as_ref(), &population, raw_relative)
+        .map_err(|error| error.to_string())?;
     let collection_inputs = CollectionInputs {
         timestamp: parsed.timestamp,
-        lock_digest: sha256(
-            &fs::read(parsed.repo_root.join("Cargo.lock"))
-                .map_err(|error| format!("Cargo.lock: {error}"))?,
-        ),
-        producer_executable_digest: sha256(
-            &fs::read(producer_executable)
-                .map_err(|error| format!("{}: {error}", producer_executable.display()))?,
-        ),
-        extractor_executable_digest: sha256(
-            &fs::read(&parsed.extractor)
-                .map_err(|error| format!("{}: {error}", parsed.extractor.display()))?,
-        ),
-        schema_digest: sha256(SCHEMA.as_bytes()),
-        plan_digest: sha256(
-            &fs::read(
-                parsed
-                    .repo_root
-                    .join("spec/assurance/MP-001-graph-quality-observation.md"),
-            )
-            .map_err(|error| format!("MP-001: {error}"))?,
-        ),
         node_version: parsed.node_version,
         rust_version: parsed.rust_version,
         python_version: parsed.python_version,
         source_remote: parsed.source_remote,
         corpus_remote: parsed.corpus_remote,
     };
-    let collection = build_quoin_collection(
-        &observation,
-        report.as_ref(),
-        &provenance,
-        &collection_inputs,
-    )
-    .map_err(|error| error.to_string())?;
+    let collection = build_quoin_collection(&observation, report.as_ref(), &collection_inputs)
+        .map_err(|error| error.to_string())?;
     let mut stdout = canonical_bytes(&collection).map_err(|error| error.to_string())?;
     stdout.push(b'\n');
     let decision_passed = report
@@ -314,21 +276,7 @@ fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
-fn validate_pins(args: &Args) -> Result<(), String> {
-    if !valid_digest(&args.config_digest) {
-        return Err("--config-digest must be sha256 plus 64 lowercase hex digits".into());
-    }
-    if args.grammars.is_empty() {
-        return Err("missing --grammar".into());
-    }
-    for grammar in &args.grammars {
-        if !matches!(
-            grammar.language.as_str(),
-            "rust" | "typescript" | "tsx" | "python"
-        ) {
-            return Err(format!("unknown grammar language {}", grammar.language));
-        }
-    }
+fn validate_inputs(args: &Args) -> Result<(), String> {
     for (name, value) in [
         ("timestamp", &args.timestamp),
         ("node-version", &args.node_version),
@@ -374,15 +322,6 @@ fn validate_release_producer(repo: &Path, producer: &Path) -> Result<(), String>
     Ok(())
 }
 
-fn valid_digest(value: &str) -> bool {
-    value.strip_prefix("sha256:").is_some_and(|hex| {
-        hex.len() == 64
-            && hex
-                .bytes()
-                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
-    })
-}
-
 struct Args {
     repo_root: PathBuf,
     corpus: PathBuf,
@@ -391,8 +330,6 @@ struct Args {
     python: PathBuf,
     output_dir: PathBuf,
     timestamp: String,
-    config_digest: String,
-    grammars: Vec<ParserGrammar>,
     node_version: String,
     rust_version: String,
     python_version: String,
@@ -420,8 +357,6 @@ impl Args {
                     | "--python"
                     | "--output-dir"
                     | "--timestamp"
-                    | "--config-digest"
-                    | "--grammar"
                     | "--node-version"
                     | "--rust-version"
                     | "--python-version"
@@ -430,7 +365,7 @@ impl Args {
             ) {
                 return Err(format!("unknown option {flag}"));
             }
-            if flag != "--grammar" && values.contains_key(&flag) {
+            if values.contains_key(&flag) {
                 return Err(format!("duplicate option {flag}"));
             }
             values.entry(flag).or_default().push(value);
@@ -442,13 +377,6 @@ impl Args {
                 .cloned()
                 .ok_or_else(|| format!("missing {flag}"))
         };
-        let grammars = values
-            .get("--grammar")
-            .cloned()
-            .unwrap_or_default()
-            .into_iter()
-            .map(parse_grammar)
-            .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             repo_root: PathBuf::from(one("--repo-root")?),
             corpus: PathBuf::from(one("--corpus")?),
@@ -457,8 +385,6 @@ impl Args {
             python: PathBuf::from(one("--python")?),
             output_dir: PathBuf::from(one("--output-dir")?),
             timestamp: one("--timestamp")?,
-            config_digest: one("--config-digest")?,
-            grammars,
             node_version: one("--node-version")?,
             rust_version: one("--rust-version")?,
             python_version: one("--python-version")?,
@@ -468,21 +394,8 @@ impl Args {
     }
 }
 
-fn parse_grammar(value: String) -> Result<ParserGrammar, String> {
-    let (language, grammar) = value
-        .split_once('=')
-        .ok_or_else(|| format!("invalid --grammar {value}; expected language=grammar"))?;
-    if language.is_empty() || grammar.is_empty() {
-        return Err(format!("invalid --grammar {value}"));
-    }
-    Ok(ParserGrammar {
-        language: language.into(),
-        grammar: grammar.into(),
-    })
-}
-
 fn usage() -> &'static str {
-    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --config-digest sha256:HEX --grammar language=crate [--grammar ...] --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
+    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
 }
 
 #[cfg(test)]
@@ -498,14 +411,6 @@ mod tests {
             ("--python", "python3"),
             ("--output-dir", "target/measurement"),
             ("--timestamp", "2026-08-31T00:00:00Z"),
-            (
-                "--config-digest",
-                "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-            ),
-            ("--grammar", "python=synthetic-python"),
-            ("--grammar", "rust=synthetic-rust"),
-            ("--grammar", "tsx=synthetic-typescript"),
-            ("--grammar", "typescript=synthetic-typescript"),
             ("--node-version", "24.15.0"),
             ("--rust-version", "1.95.0"),
             ("--python-version", "3.14.7"),
@@ -597,7 +502,6 @@ mod tests {
     fn scorer_report(edge_false_positives: u64) -> Value {
         json!({
             "schema_version": 1,
-            "corpus_revision": format!("sha256:{}", "c".repeat(64)),
             "scored_cases": 1,
             "confusion": {
                 "total": {"total": {"tp": 8, "fp": edge_false_positives + 1, "fn": 2}},
@@ -635,12 +539,11 @@ mod tests {
         commit_repo(root);
     }
 
-    // TC-123 / FR-012-AC-6: missing pins name the exact input and emit nothing.
+    // TC-123 / FR-012-AC-6: missing inputs name the exact input and emit nothing.
     #[test]
     fn parser_names_every_missing_identity_before_any_output_exists() {
         let args = valid_args();
         for missing in [
-            "--config-digest",
             "--timestamp",
             "--node-version",
             "--rust-version",
@@ -652,8 +555,6 @@ mod tests {
             assert!(error.contains(missing), "{missing}: {error}");
         }
 
-        let parsed = Args::parse(without_flag(&args, "--grammar")).unwrap();
-        assert_eq!(validate_pins(&parsed).unwrap_err(), "missing --grammar");
         assert!(
             run(Vec::new()).is_err(),
             "failed runs produce no stdout payload"

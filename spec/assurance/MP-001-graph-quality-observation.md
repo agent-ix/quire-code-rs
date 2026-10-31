@@ -106,11 +106,10 @@ modified source or corpus checkout
 
 ## Collection Procedure
 
-1. Record the producer contract, parser grammar, configuration, and
-   measurement-definition identities.
+1. Record the producer contract and measurement-definition identities.
 2. Run the corpus scorer twice with those inputs in an isolated filesystem
    environment, once after reversing tracked-file creation order..
-3. Retain each raw scorer output by relative path and content digest.
+3. Retain each raw scorer output by relative path.
 4. Compare the two canonical observation records byte for byte.
 5. Validate the record against
    [FR-011](../functional/FR-011-graph-quality-observation-schema.md) and validate
