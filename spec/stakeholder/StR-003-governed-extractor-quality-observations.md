@@ -16,15 +16,15 @@ relationships:
 ## Stakeholder Need
 
 Assurance consumers require the extractor to emit versioned quality observations
-whose population, truth comparison, unresolved work, ambiguity, raw output, and
-producer revisions shall remain independently inspectable, so that a measurement
+whose population, truth comparison, unresolved work, ambiguity, and raw output
+shall remain independently inspectable, so that a measurement
 can inform a decision without turning missing input into a successful zero.
 
 ## Rationale
 
 The corpus currently proves extractor behavior inside this repository, but a
 downstream assurance system needs more than a passing test. It needs the exact
-population that was scored, the revisions that produced it, and raw results that
+population that was scored and raw results that
 can be reinterpreted later. Without those records, a zero may mean no wrong edges,
 no supported files, an unreadable tree, or a scorer that never ran.
 
@@ -48,7 +48,7 @@ the zero-wrong-edge invariant and the interpretation of recall regressions.
 
 ## Context and Assumptions
 
-The shared corpus supplies a revision-pinned truth set and a declared population.
+The shared corpus supplies a truth set and a declared population.
 The extractor producer contract is versioned. The observation producer runs
 offline against local files and does not own evidence storage or portfolio policy.
 

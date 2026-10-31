@@ -734,6 +734,13 @@ mod tests {
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"\\server\share\raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"..\raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"C:raw.json"),
+            |v: &mut Value| v["producer"]["producer_contract_version"] = json!(0),
+            |v: &mut Value| {
+                v["producer"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("producer_contract_version");
+            },
             |v: &mut Value| {
                 v["measurement_plan"]["ref"] = json!("ix://agent-ix/quire-code-rs/MP-999")
             },

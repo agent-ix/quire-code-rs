@@ -75,7 +75,7 @@ guess, and every relationship it does emit carries the evidence that produced it
   separate an exported-surface change from a body-only change
   ([FR-009](./functional/FR-009-declaration-visibility-and-signature.md)).
 - Versioned governed graph-quality observations, including exact population,
-  confusion matrices, unresolved and ambiguous censuses, producer revisions,
+  confusion matrices, unresolved and ambiguous censuses,
   and retained raw scorer output
   ([FR-011](./functional/FR-011-graph-quality-observation-schema.md),
   [FR-012](./functional/FR-012-governed-graph-quality-producer.md)).
@@ -174,7 +174,7 @@ targets name the owning repository.
 |---|---|
 | [StR-001](./stakeholder/StR-001-single-deterministic-code-extraction-engine.md) | One deterministic extraction engine; no parser dependency in consumers |
 | [StR-002](./stakeholder/StR-002-requirement-code-test-traceability.md) | Traceability recovered from source, and trustworthy |
-| [StR-003](./stakeholder/StR-003-governed-extractor-quality-observations.md) | Governed extractor-quality observations preserve population, raw results, and revisions |
+| [StR-003](./stakeholder/StR-003-governed-extractor-quality-observations.md) | Governed extractor-quality observations preserve population and raw results |
 
 ### 5.2 User Stories
 

@@ -218,7 +218,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-120 | Zero wrong edges and incomplete recall remain separate | Integration | P0 | FR-012-AC-3, US-004-EX-3 | ✅ |
 | TC-121 | False-positive heuristic edge fails regardless of recall | Integration | P0 | FR-012-AC-4 | ✅ |
 | TC-122 | Empty, unreadable, and unsupported populations fail non-measured | Property | P0 | FR-012-AC-5 | ✅ |
-| TC-123 | Missing configuration emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
+| TC-123 | Missing timestamp, version, or remote emits no observation | Property | P0 | FR-012-AC-6 | ✅ |
 | TC-124 | Repetitions produce identical records | Integration | P0 | FR-012-AC-7 | ✅ |
 | TC-125 | Invalid plan or observation is rejected before Quoin intake | Integration | P0 | FR-012-AC-8 | ✅ |
 | TC-126 | Two pinned repetitions emit byte-identical records | Integration | P0 | NFR-005-AC-1 | ✅ |
