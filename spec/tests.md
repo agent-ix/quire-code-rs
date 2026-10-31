@@ -205,7 +205,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-107 | One declaration shape resolves at one tier in every language | Integration | P1 | FR-008-AC-13 | ✅ |
 | TC-108 | Supported population retains all dimensioned quality observations | Integration | P0 | StR-003-VC-1, US-004-EX-1 | ✅ |
 | TC-109 | Non-measured populations cannot become measured zeros | Property | P0 | StR-003-VC-2, US-004-EX-2 | ✅ |
-| TC-110 | Measured observation pins the complete producer tuple | Unit | P0 | StR-003-VC-3 | ✅ |
+| TC-110 | Measured observation records the declared producer attributes | Unit | P0 | StR-003-VC-3 | ✅ |
 | TC-111 | Raw output, schema, and MeasurementPlan validate together | Integration | P0 | StR-003-VC-4 | ✅ |
 | TC-112 | Valid measured observation passes schema version 1 | Unit | P0 | FR-011-AC-1 | ✅ |
 | TC-113 | Measured record covers all four dimensions and overall | Property | P0 | FR-011-AC-2 | ✅ |

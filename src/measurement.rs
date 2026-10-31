@@ -137,7 +137,6 @@ pub fn build_observation(
             "producer_contract_version": 1,
             "parser_grammars": grammars,
             "configuration_digest": provenance.configuration_digest,
-            "source_revision": provenance.source_revision,
             "corpus_revision": provenance.corpus_revision,
             "scorer_version": provenance.scorer_version
         },
@@ -838,7 +837,6 @@ mod tests {
         )
         .unwrap();
         for mutate in [
-            |v: &mut Value| v["producer"]["source_revision"] = json!("short"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!("/tmp/raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!("../raw.json"),
             |v: &mut Value| v["raw_scorer_output"]["path"] = json!(r"\raw.json"),

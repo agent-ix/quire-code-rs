@@ -314,7 +314,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
             &fs::read(output_dir.join("raw/scorer-report.json")).expect("retained scorer bytes")
         )
     );
-    assert_eq!(observation["producer"]["source_revision"], source_revision);
     assert_eq!(observation["producer"]["scorer_version"], corpus_revision);
     assert_eq!(
         observation["producer"]["parser_grammars"]
@@ -408,7 +407,6 @@ fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
         "/rawEvidence/graphQualityObservation/observation_id",
         "/rawEvidence/graphQualityObservation/raw_scorer_output/path",
         "/rawEvidence/graphQualityObservation/raw_scorer_output/digest",
-        "/rawEvidence/graphQualityObservation/producer/source_revision",
         "/rawEvidence/graphQualityObservation/producer/scorer_version",
         "/rawEvidence/scorerReport/scored_cases",
     ] {
