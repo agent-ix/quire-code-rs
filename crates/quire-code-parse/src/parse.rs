@@ -303,7 +303,8 @@ pub fn parse_file<'src>(
 /// further enumeration needed.
 ///
 /// Returns the `ERROR`/`MISSING` node that is the first such structural
-/// error in a pre-order walk, so `diagnostic()` names the structural
+/// error in source order (each child is checked, then descended into,
+/// before the next sibling), so `diagnostic()` names the structural
 /// position even when an earlier body-local error precedes it
 /// (FR-013-AC-15).
 fn first_declaration_structure_error(root: Node<'_>) -> Option<Node<'_>> {
@@ -345,19 +346,15 @@ fn scan_for_declaration_structure_error(
         return None;
     }
     let is_declaration = is_declaration_node(node);
-    if is_declaration || !inside_executable_body {
-        let mut cursor = node.walk();
-        for child in node.children(&mut cursor) {
-            if child.is_error() || child.is_missing() {
-                return Some(child);
-            }
-        }
-    }
+    let check_direct_children = is_declaration || !inside_executable_body;
     let executable_body = is_declaration
         .then(|| executable_body_field(node))
         .flatten();
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
+        if check_direct_children && (child.is_error() || child.is_missing()) {
+            return Some(child);
+        }
         let child_inside_body = if is_declaration {
             Some(child) == executable_body
         } else {
@@ -866,7 +863,7 @@ mod tests {
         assert!(parsed.diagnostic().is_none());
         let err = parsed.syntax_error().expect("body-local error is reported");
         assert_eq!(err.file, "x.py");
-        assert_eq!(err.line, 4);
+        assert_eq!((err.line, err.column), (4, 8));
     }
 
     #[cfg(feature = "typescript")]
@@ -879,7 +876,7 @@ mod tests {
         assert!(parsed.diagnostic().is_none());
         let err = parsed.syntax_error().expect("body-local error is reported");
         assert_eq!(err.file, "x.ts");
-        assert_eq!(err.line, 2);
+        assert_eq!((err.line, err.column), (2, 24));
     }
 
     // TC-185, FR-013-AC-13: a clean parse has no syntax error.
@@ -938,6 +935,18 @@ mod tests {
         let structural = parsed.diagnostic().expect("structural error");
         assert_eq!(syntax.line, 2);
         assert_eq!(structural.line, 3);
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-188, FR-013-AC-3: with two structural errors, `diagnostic()` names
+    // the earlier one in source order even when it is nested deeper than the
+    // later one.
+    #[test]
+    fn diagnostic_names_the_earliest_structural_error_when_it_is_nested_deeper() {
+        let source = "mod m {\n    pub fn ( ) { }\n}\nfn ( ) {}\n";
+        let parsed = parse_file(Language::Rust, "src/m.rs", source).expect("tree produced");
+        let d = parsed.diagnostic().expect("structural error");
+        assert_eq!((d.line, d.column), (2, 4));
     }
 
     /// Every node's kind and byte span, in traversal order — a determinism
