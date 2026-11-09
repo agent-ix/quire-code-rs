@@ -20,3 +20,9 @@ Ticket: PLAT-870. Plan completion: not assessed. `quoin matrix --json` (quoin 0.
 ## Verdict
 
 Coverage of the new ACs is real and traced. One gap: the changed `diagnostic()` position has no multi-structural-error test, which is exactly where it regresses.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 61062b3: TC-188 `diagnostic_names_the_earliest_structural_error_when_it_is_nested_deeper` tagged FR-013-AC-3, fails against 90c7028 (which gave (4,0)); spec/tests.md row TC-188 added; no TC-188 on origin/main or open PR #54 |

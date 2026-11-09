@@ -40,3 +40,10 @@ scope:
 ## Verdict
 
 Changes requested (one medium). `syntax_error()` itself is correct against AC-13/14/15, idiomatic, panic-free, documented; the root-crate refactor is a clean dedup. Fix FND-001 in-PR: in `scan_for_declaration_structure_error`, walk children once in source order, returning a child that is ERROR/MISSING when the direct-child check applies, else recursing into it before moving to the next sibling; correct the doc comment; add a TC-187-adjacent test with two structural errors (deep earlier, shallow later) asserting the earlier line. FND-002: add column asserts.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 61062b3: scan_for_declaration_structure_error checks each child for ERROR/MISSING then recurses into it before the next sibling; doc comment corrected; TC-188 asserts (2,4); reviewer probe on 61062b3 now gives (2,4) (deep-then-shallow) and (3,4) (nested mod), TC-187 still (3,4)/(2,27); detection set unchanged (same children checked and recursed, order only) |
+| FND-002 | fixed | 61062b3: Python asserts (4, 8), TypeScript asserts (2, 24) |
