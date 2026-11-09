@@ -4,7 +4,7 @@
 //! [FR-013](../../../spec/functional/FR-013-borrowed-parse-tree-api.md).
 //! Each variant is reachable only through its own Cargo feature
 //! (FR-013-CON-3): a crate compiled with a subset of `rust`/`python`/
-//! `typescript` has that subset of variants and no others, so
+//! `typescript`/`bash` has that subset of variants and no others, so
 //! `--no-default-features --features rust` cannot construct, match on, or
 //! link the grammar for a language it did not ask for.
 
@@ -27,6 +27,8 @@ pub enum Language {
     TypeScript,
     #[cfg(feature = "typescript")]
     Tsx,
+    #[cfg(feature = "bash")]
+    Bash,
 }
 
 impl Language {
@@ -45,6 +47,8 @@ impl Language {
             Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
             #[cfg(feature = "typescript")]
             Language::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
+            #[cfg(feature = "bash")]
+            Language::Bash => tree_sitter_bash::LANGUAGE.into(),
         }
     }
 }
@@ -65,6 +69,8 @@ mod tests {
             Language::TypeScript,
             #[cfg(feature = "typescript")]
             Language::Tsx,
+            #[cfg(feature = "bash")]
+            Language::Bash,
         ];
         for language in languages {
             let mut parser = tree_sitter::Parser::new();
@@ -76,11 +82,16 @@ mod tests {
     // TC-138, FR-013-CON-3: with only the `rust` feature compiled, `Language`
     // has exactly the one variant that feature enables — checked by
     // compiling only under that exact feature set, not by inspection.
-    #[cfg(all(feature = "rust", not(feature = "python"), not(feature = "typescript")))]
+    #[cfg(all(
+        feature = "rust",
+        not(feature = "python"),
+        not(feature = "typescript"),
+        not(feature = "bash")
+    ))]
     #[test]
     fn rust_only_build_has_one_language_variant() {
         let only = Language::Rust;
-        // If `Python`, `TypeScript` or `Tsx` were reachable under this
+        // If `Python`, `TypeScript`, `Tsx` or `Bash` were reachable under this
         // feature set, this match would fail to compile as non-exhaustive —
         // the assertion is the compiler accepting the match, not the runtime
         // value.

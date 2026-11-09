@@ -20,6 +20,8 @@ default = ["rust", "python", "typescript"]
 rust = ["dep:tree-sitter-rust"]
 python = ["dep:tree-sitter-python"]
 typescript = ["dep:tree-sitter-typescript"]
+# Not a default: shell parsing is opt-in for the consumers that extract shell symbols.
+bash = ["dep:tree-sitter-bash"]
 
 [dependencies]
 # Re-exported deliberately (see crate docs): re-exporting `tree_sitter` here,
@@ -33,6 +35,7 @@ tree-sitter = { workspace = true }
 tree-sitter-rust = { workspace = true, optional = true }
 tree-sitter-typescript = { workspace = true, optional = true }
 tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-bash = { workspace = true, optional = true }
 thiserror = "^2"
 
 [dev-dependencies]

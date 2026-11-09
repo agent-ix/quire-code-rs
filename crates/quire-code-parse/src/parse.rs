@@ -333,7 +333,7 @@ fn first_declaration_structure_error(root: Node<'_>) -> Option<Node<'_>> {
 ///
 /// The flag resets to a fresh (non-`Some`) decision at a *nested
 /// declaration* ([`is_declaration_node`]) even while already inside a body,
-/// since Rust, Python and TypeScript all allow a `mod`, `class`, `impl` or
+/// since Rust, Python, TypeScript and Bash all allow a `mod`, `class`, `impl` or
 /// function to be declared inside a function body, and that nested
 /// declaration's own name, signature and (if it is itself executable) body
 /// are each subject to the same rule again, independent of the body they
@@ -406,8 +406,8 @@ fn is_declaration_node(node: Node<'_>) -> bool {
 /// structural check like everything else rather than being treated as an
 /// opaque zone.
 ///
-/// All three grammars use the *same* node kind, and the *same* field name
-/// (`body`), for both a declaration's executable body and (Python,
+/// Rust, Python and TypeScript use the *same* node kind, and the *same* field
+/// name (`body`), for both a declaration's executable body and (Python,
 /// TypeScript) a `class`'s or `namespace`'s own list of further
 /// declarations — verified empirically via `to_sexp()` on nested fixtures,
 /// not assumed — so the child's kind alone cannot tell them apart; only

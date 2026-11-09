@@ -42,7 +42,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | Stakeholder Req | Trace to US/FR | Test/Validation | Status |
 |---|---|---|---|
-| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-175, TC-184..TC-188 | ✅ Complete |
+| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-175, TC-184..TC-192 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
 | StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
@@ -54,7 +54,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 | US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
-| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-175, TC-184..TC-188 | ✅ Complete |
+| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-175, TC-184..TC-192 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -82,7 +82,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-AC-9, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
 | FR-014 | FR-014-AC-1, FR-014-AC-2, FR-014-AC-3, FR-014-AC-4, FR-014-AC-5, FR-014-AC-6, FR-014-AC-7 | TC-177..TC-183 | ✅ |
-| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-AC-13, FR-013-AC-14, FR-013-AC-15, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175, TC-184..TC-188 | ✅ |
+| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-AC-13, FR-013-AC-14, FR-013-AC-15, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175, TC-184..TC-192 | ✅ |
 
 ### Measurement Plan Coverage
 
@@ -283,6 +283,10 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-186 | `diagnostic()` `Some` implies `syntax_error()` `Some` | Unit | P1 | FR-013-AC-14 | ✅ |
 | TC-187 | A body-local error followed by a structural error: `syntax_error()` names the earlier body-local position, `diagnostic()` the later structural one | Unit | P1 | FR-013-AC-15 | ✅ |
 | TC-188 | With two structural errors, `diagnostic()` names the earlier one in source order even when it is nested deeper | Unit | P1 | FR-013-AC-3 | ✅ |
+| TC-189 | Consumer parses a shell script (function, comment header, heredoc, `$( )`) and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
+| TC-190 | Identical shell input yields a byte-identical tree; an unclosed shell function body reports a diagnostic at line 1 | Integration | P2 | FR-013-AC-5, FR-013-AC-3 | ✅ |
+| TC-191 | A body-local error inside a shell function collapses it to a structural diagnostic (disclosed limitation) | Integration | P2 | FR-013-AC-3 | ✅ |
+| TC-192 | A stray `fi`/`done`/`}` yields neither diagnostic nor syntax_error (disclosed limitation) | Integration | P2 | FR-013-AC-3 | ✅ |
 
 ---
 
