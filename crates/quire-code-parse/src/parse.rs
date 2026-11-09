@@ -126,8 +126,10 @@ impl<'src> ParsedFile<'src> {
     ///
     /// This is the broad concept: any syntax error at all, including the
     /// body-local ones [`ParsedFile::diagnostic`] deliberately does not
-    /// report. Whenever `diagnostic()` is `Some`, this is `Some` too, at the
-    /// same position (FR-013-AC-14); the converse does not hold. A consumer
+    /// report. Whenever `diagnostic()` is `Some`, this is `Some` too
+    /// (FR-013-AC-14); the converse does not hold, and when a body-local
+    /// error precedes a structural one in source order the two name
+    /// different positions (FR-013-AC-15). A consumer
     /// that counts files with syntax errors, or wants a position for any
     /// error, reads this; a consumer deciding whether declaration structure
     /// is recoverable reads `diagnostic()`.
@@ -245,12 +247,14 @@ pub fn parse_file<'src>(
             line: 1,
         })?;
 
-    let diagnostic = if has_declaration_structure_error(tree.root_node()) {
-        let (line, column) = first_error_position(tree.root_node()).unwrap_or((1, 0));
-        Some(Diagnostic { file, line, column })
-    } else {
-        None
-    };
+    let diagnostic = first_declaration_structure_error(tree.root_node()).map(|node| {
+        let pos = node.start_position();
+        Diagnostic {
+            file,
+            line: line_number(pos.row),
+            column: column_number(pos.column),
+        }
+    });
 
     Ok(ParsedFile {
         tree,
@@ -297,16 +301,21 @@ pub fn parse_file<'src>(
 /// a fresh declaration nested inside a body? Only the first is exempt from
 /// the direct-child check; everything else gets it, by default, with no
 /// further enumeration needed.
-fn has_declaration_structure_error(root: Node<'_>) -> bool {
+///
+/// Returns the `ERROR`/`MISSING` node that is the first such structural
+/// error in a pre-order walk, so `diagnostic()` names the structural
+/// position even when an earlier body-local error precedes it
+/// (FR-013-AC-15).
+fn first_declaration_structure_error(root: Node<'_>) -> Option<Node<'_>> {
     if root.is_error() || root.is_missing() {
-        return true;
+        return Some(root);
     }
     scan_for_declaration_structure_error(root, false)
 }
 
 /// `node.has_error()` is `false` for a subtree with no error anywhere
 /// beneath it, so this short-circuits without walking such a subtree at all
-/// — the same property [`first_error_position`] already relies on to search
+/// — the same property [`first_error_position`] relies on to search
 /// to full depth cheaply.
 ///
 /// `inside_executable_body` is `true` while the recursion is anywhere inside
@@ -328,16 +337,19 @@ fn has_declaration_structure_error(root: Node<'_>) -> bool {
 /// declaration's own name, signature and (if it is itself executable) body
 /// are each subject to the same rule again, independent of the body they
 /// happen to sit inside.
-fn scan_for_declaration_structure_error(node: Node<'_>, inside_executable_body: bool) -> bool {
+fn scan_for_declaration_structure_error(
+    node: Node<'_>,
+    inside_executable_body: bool,
+) -> Option<Node<'_>> {
     if !node.has_error() {
-        return false;
+        return None;
     }
     let is_declaration = is_declaration_node(node);
     if is_declaration || !inside_executable_body {
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
             if child.is_error() || child.is_missing() {
-                return true;
+                return Some(child);
             }
         }
     }
@@ -351,11 +363,11 @@ fn scan_for_declaration_structure_error(node: Node<'_>, inside_executable_body: 
         } else {
             inside_executable_body
         };
-        if scan_for_declaration_structure_error(child, child_inside_body) {
-            return true;
+        if let Some(found) = scan_for_declaration_structure_error(child, child_inside_body) {
+            return Some(found);
         }
     }
-    false
+    None
 }
 
 /// Whether `node` is itself a declaration this rule re-evaluates from
@@ -423,14 +435,10 @@ fn executable_body_field(node: Node<'_>) -> Option<Node<'_>> {
     node.child_by_field_name("body")
 }
 
-/// One-based line and zero-based column of the first error or missing node in
-/// `root`'s subtree, if any — searched to full depth so the reported position
-/// is the most precise one available, even though
-/// [`has_declaration_structure_error`] only inspects declaration-list-shaped
-/// bodies to decide *whether* to report at all. Independent of
-/// quire-code-rs's own equivalent (this crate depends on nothing there — see
-/// FR-013-CON-2): the two exist in separate crates by design, not by
-/// omission.
+/// One-based line and zero-based column of the leftmost error or missing node
+/// in `root`'s subtree, if any, searched to full depth. Backs
+/// [`ParsedFile::syntax_error`]. Independent of quire-code-rs's own parsing
+/// (this crate depends on nothing there — see FR-013-CON-2).
 fn first_error_position(root: Node<'_>) -> Option<(u32, u32)> {
     let mut cursor = root.walk();
     let mut stack = vec![root];
@@ -539,14 +547,14 @@ mod tests {
     #[cfg(feature = "rust")]
     // TC-152, FR-013-AC-10: a body-local error — the declaration's own kind,
     // name and signature are still readable — does not trip
-    // `has_declaration_structure_error`, even though `has_error()` is true.
+    // `first_declaration_structure_error`, even though `has_error()` is true.
     #[test]
     fn body_local_error_does_not_count_as_a_declaration_structure_error() {
         let source = "pub fn broken() -> u32 { 1 + }\npub fn intact() -> u32 { 2 }\n";
         let parsed = parse_file(Language::Rust, "src/lib.rs", source).expect("parses cleanly");
         assert!(parsed.root_node().has_error(), "the body error is present");
         assert!(
-            !has_declaration_structure_error(parsed.root_node()),
+            first_declaration_structure_error(parsed.root_node()).is_none(),
             "a body-local error must not read as a declaration-structure error"
         );
         assert!(parsed.diagnostic().is_none());
@@ -902,9 +910,9 @@ mod tests {
 
     #[cfg(feature = "rust")]
     // TC-186, FR-013-AC-14: wherever `diagnostic()` is `Some`, `syntax_error()`
-    // is `Some` at the same position.
+    // is `Some`.
     #[test]
-    fn diagnostic_some_implies_syntax_error_some_at_the_same_position() {
+    fn diagnostic_some_implies_syntax_error_some() {
         let sources = [
             "pub fn broken(x: u32) -> u32 {\n    x +\n",
             "mod m {\n    pub fn ( ) { }\n    pub fn intact() {}\n}\n",
@@ -913,8 +921,8 @@ mod tests {
         ];
         for source in sources {
             let parsed = parse_file(Language::Rust, "f.rs", source).expect("tree produced");
-            let diagnostic = parsed.diagnostic().expect("structural error");
-            assert_eq!(parsed.syntax_error(), Some(diagnostic), "{source}");
+            assert!(parsed.diagnostic().is_some(), "{source}");
+            assert!(parsed.syntax_error().is_some(), "{source}");
         }
     }
 

@@ -142,8 +142,9 @@
 //! structure* error. [`ParsedFile::syntax_error`] reports *any* `ERROR` or
 //! `MISSING` node, including the body-local ones `diagnostic()` leaves out;
 //! its position is that of the leftmost such node. Whenever `diagnostic()` is
-//! `Some`, `syntax_error()` is `Some` at the same position, never the
-//! converse (FR-013-AC-13, FR-013-AC-14).
+//! `Some`, `syntax_error()` is `Some`, never the converse; the two positions
+//! differ when a body-local error precedes a structural one
+//! (FR-013-AC-13, FR-013-AC-14, FR-013-AC-15).
 //!
 //! ## Consumer obligation
 //!
