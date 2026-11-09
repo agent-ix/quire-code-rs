@@ -58,9 +58,10 @@ available.
    measurement store.
    - IT-001-SC-04: Quoin accepts the record and retains the collection.
 5. Render Quoin's report for the observation.
-   - IT-001-SC-05: population state, precision result, recall, unresolved counts,
-     ambiguous counts, raw-output reference, and all four dimensions remain
-     inspectable without an aggregate trust score.
+   - IT-001-SC-05: population state and the edge false-positive count appear in
+     the report; recall, unresolved counts, ambiguous counts, the raw-output
+     reference, and all four dimensions remain inspectable in the retained
+     `rawEvidence` without an aggregate trust score.
 
 ## Expected Results
 

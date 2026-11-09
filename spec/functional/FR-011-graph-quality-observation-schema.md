@@ -39,7 +39,7 @@ artifact rather than restating it:
   identifier field omitted.
 - `producer` records the producer-contract version.
 - `measurement_plan` names `ix://agent-ix/quire-code-rs/MP-001` and definition
-  `quire-code.graph-quality-v2`.
+  `quire-code.graph-quality-v3`.
 - `population` carries state, file counts, and sorted censuses for languages,
   node kinds, relation kinds, and resolver tiers.
 - A measured record carries sorted confusion matrices, unresolved and ambiguous

@@ -570,7 +570,7 @@ mod tests {
             ("status: active", "status: retired"),
             ("metric: graph_quality", "metric: other"),
             (
-                "definition_version: quire-code.graph-quality-v2",
+                "definition_version: quire-code.graph-quality-v3",
                 "definition_version: drifted",
             ),
             ("direction: zero", "direction: higher"),
@@ -656,11 +656,14 @@ mod tests {
                     .unwrap();
             assert_eq!(result.decision_passed, expected, "{name}");
             let collection: Value = serde_json::from_slice(&result.stdout).unwrap();
-            assert!(collection["observations"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|item| item.pointer("/dimensions/measure") == Some(&json!("recall"))));
+            let observations = collection["observations"].as_array().unwrap();
+            assert_eq!(observations.len(), 1, "{name}");
+            assert_eq!(observations[0]["value"], edge_fp, "{name}");
+            assert_eq!(
+                observations[0].pointer("/population/matched"),
+                Some(&json!(edge_fp)),
+                "{name}"
+            );
             assert_eq!(
                 collection["rawEvidence"]["scorerReport"]["confusion"]["axis_kind"]["edge"]["fp"],
                 edge_fp

@@ -30,9 +30,9 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 
 - One Quoin MeasurementCollection v2 on standard output. Its `rawEvidence`
   contains the schema-valid graph-quality observation and the complete parsed
-  scorer report; its typed `observations` expose precision, recall, unresolved,
-  and ambiguous values without transcribing away their dimensions or population
-  state.
+  scorer report; its typed `observations` hold exactly one `graph_quality`
+  observation, the census-wide edge false-positive count with its population
+  state, so Quoin judges only the value MP-001's decision rule governs.
 - Raw scorer output at the relative path named by the observation.
 - Non-zero process status when the population is not measured, validation fails,
   or a wrong heuristic edge violates the decision rule.
