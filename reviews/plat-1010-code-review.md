@@ -64,3 +64,5 @@ count, is not reached. The other findings do not block.
 | FND-001 | fixed | Reproduced at 624528f: `quoin measurement record` no longer reports QM-POPULATION-UNSTATED. Only PLAT-1361's envelope rejections remain. How the value is sourced is a new finding, FND-004. |
 | FND-002 | fixed | - |
 | FND-003 | fixed | - |
+| FND-004 | fixed | Round 2 (8a920e8): the binary runs `score_once` `SCORER_RUNS = 2` times. `reconcile_repetitions` requires identical reports, returns typed `RepetitionMismatch`/`NoRepetitions` errors otherwise, and states the count of runs performed as `population.repetitions`. The REPETITIONS constant is gone. |
+| FND-005 | fixed | - |

@@ -58,3 +58,4 @@ judge the rule. That gap is the spec side of SR-16310 FND-001.
 | FND-001 | fixed | - |
 | FND-002 | fixed | - |
 | FND-003 | fixed | - |
+| FND-004 | fixed | - |
