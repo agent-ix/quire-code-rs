@@ -138,11 +138,13 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
 }
 
 // TC-108, TC-109, TC-110, TC-111, TC-118, TC-119, TC-124, TC-125, TC-127, TC-129 /
-// StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..8,
+// StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..9,
 // NFR-005-AC-1..2, MP-001, IT-001: real extractor + scorer + Quire + Quoin.
+// Known failing at Quoin intake until the envelope sub-ticket lands; it does
+// not yet demonstrate end-to-end acceptance.
 #[test]
-#[ignore = "requires clean pinned sibling checkouts and installed Quire/Quoin CLIs"]
-fn real_corpus_observation_is_accepted_and_rendered_by_quoin() {
+#[ignore = "requires clean pinned sibling checkouts and installed Quire/Quoin CLIs; Quoin intake currently rejects the collection envelope"]
+fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let corpus = PathBuf::from(std::env::var("QUIRE_CORPUS_ROOT").expect("QUIRE_CORPUS_ROOT"));
     let quoin = std::env::var("QUOIN_BIN").expect("QUOIN_BIN");

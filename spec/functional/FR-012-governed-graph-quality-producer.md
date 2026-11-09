@@ -88,7 +88,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-012-CON-1 | Recall SHALL remain a reported observation with no threshold that can compensate for or relax a false-positive heuristic edge. | Integrity | Static Test |
+| FR-012-CON-1 | Recall SHALL remain reported in `rawEvidence` (never as a typed `graph_quality` observation) with no threshold that can compensate for or relax a false-positive heuristic edge. | Integrity | Static Test |
 | FR-012-CON-2 | The producer SHALL use local filesystem inputs only. | Security | Static Test |
 | FR-012-CON-3 | The producer SHALL initiate no network request. | Security | Static Test |
 
@@ -98,12 +98,13 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 |----|----------|--------------|
 | FR-012-AC-1 | A supported non-empty corpus emits one schema-valid observation referencing active MP-001 and retained raw scorer output. | Test (TC-118) |
 | FR-012-AC-2 | The measured observation contains exact population, confusion-matrix, unresolved, ambiguous, and recall entries for all four required dimensions. | Test (TC-119) |
-| FR-012-AC-3 | Zero false-positive heuristic edges passes the precision decision while observed recall is retained independently, including recall below one. | Test (TC-120) |
+| FR-012-AC-3 | Zero false-positive heuristic edges passes the zero-wrong-edge decision while observed recall is retained independently, including recall below one. | Test (TC-120) |
 | FR-012-AC-4 | A false-positive heuristic edge is retained in its matrix and makes the producer exit non-zero regardless of recall. | Test (TC-121) |
 | FR-012-AC-5 | Empty, unreadable, and unsupported fixtures emit their respective non-measured state, contain no results, and exit non-zero. | Test (TC-122) |
 | FR-012-AC-6 | A missing timestamp, toolchain version, or source remote produces no observation, exits non-zero, and names the missing input. | Test (TC-123) |
 | FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations. | Test (TC-124) |
 | FR-012-AC-8 | Invalid MeasurementPlan or observation data is rejected before a record is offered to Quoin. | Test (TC-125) |
+| FR-012-AC-9 | The collection's typed `observations` hold exactly one `graph_quality` observation whose `value` equals `population.matched` and the census-wide edge false-positive count, stating `population.repetitions`; a non-measured population yields one `not_computed` observation with a null value. | Test (TC-120, TC-122) |
 
 ## Dependencies
 

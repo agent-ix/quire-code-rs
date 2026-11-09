@@ -18,6 +18,10 @@ pub const PLAN_ID: &str = "MP-001";
 pub const PLAN_REF: &str = "ix://agent-ix/quire-code-rs/MP-001";
 pub const DEFINITION_VERSION: &str = "quire-code.graph-quality-v3";
 pub const METRIC: &str = "graph_quality";
+/// MP-001 `statistical_design.repetitions`: the pinned-input repetitions the
+/// pipeline test and IT-001 run to prove byte-identical records. The producer
+/// binary itself scores once per invocation, so this is declared, not counted.
+pub const REPETITIONS: u64 = 2;
 
 type LanguageUnresolvedCounts = BTreeMap<String, (u64, u64)>;
 type UnresolvedCounts = (u64, u64, LanguageUnresolvedCounts);
@@ -408,16 +412,15 @@ fn dimension_counts(
 
 /// Evaluate only the governed precision rule. Scorer process status and recall
 /// are deliberately excluded because the plan gives recall no pass threshold.
-pub fn precision_decision_passed(report: &Value) -> Result<bool, MeasurementError> {
-    let false_positives = report
+pub fn edge_false_positive_count(report: &Value) -> Result<u64, MeasurementError> {
+    report
         .pointer("/confusion/axis_kind/edge/fp")
         .and_then(Value::as_u64)
         .ok_or_else(|| {
             MeasurementError::InvalidScorerReport(
-                "missing edge false-positive count for precision decision".into(),
+                "missing edge false-positive count for the zero-wrong-edge decision".into(),
             )
-        })?;
-    Ok(false_positives == 0)
+        })
 }
 
 fn dimension_sort_key(value: &Value) -> (String, String) {
@@ -484,12 +487,15 @@ fn quoin_observations(
                 ))
             })
     };
-    let edge_fp = edge_count("fp")?;
+    let edge_fp = edge_false_positive_count(scorer_report)?;
     let edge_tp = edge_count("tp")?;
+    let examined = edge_tp.checked_add(edge_fp).ok_or_else(|| {
+        MeasurementError::InvalidScorerReport("edge tp + fp overflows u64".into())
+    })?;
     Ok(vec![json!({
         "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
         "state": "measured", "value": edge_fp, "unit": "count", "shape": "scalar",
-        "population": {"examined": edge_tp + edge_fp, "matched": edge_fp, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
+        "population": {"examined": examined, "matched": edge_fp, "repetitions": REPETITIONS, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
         "dimensions": {"measure":"edge_false_positive", "dimension":"overall", "key":"overall", "population_state":"measured"}
     })])
 }
@@ -694,10 +700,10 @@ mod tests {
             "raw/scorer.json",
         )
         .unwrap();
-        assert!(precision_decision_passed(&report()).unwrap());
+        assert!(edge_false_positive_count(&report()).unwrap() == 0);
         let mut wrong_edge = report();
         wrong_edge["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
-        assert!(!precision_decision_passed(&wrong_edge).unwrap());
+        assert_eq!(edge_false_positive_count(&wrong_edge).unwrap(), 1);
         assert_eq!(value.pointer("/results/recall/0/ratio"), Some(&json!(0.8)));
         let text = String::from_utf8(canonical_bytes(&value).unwrap()).unwrap();
         for forbidden in ["hostname", "process_id", "/Users/", "timestamp"] {
@@ -705,7 +711,7 @@ mod tests {
         }
     }
 
-    // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3:
+    // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3, FR-012-AC-9:
     // Quoin receives exactly one graph_quality observation, the census-wide
     // edge false-positive count, and the producer/extractor attestations
     // retain their distinct executable identities.
@@ -755,6 +761,53 @@ mod tests {
             observations[0].pointer("/population/examined"),
             Some(&json!(5))
         );
+    }
+
+    // TC-120 / FR-012-AC-9: the observation states the declared repetitions.
+    #[test]
+    fn measured_observation_states_repetitions_and_rejects_overflow() {
+        let scorer = report();
+        let observation = build_observation(
+            Some(&scorer),
+            &population(PopulationState::Measured),
+            "raw/scorer.json",
+        )
+        .unwrap();
+        let collection =
+            build_quoin_collection(&observation, Some(&scorer), &collection_inputs()).unwrap();
+        assert_eq!(
+            collection.pointer("/observations/0/population/repetitions"),
+            Some(&json!(REPETITIONS))
+        );
+        let mut huge = report();
+        huge["confusion"]["axis_kind"]["edge"]["tp"] = json!(u64::MAX);
+        huge["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
+        assert!(build_quoin_collection(&observation, Some(&huge), &collection_inputs()).is_err());
+    }
+
+    // TC-122 / FR-012-AC-9: a non-measured population yields one not_computed
+    // observation with a null value, never a measured zero.
+    #[test]
+    fn non_measured_population_emits_one_not_computed_observation() {
+        for state in [
+            PopulationState::Empty,
+            PopulationState::Unreadable,
+            PopulationState::Unsupported,
+        ] {
+            let observation =
+                build_observation(None, &population(state), "raw/scorer.json").unwrap();
+            let collection =
+                build_quoin_collection(&observation, None, &collection_inputs()).unwrap();
+            let observations = collection["observations"].as_array().unwrap();
+            assert_eq!(observations.len(), 1);
+            assert_eq!(observations[0]["state"], "not_computed");
+            assert!(observations[0]["value"].is_null());
+            assert!(observations[0].get("population").is_none());
+            assert_eq!(
+                observations[0].pointer("/dimensions/population_state"),
+                Some(&json!(state))
+            );
+        }
     }
 
     // TC-124, TC-126 / FR-012-AC-7, NFR-005-AC-1.

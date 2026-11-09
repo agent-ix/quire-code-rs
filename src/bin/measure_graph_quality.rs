@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use quire_code_rs::measurement::{
-    build_observation, build_quoin_collection, canonical_bytes, precision_decision_passed,
-    CollectionInputs, Population, PopulationState, DEFINITION_VERSION, METRIC, PLAN_ID,
+    build_observation, build_quoin_collection, canonical_bytes, CollectionInputs, Population,
+    PopulationState, DEFINITION_VERSION, METRIC, PLAN_ID,
 };
 use serde_json::{json, Value};
 
@@ -94,12 +94,10 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         .map_err(|error| error.to_string())?;
     let mut stdout = canonical_bytes(&collection).map_err(|error| error.to_string())?;
     stdout.push(b'\n');
-    let decision_passed = report
-        .as_ref()
-        .map(precision_decision_passed)
-        .transpose()
-        .map_err(|error| error.to_string())?
-        .unwrap_or(false);
+    // The typed observation's value is the single edge false-positive count;
+    // the exit status reads that same value. A non-measured run has no report.
+    let decision_passed =
+        report.is_some() && collection.pointer("/observations/0/value") == Some(&json!(0));
     Ok(RunResult {
         stdout,
         decision_passed,

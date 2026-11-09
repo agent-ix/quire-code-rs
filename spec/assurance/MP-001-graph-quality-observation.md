@@ -66,10 +66,17 @@ matching `objective.direction: zero`. The rule binds to the single
 `key: overall`; its `value` and `population.matched` both equal the count.
 Quoin applies the rule to every observation sharing the plan's metric, plan id
 and definition version, so the producer emits no other `graph_quality`
-observation: per-stratum confusion counts, precision, recall, unresolved and
-ambiguous counts stay in `rawEvidence`. The rule is evaluated only for a
+observation: per-stratum confusion counts, recall, and unresolved and
+ambiguous counts stay in the scorer report under `rawEvidence.scorerReport`,
+and the producer's own observation (population state, strata, raw-output
+reference) stays under `rawEvidence.graphQualityObservation`; no precision
+ratio is stored. The rule is evaluated only for a
 `measured` population; a non-measured state makes no decision rather than
-counting as zero. Recall is not part of the rule.
+counting as zero. The decision observation states `population.repetitions`
+(at least 2, the `statistical_design.repetitions` value), `population.complete:
+true`, and `population.examined` greater than zero. A census with zero heuristic
+edges (`examined` equal to zero) is reported as an empty population, not as a
+pass. Recall is not part of the rule.
 
 ## Population
 
