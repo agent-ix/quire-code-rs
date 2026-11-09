@@ -70,10 +70,13 @@ for row in unbacked:
 
 for d in report["diagnostics"]:
     # A declaration that matches nothing reports a confident zero, which is the
-    # exact shape of the defect this gate exists for.
+    # exact shape of the defect this gate exists for. `archetype-matches-nothing`
+    # is deliberately not in the set: the traceability model comes from the
+    # shared spec-artifacts-process module, which declares archetypes (inspection,
+    # interface, suite registry) a given repository may legitimately never use,
+    # and this repository cannot remove a module's declarations.
     if d["reason"] in {
         "id-column-matches-nothing",
-        "archetype-matches-nothing",
         "section-holds-no-table",
         "marker-form-mismatch",
         "hollow-denominator",

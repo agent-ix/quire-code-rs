@@ -108,3 +108,98 @@ fn cargo_metadata() -> serde_json::Value {
     assert!(output.status.success(), "cargo metadata failed");
     serde_json::from_slice(&output.stdout).expect("cargo metadata emits JSON")
 }
+
+// TC-133 / FR-012-CON-2: the producer reads local filesystem inputs only. Its
+// sources name no URL scheme and run no git subcommand that reaches a remote;
+// `--source-remote` and `--corpus-remote` are recorded identities, never
+// fetched.
+#[test]
+fn producer_sources_reach_only_local_filesystem_inputs() {
+    let mut checked = 0;
+    for (path, text) in producer_sources() {
+        checked += 1;
+        for scheme in ["http://", "https://", "ssh://", "git://", "ftp://"] {
+            assert!(
+                !text.contains(scheme),
+                "{path} names the URL scheme {scheme}"
+            );
+        }
+        for subcommand in ["clone", "fetch", "pull", "push", "ls-remote"] {
+            assert!(
+                !text.contains(&format!("\"{subcommand}\"")),
+                "{path} runs the remote-reaching git subcommand `{subcommand}`"
+            );
+        }
+    }
+    assert!(checked > 0, "no producer source was scanned");
+}
+
+// TC-134 / FR-012-CON-3: the producer initiates no network request. No source
+// names a socket API and no workspace member depends on a network crate.
+#[test]
+fn producer_sources_and_dependencies_initiate_no_network_request() {
+    let mut checked = 0;
+    for (path, text) in producer_sources() {
+        checked += 1;
+        for api in [
+            "std::net",
+            "TcpStream",
+            "UdpSocket",
+            "TcpListener",
+            "\"curl\"",
+            "\"wget\"",
+        ] {
+            assert!(!text.contains(api), "{path} uses the network API {api}");
+        }
+    }
+    assert!(checked > 0, "no producer source was scanned");
+
+    let metadata = cargo_metadata();
+    let members: std::collections::HashSet<&str> = metadata["workspace_members"]
+        .as_array()
+        .expect("workspace_members")
+        .iter()
+        .map(|id| id.as_str().expect("workspace member id"))
+        .collect();
+    for package in metadata["packages"].as_array().expect("packages") {
+        if !members.contains(package["id"].as_str().unwrap_or_default()) {
+            continue;
+        }
+        for dependency in package["dependencies"].as_array().expect("dependencies") {
+            let name = dependency["name"].as_str().unwrap_or_default();
+            for network in [
+                "reqwest", "ureq", "hyper", "curl", "isahc", "surf", "tokio", "git2",
+            ] {
+                assert_ne!(
+                    name, network,
+                    "workspace member depends on network crate {name}"
+                );
+            }
+        }
+    }
+}
+
+/// Every `.rs` file under the workspace's `src` trees, as (path, text).
+fn producer_sources() -> Vec<(String, String)> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut pending = vec![root.join("src")];
+    if let Ok(entries) = std::fs::read_dir(root.join("crates")) {
+        pending.extend(entries.flatten().map(|entry| entry.path().join("src")));
+    }
+    let mut files = Vec::new();
+    while let Some(dir) = pending.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                let text = std::fs::read_to_string(&path).expect("source is readable");
+                files.push((path.display().to_string(), text));
+            }
+        }
+    }
+    files
+}
