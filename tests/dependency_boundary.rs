@@ -136,6 +136,8 @@ fn producer_sources_reach_only_local_filesystem_inputs() {
 
 // TC-134 / FR-012-CON-3: the producer initiates no network request. No source
 // names a socket API and no workspace member depends on a network crate.
+// Subprocess behaviour (the scorer's python, `quire validate`, `git status`)
+// is out of scope for a source scan.
 #[test]
 fn producer_sources_and_dependencies_initiate_no_network_request() {
     let mut checked = 0;
@@ -179,6 +181,21 @@ fn producer_sources_and_dependencies_initiate_no_network_request() {
     }
 }
 
+/// Drops `//` comment text (doc comments included) so prose cannot trip a scan.
+fn strip_line_comments(text: &str) -> String {
+    text.lines()
+        .map(|line| {
+            // A `//` right after `:` is a URL scheme in a string, which the
+            // scan must still see.
+            let comment = line
+                .match_indices("//")
+                .find(|(at, _)| !line[..*at].ends_with(':'));
+            comment.map_or(line, |(at, _)| &line[..at])
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Every `.rs` file under the workspace's `src` trees, as (path, text).
 fn producer_sources() -> Vec<(String, String)> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -197,7 +214,7 @@ fn producer_sources() -> Vec<(String, String)> {
                 pending.push(path);
             } else if path.extension().is_some_and(|ext| ext == "rs") {
                 let text = std::fs::read_to_string(&path).expect("source is readable");
-                files.push((path.display().to_string(), text));
+                files.push((path.display().to_string(), strip_line_comments(&text)));
             }
         }
     }
