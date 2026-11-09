@@ -14,13 +14,10 @@
 //!
 //! Parsing itself is routed through `quire_code_parse::parse_file` (PLAT-849)
 //! rather than this module owning a `tree_sitter::Parser` directly — see
-//! [`parse_tree`]. This module keeps its own error-detection logic
-//! (`root.has_error()` plus [`first_error_position`]) rather than switching to
-//! `quire_code_parse::ParsedFile::diagnostic()`: that accessor fires on a
-//! narrower condition (only a declaration-structure error, not *any* error
-//! anywhere), and PLAT-849 is a routing change, not a behaviour change — the
-//! existing 115+ tests are its control. This module's own check is a superset
-//! of what `diagnostic()` would report, so nothing is lost by not reading it.
+//! [`parse_tree`]. Syntax-error detection reads
+//! `quire_code_parse::ParsedFile::syntax_error()`, which fires on any
+//! `ERROR`/`MISSING` node anywhere, unlike `diagnostic()`, which fires only
+//! when declaration structure is unrecoverable.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -231,10 +228,13 @@ pub fn parse_file(file: &SourceFile) -> ParsedFile {
     let root = parsed.root_node();
     let config = file.language.config();
 
-    if root.has_error() {
-        let (line, column) = first_error_position(root).unwrap_or((1, 0));
-        out.diagnostics
-            .push(Diagnostic::parse_error(&path, "syntax error", line, column));
+    if let Some(error) = parsed.syntax_error() {
+        out.diagnostics.push(Diagnostic::parse_error(
+            &path,
+            "syntax error",
+            error.line,
+            error.column,
+        ));
     }
 
     // An error-node root means nothing in the file is trustworthy: emit the
@@ -318,26 +318,6 @@ fn parse_tree(
         file.path.as_str(),
         file.content.as_str(),
     )
-}
-
-/// One-based line and zero-based column of the first error node, if any.
-fn first_error_position(root: Node<'_>) -> Option<(u32, u32)> {
-    let mut cursor = root.walk();
-    let mut stack = vec![root];
-    while let Some(node) = stack.pop() {
-        if node.is_error() || node.is_missing() {
-            let pos = node.start_position();
-            return Some((pos.row as u32 + 1, pos.column as u32));
-        }
-        if node.has_error() {
-            // Push children in reverse so the leftmost error is found first.
-            let children: Vec<_> = node.children(&mut cursor).collect();
-            for child in children.into_iter().rev() {
-                stack.push(child);
-            }
-        }
-    }
-    None
 }
 
 struct Walker<'a> {
