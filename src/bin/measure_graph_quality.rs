@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use quire_code_rs::measurement::{
-    build_observation, build_quoin_collection, canonical_bytes, precision_decision_passed,
+    build_observation, build_quoin_collection, canonical_bytes, reconcile_repetitions,
     CollectionInputs, Population, PopulationState, DEFINITION_VERSION, METRIC, PLAN_ID,
 };
 use serde_json::{json, Value};
@@ -65,8 +65,13 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
     fs::create_dir_all(raw_path.parent().expect("raw path has parent"))
         .map_err(|error| format!("{}: {error}", raw_path.display()))?;
 
-    let (report, raw_bytes) = if population.state == PopulationState::Measured {
-        score(&parsed)?
+    let (report, raw_bytes, repetitions) = if population.state == PopulationState::Measured {
+        let runs = (0..SCORER_RUNS)
+            .map(|_| score_once(&parsed))
+            .collect::<Result<Vec<_>, _>>()?;
+        let (report, raw, repetitions) =
+            reconcile_repetitions(runs).map_err(|error| error.to_string())?;
+        (Some(report), raw, repetitions)
     } else {
         let reason = serde_json::to_vec(&json!({
             "state": population.state,
@@ -76,7 +81,7 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
             "unsupported_files": population.unsupported_files
         }))
         .map_err(|error| error.to_string())?;
-        (None, reason)
+        (None, reason, 0)
     };
     fs::write(&raw_path, &raw_bytes).map_err(|error| format!("{}: {error}", raw_path.display()))?;
 
@@ -89,24 +94,26 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         python_version: parsed.python_version,
         source_remote: parsed.source_remote,
         corpus_remote: parsed.corpus_remote,
+        repetitions,
     };
     let collection = build_quoin_collection(&observation, report.as_ref(), &collection_inputs)
         .map_err(|error| error.to_string())?;
     let mut stdout = canonical_bytes(&collection).map_err(|error| error.to_string())?;
     stdout.push(b'\n');
-    let decision_passed = report
-        .as_ref()
-        .map(precision_decision_passed)
-        .transpose()
-        .map_err(|error| error.to_string())?
-        .unwrap_or(false);
+    // The typed observation's value is the single edge false-positive count;
+    // the exit status reads that same value. A non-measured run has no report.
+    let decision_passed =
+        report.is_some() && collection.pointer("/observations/0/value") == Some(&json!(0));
     Ok(RunResult {
         stdout,
         decision_passed,
     })
 }
 
-fn score(args: &Args) -> Result<(Option<Value>, Vec<u8>), String> {
+/// MP-001 `statistical_design.repetitions`: scorer runs per invocation.
+const SCORER_RUNS: usize = 2;
+
+fn score_once(args: &Args) -> Result<(Value, Vec<u8>), String> {
     let producer = format!(
         "{} --org '{{org}}' --repo '{{repo}}' '{{input}}'",
         shell_quote(&args.extractor.to_string_lossy())
@@ -133,7 +140,7 @@ fn score(args: &Args) -> Result<(Option<Value>, Vec<u8>), String> {
             String::from_utf8_lossy(&output.stderr)
         )
     })?;
-    Ok((Some(report), output.stdout))
+    Ok((report, output.stdout))
 }
 
 fn validate_plan(quire: &Path, repo: &Path) -> Result<(), String> {
@@ -570,7 +577,7 @@ mod tests {
             ("status: active", "status: retired"),
             ("metric: graph_quality", "metric: other"),
             (
-                "definition_version: quire-code.graph-quality-v2",
+                "definition_version: quire-code.graph-quality-v3",
                 "definition_version: drifted",
             ),
             ("direction: zero", "direction: higher"),
@@ -656,11 +663,14 @@ mod tests {
                     .unwrap();
             assert_eq!(result.decision_passed, expected, "{name}");
             let collection: Value = serde_json::from_slice(&result.stdout).unwrap();
-            assert!(collection["observations"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|item| item.pointer("/dimensions/measure") == Some(&json!("recall"))));
+            let observations = collection["observations"].as_array().unwrap();
+            assert_eq!(observations.len(), 1, "{name}");
+            assert_eq!(observations[0]["value"], edge_fp, "{name}");
+            assert_eq!(
+                observations[0].pointer("/population/matched"),
+                Some(&json!(edge_fp)),
+                "{name}"
+            );
             assert_eq!(
                 collection["rawEvidence"]["scorerReport"]["confusion"]["axis_kind"]["edge"]["fp"],
                 edge_fp

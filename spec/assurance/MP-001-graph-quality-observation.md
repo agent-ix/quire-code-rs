@@ -5,7 +5,7 @@ type: MeasurementPlan
 status: active
 owner: quire-code-rs-maintainers
 metric: graph_quality
-definition_version: quire-code.graph-quality-v2
+definition_version: quire-code.graph-quality-v3
 stage: gate
 ground_truth_kind: human-labelled
 objective:
@@ -60,10 +60,23 @@ An `empty`, `unreadable`, or `unsupported` population makes no quality decision.
 `statistical_design.estimator: count` is the number of wrong heuristic edges:
 the scorer's overall edge false-positive count across the whole census. The
 rule holds when that count equals zero (`comparator: eq`, `threshold: 0`),
-matching `objective.direction: zero`; the producer publishes the outcome as the
-`precision_decision` observation. The rule is evaluated only for a `measured`
-population; a non-measured state makes no decision rather than counting as
-zero. Recall is not part of the rule.
+matching `objective.direction: zero`. The rule binds to the single
+`graph_quality` observation the producer emits per run, identified by
+`dimensions.measure: edge_false_positive`, `dimension: overall`,
+`key: overall`; its `value` and `population.matched` both equal the count.
+Quoin applies the rule to every observation sharing the plan's metric, plan id
+and definition version, so the producer emits no other `graph_quality`
+observation: per-stratum confusion counts, recall, and unresolved and
+ambiguous counts stay in the scorer report under `rawEvidence.scorerReport`,
+and the producer's own observation (population state, strata, raw-output
+reference) stays under `rawEvidence.graphQualityObservation`; no precision
+ratio is stored. The rule is evaluated only for a
+`measured` population; a non-measured state makes no decision rather than
+counting as zero. The decision observation states `population.repetitions`
+(at least 2, the `statistical_design.repetitions` value), `population.complete:
+true`, and `population.examined` greater than zero. A census with zero heuristic
+edges (`examined` equal to zero) is reported as an empty population, not as a
+pass. Recall is not part of the rule.
 
 ## Population
 

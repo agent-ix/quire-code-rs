@@ -30,9 +30,9 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 
 - One Quoin MeasurementCollection v2 on standard output. Its `rawEvidence`
   contains the schema-valid graph-quality observation and the complete parsed
-  scorer report; its typed `observations` expose precision, recall, unresolved,
-  and ambiguous values without transcribing away their dimensions or population
-  state.
+  scorer report; its typed `observations` hold exactly one `graph_quality`
+  observation, the census-wide edge false-positive count with its population
+  state, so Quoin judges only the value MP-001's decision rule governs.
 - Raw scorer output at the relative path named by the observation.
 - Non-zero process status when the population is not measured, validation fails,
   or a wrong heuristic edge violates the decision rule.
@@ -74,6 +74,10 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
   status that names the incomplete field.
 - When an observation is ready for emission, the producer SHALL validate it
   against the versioned schema.
+- The producer SHALL run the corpus scorer twice per invocation (MP-001
+  `statistical_design.repetitions`), SHALL fail with a repetition mismatch
+  error when the two reports differ, and SHALL state `population.repetitions`
+  as the number of runs actually performed.
 - The producer SHALL retain the raw scorer output used to derive the observation.
 - The producer SHALL write dimension collections in canonical sorted order.
 - The producer SHALL derive the observation identifier from canonical content.
@@ -88,7 +92,7 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 
 | ID | Constraint | Type | Validation |
 |----|------------|------|------------|
-| FR-012-CON-1 | Recall SHALL remain a reported observation with no threshold that can compensate for or relax a false-positive heuristic edge. | Integrity | Static Test |
+| FR-012-CON-1 | Recall SHALL remain reported in `rawEvidence` (never as a typed `graph_quality` observation) with no threshold that can compensate for or relax a false-positive heuristic edge. | Integrity | Static Test |
 | FR-012-CON-2 | The producer SHALL use local filesystem inputs only. | Security | Static Test |
 | FR-012-CON-3 | The producer SHALL initiate no network request. | Security | Static Test |
 
@@ -98,12 +102,13 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 |----|----------|--------------|
 | FR-012-AC-1 | A supported non-empty corpus emits one schema-valid observation referencing active MP-001 and retained raw scorer output. | Test (TC-118) |
 | FR-012-AC-2 | The measured observation contains exact population, confusion-matrix, unresolved, ambiguous, and recall entries for all four required dimensions. | Test (TC-119) |
-| FR-012-AC-3 | Zero false-positive heuristic edges passes the precision decision while observed recall is retained independently, including recall below one. | Test (TC-120) |
+| FR-012-AC-3 | Zero false-positive heuristic edges passes the zero-wrong-edge decision while observed recall is retained independently, including recall below one. | Test (TC-120) |
 | FR-012-AC-4 | A false-positive heuristic edge is retained in its matrix and makes the producer exit non-zero regardless of recall. | Test (TC-121) |
 | FR-012-AC-5 | Empty, unreadable, and unsupported fixtures emit their respective non-measured state, contain no results, and exit non-zero. | Test (TC-122) |
 | FR-012-AC-6 | A missing timestamp, toolchain version, or source remote produces no observation, exits non-zero, and names the missing input. | Test (TC-123) |
-| FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations. | Test (TC-124) |
+| FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations, and disagreeing scorer runs within one invocation fail with a repetition mismatch. | Test (TC-124) |
 | FR-012-AC-8 | Invalid MeasurementPlan or observation data is rejected before a record is offered to Quoin. | Test (TC-125) |
+| FR-012-AC-9 | The collection's typed `observations` hold exactly one `graph_quality` observation whose `value` equals `population.matched` and the census-wide edge false-positive count, stating `population.repetitions` as the count of scorer runs performed and found identical; a non-measured population yields one `not_computed` observation with a null value. | Test (TC-120, TC-122) |
 
 ## Dependencies
 

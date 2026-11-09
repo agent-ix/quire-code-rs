@@ -16,7 +16,7 @@ use thiserror::Error;
 pub const SCHEMA: &str = include_str!("../schemas/graph-quality-observation-v1.schema.json");
 pub const PLAN_ID: &str = "MP-001";
 pub const PLAN_REF: &str = "ix://agent-ix/quire-code-rs/MP-001";
-pub const DEFINITION_VERSION: &str = "quire-code.graph-quality-v2";
+pub const DEFINITION_VERSION: &str = "quire-code.graph-quality-v3";
 pub const METRIC: &str = "graph_quality";
 
 type LanguageUnresolvedCounts = BTreeMap<String, (u64, u64)>;
@@ -38,6 +38,10 @@ pub enum MeasurementError {
     InvalidObservation(String),
     #[error("scorer report is invalid: {0}")]
     InvalidScorerReport(String),
+    #[error("scorer repetition {0} disagrees with repetition 1")]
+    RepetitionMismatch(usize),
+    #[error("no scorer repetition was performed")]
+    NoRepetitions,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +70,26 @@ pub struct CollectionInputs {
     pub python_version: String,
     pub source_remote: String,
     pub corpus_remote: String,
+    /// Scorer runs actually performed and found identical (FR-012-AC-7).
+    pub repetitions: u64,
+}
+
+/// Collapse the scorer runs of one producer invocation into one report.
+/// Every run must produce an identical report; the returned count is the
+/// number of runs actually performed, which the observation states as
+/// `population.repetitions`.
+pub fn reconcile_repetitions<T>(
+    runs: Vec<(Value, T)>,
+) -> Result<(Value, T, u64), MeasurementError> {
+    let count = runs.len() as u64;
+    let mut runs = runs.into_iter();
+    let (first, raw) = runs.next().ok_or(MeasurementError::NoRepetitions)?;
+    for (index, (report, _)) in runs.enumerate() {
+        if report != first {
+            return Err(MeasurementError::RepetitionMismatch(index + 2));
+        }
+    }
+    Ok((first, raw, count))
 }
 
 pub fn sha256(bytes: &[u8]) -> String {
@@ -213,7 +237,7 @@ pub fn build_quoin_collection(
     inputs: &CollectionInputs,
 ) -> Result<Value, MeasurementError> {
     validate_observation(observation)?;
-    let observations = quoin_observations(observation, scorer_report)?;
+    let observations = quoin_observations(observation, scorer_report, inputs.repetitions)?;
     let collection_id = observation["observation_id"]
         .as_str()
         .unwrap_or_default()
@@ -406,18 +430,18 @@ fn dimension_counts(
     out
 }
 
-/// Evaluate only the governed precision rule. Scorer process status and recall
-/// are deliberately excluded because the plan gives recall no pass threshold.
-pub fn precision_decision_passed(report: &Value) -> Result<bool, MeasurementError> {
-    let false_positives = report
+/// The census-wide edge false-positive count: the one value MP-001's
+/// zero-wrong-edge rule governs. Scorer process status and recall are
+/// deliberately excluded because the plan gives recall no pass threshold.
+pub fn edge_false_positive_count(report: &Value) -> Result<u64, MeasurementError> {
+    report
         .pointer("/confusion/axis_kind/edge/fp")
         .and_then(Value::as_u64)
         .ok_or_else(|| {
             MeasurementError::InvalidScorerReport(
-                "missing edge false-positive count for precision decision".into(),
+                "missing edge false-positive count for the zero-wrong-edge decision".into(),
             )
-        })?;
-    Ok(false_positives == 0)
+        })
 }
 
 fn dimension_sort_key(value: &Value) -> (String, String) {
@@ -451,9 +475,14 @@ fn require_sorted_unique(items: &[Value], pointer: &str) -> Result<(), Measureme
     Ok(())
 }
 
+/// The single typed observation Quoin judges against MP-001's decision rule:
+/// the census-wide edge false-positive count. Every other diagnostic stays in
+/// `rawEvidence`, because Quoin applies the rule to every observation that
+/// shares the plan's metric, plan id and definition version.
 fn quoin_observations(
     observation: &Value,
     scorer_report: Option<&Value>,
+    repetitions: u64,
 ) -> Result<Vec<Value>, MeasurementError> {
     let state = observation
         .pointer("/population/state")
@@ -462,124 +491,35 @@ fn quoin_observations(
     if state != "measured" {
         return Ok(vec![json!({
             "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
-            "state": "not_computed", "value": Value::Null, "unit": "decision", "shape": "scalar",
-            "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall", "population_state":state},
+            "state": "not_computed", "value": Value::Null, "unit": "count", "shape": "scalar",
+            "dimensions": {"measure":"edge_false_positive", "dimension":"overall", "key":"overall", "population_state":state},
             "reason": format!("population state is {state}")
         })]);
-    }
-    let matrices = observation
-        .pointer("/results/confusion_matrices")
-        .and_then(Value::as_array)
-        .ok_or_else(|| {
-            MeasurementError::InvalidObservation("results omit confusion matrices".into())
-        })?;
-    let recalls = observation
-        .pointer("/results/recall")
-        .and_then(Value::as_array)
-        .unwrap_or(&Vec::new())
-        .to_vec();
-    let mut out = Vec::new();
-    for matrix in matrices {
-        for (measure, field) in [
-            ("true_positive", "true_positive"),
-            ("false_positive", "false_positive"),
-            ("false_negative", "false_negative"),
-        ] {
-            out.push(quoin_value(
-                measure,
-                matrix,
-                matrix[field].clone(),
-                "count",
-                "count",
-            ));
-        }
-        let tp = matrix["true_positive"].as_u64().unwrap_or(0);
-        let fp = matrix["false_positive"].as_u64().unwrap_or(0);
-        if tp + fp > 0 {
-            out.push(quoin_value(
-                "precision",
-                matrix,
-                json!(tp as f64 / (tp + fp) as f64),
-                "fraction",
-                "ratio",
-            ));
-        }
     }
     let scorer_report = scorer_report.ok_or_else(|| {
         MeasurementError::InvalidScorerReport("measured collection has no scorer report".into())
     })?;
-    let decision = precision_decision_passed(scorer_report)?;
-    let edge_tp = scorer_report
-        .pointer("/confusion/axis_kind/edge/tp")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let edge_fp = scorer_report
-        .pointer("/confusion/axis_kind/edge/fp")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    out.push(json!({
-        "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
-        "state": "measured", "value": if decision { 1 } else { 0 }, "unit": "decision", "shape": "scalar",
-        "population": {"examined": edge_tp + edge_fp, "matched": edge_tp, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
-        "dimensions": {"measure":"precision_decision", "dimension":"overall", "key":"overall", "population_state":"measured"}
-    }));
-    for recall in &recalls {
-        out.push(quoin_value(
-            "recall",
-            recall,
-            recall["ratio"].clone(),
-            "fraction",
-            "ratio",
-        ));
-    }
-    for (measure, pointer) in [
-        ("unresolved", "/results/unresolved"),
-        ("ambiguous", "/results/ambiguous"),
-    ] {
-        for item in observation
-            .pointer(pointer)
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
-            out.push(quoin_value(
-                measure,
-                item,
-                item["count"].clone(),
-                "count",
-                "count",
-            ));
-        }
-    }
-    out.sort_by(|a, b| {
-        canonical_bytes(a)
-            .unwrap_or_default()
-            .cmp(&canonical_bytes(b).unwrap_or_default())
-    });
-    Ok(out)
-}
-
-fn quoin_value(measure: &str, item: &Value, value: Value, unit: &str, shape: &str) -> Value {
-    let tp = item.get("true_positive").and_then(Value::as_u64);
-    let fp = item.get("false_positive").and_then(Value::as_u64);
-    let fn_count = item.get("false_negative").and_then(Value::as_u64);
-    let recovered = item.get("recovered").and_then(Value::as_u64);
-    let expected = item.get("expected").and_then(Value::as_u64);
-    let (examined, matched) = match measure {
-        "precision" => (tp.zip(fp).map(|(a, b)| a + b), tp),
-        "recall" => (expected, recovered),
-        _ => (tp.zip(fn_count).map(|(a, b)| a + b), tp),
+    let edge_count = |field: &str| {
+        scorer_report
+            .pointer(&format!("/confusion/axis_kind/edge/{field}"))
+            .and_then(Value::as_u64)
+            .ok_or_else(|| {
+                MeasurementError::InvalidScorerReport(format!(
+                    "missing edge {field} count for the false-positive observation"
+                ))
+            })
     };
-    json!({
+    let edge_fp = edge_false_positive_count(scorer_report)?;
+    let edge_tp = edge_count("tp")?;
+    let examined = edge_tp.checked_add(edge_fp).ok_or_else(|| {
+        MeasurementError::InvalidScorerReport("edge tp + fp overflows u64".into())
+    })?;
+    Ok(vec![json!({
         "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
-        "state": "measured", "value": value, "unit": unit, "shape": shape,
-        "population": {"examined": examined, "matched": matched, "complete": true, "identity": observation_population_identity(item)},
-        "dimensions": {"measure":measure, "dimension":item["dimension"], "key":item["key"], "population_state":"measured"}
-    })
-}
-
-fn observation_population_identity(item: &Value) -> Value {
-    json!({"dimension":item["dimension"], "key":item["key"]})
+        "state": "measured", "value": edge_fp, "unit": "count", "shape": "scalar",
+        "population": {"examined": examined, "matched": edge_fp, "repetitions": repetitions, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
+        "dimensions": {"measure":"edge_false_positive", "dimension":"overall", "key":"overall", "population_state":"measured"}
+    })])
 }
 
 #[cfg(test)]
@@ -638,6 +578,7 @@ mod tests {
             python_version: "3.14.7".into(),
             source_remote: "local-source".into(),
             corpus_remote: "local-corpus".into(),
+            repetitions: 2,
         }
     }
 
@@ -782,10 +723,10 @@ mod tests {
             "raw/scorer.json",
         )
         .unwrap();
-        assert!(precision_decision_passed(&report()).unwrap());
+        assert!(edge_false_positive_count(&report()).unwrap() == 0);
         let mut wrong_edge = report();
         wrong_edge["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
-        assert!(!precision_decision_passed(&wrong_edge).unwrap());
+        assert_eq!(edge_false_positive_count(&wrong_edge).unwrap(), 1);
         assert_eq!(value.pointer("/results/recall/0/ratio"), Some(&json!(0.8)));
         let text = String::from_utf8(canonical_bytes(&value).unwrap()).unwrap();
         for forbidden in ["hostname", "process_id", "/Users/", "timestamp"] {
@@ -793,12 +734,13 @@ mod tests {
         }
     }
 
-    // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3:
-    // Quoin receives typed precision and the producer/extractor attestations
+    // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3, FR-012-AC-9:
+    // Quoin receives exactly one graph_quality observation, the census-wide
+    // edge false-positive count, and the producer/extractor attestations
     // retain their distinct executable identities.
     #[test]
-    fn collection_exposes_precision_decision_and_named_artifacts() {
-        let scorer = report();
+    fn collection_exposes_one_edge_false_positive_count_and_named_artifacts() {
+        let mut scorer = report();
         let observation = build_observation(
             Some(&scorer),
             &population(PopulationState::Measured),
@@ -816,14 +758,98 @@ mod tests {
                 "raw-scorer-output"
             ]))
         );
-        let measures = collection["observations"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter_map(|item| item.pointer("/dimensions/measure").and_then(Value::as_str))
-            .collect::<BTreeSet<_>>();
-        assert!(measures.contains("precision"));
-        assert!(measures.contains("precision_decision"));
+        let observations = collection["observations"].as_array().unwrap();
+        assert_eq!(observations.len(), 1);
+        assert_eq!(observations[0]["value"], json!(0));
+        assert_eq!(
+            observations[0].pointer("/population/matched"),
+            Some(&json!(0))
+        );
+        assert_eq!(
+            observations[0].pointer("/dimensions/measure"),
+            Some(&json!("edge_false_positive"))
+        );
+
+        scorer["confusion"]["axis_kind"]["edge"]["fp"] = json!(2);
+        let collection =
+            build_quoin_collection(&observation, Some(&scorer), &collection_inputs()).unwrap();
+        let observations = collection["observations"].as_array().unwrap();
+        assert_eq!(observations.len(), 1);
+        assert_eq!(observations[0]["value"], json!(2));
+        assert_eq!(
+            observations[0].pointer("/population/matched"),
+            Some(&json!(2))
+        );
+        assert_eq!(
+            observations[0].pointer("/population/examined"),
+            Some(&json!(5))
+        );
+    }
+
+    // TC-120 / FR-012-AC-9: the observation states the declared repetitions.
+    #[test]
+    fn measured_observation_states_repetitions_and_rejects_overflow() {
+        let scorer = report();
+        let observation = build_observation(
+            Some(&scorer),
+            &population(PopulationState::Measured),
+            "raw/scorer.json",
+        )
+        .unwrap();
+        let collection =
+            build_quoin_collection(&observation, Some(&scorer), &collection_inputs()).unwrap();
+        assert_eq!(
+            collection.pointer("/observations/0/population/repetitions"),
+            Some(&json!(2))
+        );
+        let mut huge = report();
+        huge["confusion"]["axis_kind"]["edge"]["tp"] = json!(u64::MAX);
+        huge["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
+        assert!(build_quoin_collection(&observation, Some(&huge), &collection_inputs()).is_err());
+    }
+
+    // TC-124 / FR-012-AC-7: agreeing runs reconcile and are counted; a
+    // disagreeing run is a typed error, never a silent pick.
+    #[test]
+    fn repetitions_agree_or_fail_typed() {
+        let (merged, raw, count) =
+            reconcile_repetitions(vec![(report(), "a"), (report(), "b")]).unwrap();
+        assert_eq!((merged, raw, count), (report(), "a", 2));
+        let mut other = report();
+        other["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
+        assert!(matches!(
+            reconcile_repetitions(vec![(report(), ()), (other, ())]),
+            Err(MeasurementError::RepetitionMismatch(2))
+        ));
+        assert!(matches!(
+            reconcile_repetitions::<()>(vec![]),
+            Err(MeasurementError::NoRepetitions)
+        ));
+    }
+
+    // TC-122 / FR-012-AC-9: a non-measured population yields one not_computed
+    // observation with a null value, never a measured zero.
+    #[test]
+    fn non_measured_population_emits_one_not_computed_observation() {
+        for state in [
+            PopulationState::Empty,
+            PopulationState::Unreadable,
+            PopulationState::Unsupported,
+        ] {
+            let observation =
+                build_observation(None, &population(state), "raw/scorer.json").unwrap();
+            let collection =
+                build_quoin_collection(&observation, None, &collection_inputs()).unwrap();
+            let observations = collection["observations"].as_array().unwrap();
+            assert_eq!(observations.len(), 1);
+            assert_eq!(observations[0]["state"], "not_computed");
+            assert!(observations[0]["value"].is_null());
+            assert!(observations[0].get("population").is_none());
+            assert_eq!(
+                observations[0].pointer("/dimensions/population_state"),
+                Some(&json!(state))
+            );
+        }
     }
 
     // TC-124, TC-126 / FR-012-AC-7, NFR-005-AC-1.
