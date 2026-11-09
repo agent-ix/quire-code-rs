@@ -99,18 +99,16 @@ parse call borrowed.
   exactly as a top-level one does. One grammar shape does not honor this
   cleanly and is a disclosed known limitation rather than a silently
   different answer: see "Known limitations" below.
-- The crate SHALL define two named concepts, both owned by `quire-code-parse`.
-  A *declaration-structure error* is the condition `ParsedFile::diagnostic()`
-  reports, with the semantics stated above, unchanged. A *syntax error* is any
-  `ERROR` or `MISSING` node anywhere in the tree, reported by
-  `ParsedFile::syntax_error()` as `Some(Diagnostic)` naming the file
-  identifier, the one-based line and the zero-based column of the first such
-  node, and `None` only when the tree has none. `syntax_error()` SHALL return
-  `Some` whenever `diagnostic()` returns `Some`, because a declaration-
-  structure error is itself an `ERROR` or `MISSING` node. A consumer asking
-  "does this file have a parse error" SHALL ask one of the two accessors
-  according to which concept it means, and SHALL NOT infer the answer from
-  `Node::has_error()` on the root.
+- The crate SHALL report a declaration-structure error through
+  `ParsedFile::diagnostic()` with the semantics stated above, unchanged.
+- The crate SHALL report a syntax error through `ParsedFile::syntax_error()`
+  as `Some(Diagnostic)` naming the file identifier, the one-based line and
+  the zero-based column of the first `ERROR` or `MISSING` node anywhere in
+  the tree, in source order, body-local or not, and `None` only when the
+  tree has no such node.
+- The crate SHALL return `Some` from `syntax_error()` whenever `diagnostic()`
+  returns `Some`, because a declaration-structure error is itself an `ERROR`
+  or `MISSING` node.
 - The crate SHALL return `Err(ParseError::NoTree)` — naming the file
   identifier and a line, and owning its file identifier rather than borrowing
   it — only in the defensive case where tree-sitter produces no tree at all
@@ -161,7 +159,9 @@ parse call borrowed.
 | FR-013-AC-11 | `ParseError` carries no lifetime parameter and is `'static`, verified by a compiled type-level assertion rather than assumed from its shape; a consumer boxes it as `Box<dyn std::error::Error + 'static>` and its accessors and `Display` message name the file and line it carries. An earlier shape of this crate carried a borrowed `ParsedFile` inside `ParseError`, which could not satisfy this (PLAT-841 PR #22 review finding FND-005). `ParseError::NoTree` is the only variant and is not reachable through `parse_file` for any input this crate's own fixtures or property tests have found; its `'static`-ness is real insurance against a currently unexercisable case, not motivated by a live use case today | Test (TC-139, TC-140, TC-169, TC-170) |
 | FR-013-AC-12 | `Diagnostic` carries a `file` field alongside `line` and `column`, so a caller that copies a `Diagnostic` out of the loop that produced it — to log it, or to collect it alongside diagnostics from other files — does not have to re-pair it with its source file by hand, or risk pairing it with the wrong one (PLAT-841 PR #22 review round 3, finding FND-013) | Test (TC-161, TC-171) |
 | FR-013-AC-13 | A file with a body-local error that `diagnostic()` does not report (`diagnostic()` returns `None`) returns `Some` from `syntax_error()`, naming the file, a one-based line and a zero-based column of the first `ERROR` or `MISSING` node; verified for Rust, Python and TypeScript; a clean parse returns `None` from `syntax_error()` | Test (TC-184, TC-185) |
-| FR-013-AC-14 | Whenever `diagnostic()` returns `Some`, `syntax_error()` returns `Some`; a file whose only error is body-local returns `Some` from `syntax_error()` and `None` from `diagnostic()` | Test (TC-186) |
+| FR-013-AC-14 | Whenever `diagnostic()` returns `Some`, `syntax_error()` returns `Some` | Test (TC-186) |
+| FR-013-AC-15 | In a file with a body-local error followed later in source order by a structural error, `syntax_error()` names the earlier body-local position and `diagnostic()` names the later structural one | Test (TC-187) |
+
 
 ## Consumer obligation
 
@@ -176,7 +176,9 @@ failure mode, reintroduced one layer up instead of ended. `quire-rs`
 under its own, separately-landed requirement to close that gap:
 `ix://agent-ix/quire-rs/FR-051-AC-9` (landed under PLAT-842) requires
 `quire-rs`'s own per-file reporting to name a file and line whenever this
-crate's declaration structure could not be resolved. A consumer of this
+crate's declaration structure could not be resolved. A consumer asking "does this file have a parse error" is obligated to ask
+`diagnostic()` or `syntax_error()` according to which concept it means, and
+not to infer the answer from `Node::has_error()` on the root. A consumer of this
 crate — `quire-rs` today, `filament-ide-rs` or a future daemon later — is
 obligated to surface `ParsedFile::diagnostic()` in its own reporting rather
 than discard it; this is stated here, not only in FR-051, because a fourth
