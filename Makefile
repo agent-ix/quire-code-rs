@@ -74,7 +74,11 @@ check-single-grammar:
 		echo "FAIL: tree-sitter-typescript is reachable with only the rust feature enabled" >&2; \
 		exit 1; \
 	fi; \
-	echo "check-single-grammar: tree-sitter-rust is linked and tree-sitter-python/typescript are not"
+	if echo "$$tree_output" | grep -q "tree-sitter-bash"; then \
+		echo "FAIL: tree-sitter-bash is reachable with only the rust feature enabled" >&2; \
+		exit 1; \
+	fi; \
+	echo "check-single-grammar: tree-sitter-rust is linked and tree-sitter-python/typescript/bash are not"
 
 # `measurement` is default-off (required-features on the bin and test target)
 # so a plain `make test`/`cargo test --workspace` silently skips both rather

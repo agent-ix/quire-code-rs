@@ -195,3 +195,39 @@ fn unresolvable_class_method_in_a_namespace_counts_as_a_declaration_structure_er
         "a method with a malformed parameter list, nested inside a namespaced class, must still be caught"
     );
 }
+
+#[cfg(feature = "bash")]
+const SHELL_SOURCE: &str = "#!/usr/bin/env bash\n# Deploys the thing.\n\ndeploy() {\n  local out\n  out=$(git rev-parse HEAD)\n  cat <<EOF\nrev $out\nEOF\n}\n";
+
+#[cfg(feature = "bash")]
+// TC-189: the Bash grammar parses a script with a comment header, a function,
+// a heredoc and a `$( )` substitution, and the tree walks.
+#[test]
+fn consumer_parses_shell_and_walks_the_tree() {
+    let parsed =
+        parse_file(Language::Bash, "scripts/deploy.sh", SHELL_SOURCE).expect("parses cleanly");
+    assert!(parsed.diagnostic().is_none());
+    assert!(parsed.syntax_error().is_none());
+    let root = parsed.root_node();
+    assert_eq!(root.kind(), "program");
+    let mut cursor = root.walk();
+    let kinds: Vec<_> = root.named_children(&mut cursor).map(|n| n.kind()).collect();
+    assert_eq!(kinds, vec!["comment", "comment", "function_definition"]);
+    let sexp = root.to_sexp();
+    assert!(sexp.contains("command_substitution"), "{sexp}");
+    assert!(sexp.contains("heredoc_redirect"), "{sexp}");
+}
+
+#[cfg(feature = "bash")]
+// TC-190: identical shell input yields a byte-identical tree, and a function
+// whose name is unparseable surfaces as a diagnostic rather than silence.
+#[test]
+fn shell_parse_is_deterministic_and_broken_function_is_diagnosed() {
+    let first = parse_file(Language::Bash, "a.sh", SHELL_SOURCE).expect("parses");
+    let second = parse_file(Language::Bash, "a.sh", SHELL_SOURCE).expect("parses");
+    assert_eq!(first.root_node().to_sexp(), second.root_node().to_sexp());
+
+    let broken = parse_file(Language::Bash, "b.sh", "f( {\n  echo hi\n}\n").expect("tree produced");
+    assert!(broken.syntax_error().is_some());
+    assert!(broken.diagnostic().is_some());
+}

@@ -139,7 +139,7 @@ parse call borrowed.
 |----|------------|------|------------|
 | FR-013-CON-1 | The crate SHALL NOT impose this repository's own `load → resolve → emit → drop` discipline (ADR-002) on a caller of this API; ADR-002 governs this repository's own extraction pipeline only, and this crate places no upper bound on how long a caller retains the returned `ParsedFile` and its borrowed source | Interface | Inspection |
 | FR-013-CON-2 | The crate SHALL depend on no fact-model, type-environment, call-resolution or record-emission code, so a consumer wanting only a syntax tree does not compile them | Structural | Inspection (`cargo tree`) |
-| FR-013-CON-3 | Each supported language's grammar SHALL be reachable only through a like-named Cargo feature (`rust`, `python`, `typescript`), enforced by gating each `Language` variant on that feature | Structural | Test (TC-137, TC-138) |
+| FR-013-CON-3 | Each supported language's grammar SHALL be reachable only through a like-named Cargo feature (`rust`, `python`, `typescript`, `bash`), enforced by gating each `Language` variant on that feature | Structural | Test (TC-137, TC-138) |
 | FR-013-CON-4 | Mapping a mention, a symbol, or any classification against the returned tree belongs to the consumer, per [FR-005-CON-1](./FR-005-spec-mention-harvesting.md) | Interface | Inspection |
 
 ## Acceptance Criteria
