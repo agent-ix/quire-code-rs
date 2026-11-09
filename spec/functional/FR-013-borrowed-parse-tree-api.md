@@ -149,7 +149,7 @@ parse call borrowed.
 | FR-013-AC-1 | A consumer parses Rust source and walks the returned tree with tree-sitter's own `Node` API, with no dependency edge to the fact model, type environment, call resolver or record emitter | Test (TC-135, TC-146, TC-147) |
 | FR-013-AC-2 | The returned `ParsedFile` borrows its source text; the value and slices taken from it remain valid for the caller-chosen lifetime after the call returns | Test (TC-141, TC-150) |
 | FR-013-AC-3 | A file whose declaration structure is unrecoverable — an error outside every declaration's own executable body, at *any* nesting depth — returns `Ok(ParsedFile)` with `diagnostic()` returning `Some`, naming the file and the one-based line of the first error position, never a result indistinguishable from a clean parse. Verified nested one level deep in a `mod`, an `impl`, inside a struct's own field list, inside an enum's own variant list, inside a function's own parameter list, two `mod`s deep, and with a `mod` missing its closing brace (Rust); nested inside a `class`, and for Python's own last-statement-in-a-suite recovery shape, which surfaces as structural for a broken `return` and, identically, for a broken assignment (Python); nested inside a `namespace`, including inside a `namespace`'s own `class` (TypeScript); and across a batch of files collected into one `Vec` — not only at the top level, which an earlier, depth-1-only form of this check missed (PLAT-841 PR #22 review finding FND-001), and not only at container-body boundaries, which an earlier per-container-kind form of this check still missed for a struct field, enum variant or parameter list (PLAT-841 PR #22 review findings FND-007, FND-008, FND-009) | Test (TC-136, TC-148, TC-153, TC-157, TC-159, TC-160, TC-162, TC-165, TC-166, TC-167, TC-168, TC-171, TC-172, TC-173, TC-174, TC-175) |
-| FR-013-AC-4 | Building `quire-code-parse` with `--no-default-features --features rust` compiles and links the Rust grammar only; the Python and TypeScript grammar crates are absent from the resolved dependency graph — verified by `make check-single-grammar`'s `cargo tree` inspection; see "Verification note on FR-013-AC-4" below for why this mints no TC id | Inspection |
+| FR-013-AC-4 | Building `quire-code-parse` with `--no-default-features --features rust` compiles and links the Rust grammar only; the Python, TypeScript and Bash grammar crates are absent from the resolved dependency graph — verified by `make check-single-grammar`'s `cargo tree` inspection; see "Verification note on FR-013-AC-4" below for why this mints no TC id | Inspection |
 | FR-013-AC-5 | Parsing identical language, file identifier and source-text bytes twice yields syntax trees whose rendered structure is identical on both calls, including across process boundaries against a committed golden fixture, not only within one test run | Test (TC-142, TC-149, TC-155) |
 | FR-013-AC-6 | No source text a caller can supply as a `&str` causes a panic | Test (TC-143, TC-156) |
 | FR-013-AC-7 | `ParsedFile`'s `Send`/`Sync` status is documented and verified by a compiled static assertion rather than assumed from the underlying `tree-sitter` version's documentation; the crate documentation states the fan-out pattern(s) this verified status makes sound for parsing a repository in parallel | Test (TC-144, TC-145) |
@@ -188,7 +188,7 @@ zero-diagnostic result.
 
 ## Known limitations
 
-Two shapes are disclosed here rather than left to a code comment a reader
+Three shapes are disclosed here rather than left to a code comment a reader
 would have to find on their own:
 
 - **`declare module` blocks and `.d.ts` ambient-module files are not
@@ -225,6 +225,16 @@ would have to find on their own:
   contract is stated at the level of the body-node rule applied
   mechanically, not at the level of matching a reader's intuition about
   what counts as "inside" a function in prose.
+- **Bash does not follow the body-local rule in either direction.** An
+  error inside a shell function's body (`f() {\n  echo $(\n}\n`) collapses
+  the whole function into a top-level `ERROR`, so `diagnostic()` is `Some`
+  (line 1, column 1) where the other grammars would return `None`
+  (`TC-191`). Conversely, a stray closing keyword (`fi`, `done`, `}`) parses
+  as an ordinary command word, so neither `diagnostic()` nor
+  `syntax_error()` reports it (`TC-192`). Both are tree-sitter-bash's own
+  recovery, not something this crate adds; they are pinned so a grammar
+  update that changes either is noticed. An unclosed function body
+  (`TC-190`) is diagnosed as expected.
 
 ## Correction record: FND-012, FND-013
 
@@ -267,7 +277,7 @@ requirement, so it was not done.
 
 ## Verification note on FR-013-AC-4
 
-AC-4's load-bearing half — that the Python and TypeScript grammar crates are
+AC-4's load-bearing half — that the Python, TypeScript and Bash grammar crates are
 *absent* from the resolved dependency graph under `--features rust` — is
 verified by `make check-single-grammar`'s `cargo tree` inspection, run in CI
 on every PR. No `#[test]` fn can falsify that half: a compiled Rust test can

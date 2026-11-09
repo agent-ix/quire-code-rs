@@ -219,15 +219,45 @@ fn consumer_parses_shell_and_walks_the_tree() {
 }
 
 #[cfg(feature = "bash")]
-// TC-190: identical shell input yields a byte-identical tree, and a function
-// whose name is unparseable surfaces as a diagnostic rather than silence.
+// TC-190, FR-013-AC-5, FR-013-AC-3: identical shell input yields a
+// byte-identical tree, and an unclosed function body surfaces as a
+// diagnostic at a reported line rather than silence.
 #[test]
-fn shell_parse_is_deterministic_and_broken_function_is_diagnosed() {
+fn shell_parse_is_deterministic_and_unclosed_function_is_diagnosed() {
     let first = parse_file(Language::Bash, "a.sh", SHELL_SOURCE).expect("parses");
     let second = parse_file(Language::Bash, "a.sh", SHELL_SOURCE).expect("parses");
     assert_eq!(first.root_node().to_sexp(), second.root_node().to_sexp());
 
-    let broken = parse_file(Language::Bash, "b.sh", "f( {\n  echo hi\n}\n").expect("tree produced");
+    let broken = parse_file(Language::Bash, "b.sh", "f() {\n  echo hi\n").expect("tree produced");
+    let diagnostic = broken.diagnostic().expect("unclosed function is diagnosed");
+    assert_eq!(diagnostic.file(), "b.sh");
+    assert_eq!(diagnostic.line(), 1);
     assert!(broken.syntax_error().is_some());
-    assert!(broken.diagnostic().is_some());
+}
+
+#[cfg(feature = "bash")]
+// TC-191, FR-013-AC-10: Bash departs from the body-local rule. An error inside
+// a function body collapses the whole function into a top-level ERROR, so
+// `diagnostic()` is `Some` where Rust, Python and TypeScript return `None`.
+// Pinned so a grammar update that changes it is noticed.
+#[test]
+fn shell_body_local_error_reads_as_structural() {
+    let parsed =
+        parse_file(Language::Bash, "c.sh", "f() {\n  echo $(\n}\n").expect("tree produced");
+    let diagnostic = parsed.diagnostic().expect("function collapses to ERROR");
+    assert_eq!(diagnostic.line(), 1);
+    assert_eq!(diagnostic.column(), 1);
+}
+
+#[cfg(feature = "bash")]
+// TC-192, FR-013-AC-3: a stray closing keyword parses as an ordinary command
+// word, so neither `diagnostic()` nor `syntax_error()` reports it. Pinned as
+// a disclosed limitation.
+#[test]
+fn shell_stray_closing_keyword_is_accepted_silently() {
+    for source in ["fi\n", "done\n", "}\n"] {
+        let parsed = parse_file(Language::Bash, "d.sh", source).expect("parses");
+        assert!(parsed.diagnostic().is_none(), "{source:?}");
+        assert!(parsed.syntax_error().is_none(), "{source:?}");
+    }
 }

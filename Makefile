@@ -13,7 +13,7 @@ help:
 	@echo "  make test             - cargo test"
 	@echo "  make build            - Release build"
 	@echo "  make clean            - cargo clean"
-	@echo "  make deny             - cargo deny check licenses"
+	@echo "  make deny             - cargo deny check licenses (workspace, then quire-code-parse with all grammar features)"
 	@echo "  make cargo-audit      - cargo audit (RustSec advisories)"
 	@echo "  make coverage         - Test Matrix rows vs the suite (quire coverage)"
 	@echo "  make check-single-grammar - quire-code-parse --features rust links one grammar (FR-013-AC-4)"
@@ -36,10 +36,12 @@ fmt-check:
 .PHONY: lint
 lint:
 	$(CARGO) clippy --workspace --all-targets -- -D warnings
+	$(CARGO) clippy -p quire-code-parse --all-targets --features bash -- -D warnings
 
 .PHONY: test
 test:
 	$(CARGO) test --workspace
+	$(CARGO) test -p quire-code-parse --features bash
 
 # FR-013-AC-4: a consumer that compiles quire-code-parse with only the `rust`
 # feature links the Rust grammar and no other. Built as a real assertion
@@ -104,6 +106,7 @@ clean:
 .PHONY: deny
 deny:
 	$(CARGO) deny check licenses
+	$(CARGO) deny --manifest-path crates/quire-code-parse/Cargo.toml --all-features check licenses
 
 .PHONY: cargo-audit
 cargo-audit:
