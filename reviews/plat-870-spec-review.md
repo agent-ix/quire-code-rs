@@ -40,3 +40,11 @@ only on a direct child that is itself an ERROR or MISSING node. AC-13 and
 AC-14 can fail (a clean parse returning Some, a body-local file returning
 None, a structural file returning None from syntax_error). Pre-existing
 `quire validate` errors are identical on origin/main and are not findings.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 48ba34b adds FR-013-AC-15 (body-local error before a structural error: syntax_error() names the earlier position, diagnostic() the later) with TC-187, and the syntax-error bullet now says "in source order" |
+| FND-002 | fixed | 48ba34b sets the StR-001, US-005 and FR-013 coverage rows to 🚧 |
+| FND-003 | fixed | 48ba34b reduces AC-14 to the implication only; TC-186 trimmed to match |

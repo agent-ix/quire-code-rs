@@ -29,3 +29,10 @@ Manual reading found two defects in the new Behavior bullet.
 
 The edited body-local bullet (lines 89-100) and the new Outputs entry read
 cleanly; AC-13 and AC-14 are concrete, observable, and stated per accessor.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 48ba34b splits the bullet into three single-SHALL crate statements and drops "SHALL define two named concepts" |
+| FND-002 | fixed | 48ba34b moves the consumer obligation (ask diagnostic() or syntax_error(), never root has_error()) into the Consumer obligation section, phrased as an obligation, not a crate SHALL |
