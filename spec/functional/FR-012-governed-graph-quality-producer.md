@@ -74,6 +74,10 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
   status that names the incomplete field.
 - When an observation is ready for emission, the producer SHALL validate it
   against the versioned schema.
+- The producer SHALL run the corpus scorer twice per invocation (MP-001
+  `statistical_design.repetitions`), SHALL fail with a repetition mismatch
+  error when the two reports differ, and SHALL state `population.repetitions`
+  as the number of runs actually performed.
 - The producer SHALL retain the raw scorer output used to derive the observation.
 - The producer SHALL write dimension collections in canonical sorted order.
 - The producer SHALL derive the observation identifier from canonical content.
@@ -102,9 +106,9 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 | FR-012-AC-4 | A false-positive heuristic edge is retained in its matrix and makes the producer exit non-zero regardless of recall. | Test (TC-121) |
 | FR-012-AC-5 | Empty, unreadable, and unsupported fixtures emit their respective non-measured state, contain no results, and exit non-zero. | Test (TC-122) |
 | FR-012-AC-6 | A missing timestamp, toolchain version, or source remote produces no observation, exits non-zero, and names the missing input. | Test (TC-123) |
-| FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations. | Test (TC-124) |
+| FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations, and disagreeing scorer runs within one invocation fail with a repetition mismatch. | Test (TC-124) |
 | FR-012-AC-8 | Invalid MeasurementPlan or observation data is rejected before a record is offered to Quoin. | Test (TC-125) |
-| FR-012-AC-9 | The collection's typed `observations` hold exactly one `graph_quality` observation whose `value` equals `population.matched` and the census-wide edge false-positive count, stating `population.repetitions`; a non-measured population yields one `not_computed` observation with a null value. | Test (TC-120, TC-122) |
+| FR-012-AC-9 | The collection's typed `observations` hold exactly one `graph_quality` observation whose `value` equals `population.matched` and the census-wide edge false-positive count, stating `population.repetitions` as the count of scorer runs performed and found identical; a non-measured population yields one `not_computed` observation with a null value. | Test (TC-120, TC-122) |
 
 ## Dependencies
 

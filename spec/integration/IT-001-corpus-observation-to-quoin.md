@@ -56,10 +56,7 @@ available.
      version.
 4. Submit the emitted MeasurementCollection v2 to a real temporary Quoin
    measurement store.
-   - IT-001-SC-04: Quoin retains the collection and the retained fields match
-     the emitted ones. Currently the ignored pipeline test is known to fail at
-     this step: Quoin's intake rejects the collection envelope (tracked in the
-     PLAT-1010 envelope sub-ticket), so end-to-end acceptance is not claimed.
+   - IT-001-SC-04: Quoin accepts the record and retains the collection.
 5. Render Quoin's report for the observation.
    - IT-001-SC-05: population state and the edge false-positive count appear in
      the report; recall, unresolved counts, ambiguous counts, the raw-output

@@ -34,3 +34,11 @@ and the "exactly one observation" contract have no assertion or no criterion.
 | FND-001 | medium | The rewritten `not_computed` observation has no test asserting it (`measure: edge_false_positive`, `unit: count`, `value: null`, exactly one observation). `binary_pipeline_emits_each_non_measured_state_without_results` checks only `rawEvidence`, never `collection.observations`. | src/measurement.rs:466-473, src/bin/measure_graph_quality.rs:600-622 |
 | FND-002 | medium | FR-012 Outputs now states that the typed `observations` hold exactly one `graph_quality` observation whose value is the edge false-positive count, but no FR-012 acceptance criterion states it, so the Test Matrix cannot show it as covered. Add an AC: exactly one observation, `value == population.matched ==` the edge FP count, and one `not_computed` observation when the population is not measured. Tag the tests above to it. | spec/functional/FR-012-governed-graph-quality-producer.md:31-35 |
 | FND-003 | medium | IT-001-SC-04 (Quoin accepts the record) cannot pass against installed quoin 0.29.1. Besides the missing `population.repetitions` (SR-16310 FND-001), intake rejects the collection envelope: no `configDigest` or `sourceRevision`, `verificationStack.lockDigest`/`executableDigest` are not sha256 values, sources are not full-SHA, and `artifacts` is an array, not an object. The envelope code predates this PR, but the edited ignored IT test still asserts that record succeeds. | src/measurement.rs:210-247, tests/measurement_pipeline.rs:262-320 |
+
+## Dispositions
+
+| FND | outcome | reason |
+|---|---|---|
+| FND-001 | fixed | - |
+| FND-002 | fixed | - |
+| FND-003 | deferred | PLAT-1361 owns the envelope rejections that predate this PR. The repetitions part is fixed (see SR-16310 FND-001). |

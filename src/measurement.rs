@@ -18,10 +18,6 @@ pub const PLAN_ID: &str = "MP-001";
 pub const PLAN_REF: &str = "ix://agent-ix/quire-code-rs/MP-001";
 pub const DEFINITION_VERSION: &str = "quire-code.graph-quality-v3";
 pub const METRIC: &str = "graph_quality";
-/// MP-001 `statistical_design.repetitions`: the pinned-input repetitions the
-/// pipeline test and IT-001 run to prove byte-identical records. The producer
-/// binary itself scores once per invocation, so this is declared, not counted.
-pub const REPETITIONS: u64 = 2;
 
 type LanguageUnresolvedCounts = BTreeMap<String, (u64, u64)>;
 type UnresolvedCounts = (u64, u64, LanguageUnresolvedCounts);
@@ -42,6 +38,10 @@ pub enum MeasurementError {
     InvalidObservation(String),
     #[error("scorer report is invalid: {0}")]
     InvalidScorerReport(String),
+    #[error("scorer repetition {0} disagrees with repetition 1")]
+    RepetitionMismatch(usize),
+    #[error("no scorer repetition was performed")]
+    NoRepetitions,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -70,6 +70,26 @@ pub struct CollectionInputs {
     pub python_version: String,
     pub source_remote: String,
     pub corpus_remote: String,
+    /// Scorer runs actually performed and found identical (FR-012-AC-7).
+    pub repetitions: u64,
+}
+
+/// Collapse the scorer runs of one producer invocation into one report.
+/// Every run must produce an identical report; the returned count is the
+/// number of runs actually performed, which the observation states as
+/// `population.repetitions`.
+pub fn reconcile_repetitions<T>(
+    runs: Vec<(Value, T)>,
+) -> Result<(Value, T, u64), MeasurementError> {
+    let count = runs.len() as u64;
+    let mut runs = runs.into_iter();
+    let (first, raw) = runs.next().ok_or(MeasurementError::NoRepetitions)?;
+    for (index, (report, _)) in runs.enumerate() {
+        if report != first {
+            return Err(MeasurementError::RepetitionMismatch(index + 2));
+        }
+    }
+    Ok((first, raw, count))
 }
 
 pub fn sha256(bytes: &[u8]) -> String {
@@ -217,7 +237,7 @@ pub fn build_quoin_collection(
     inputs: &CollectionInputs,
 ) -> Result<Value, MeasurementError> {
     validate_observation(observation)?;
-    let observations = quoin_observations(observation, scorer_report)?;
+    let observations = quoin_observations(observation, scorer_report, inputs.repetitions)?;
     let collection_id = observation["observation_id"]
         .as_str()
         .unwrap_or_default()
@@ -410,8 +430,9 @@ fn dimension_counts(
     out
 }
 
-/// Evaluate only the governed precision rule. Scorer process status and recall
-/// are deliberately excluded because the plan gives recall no pass threshold.
+/// The census-wide edge false-positive count: the one value MP-001's
+/// zero-wrong-edge rule governs. Scorer process status and recall are
+/// deliberately excluded because the plan gives recall no pass threshold.
 pub fn edge_false_positive_count(report: &Value) -> Result<u64, MeasurementError> {
     report
         .pointer("/confusion/axis_kind/edge/fp")
@@ -461,6 +482,7 @@ fn require_sorted_unique(items: &[Value], pointer: &str) -> Result<(), Measureme
 fn quoin_observations(
     observation: &Value,
     scorer_report: Option<&Value>,
+    repetitions: u64,
 ) -> Result<Vec<Value>, MeasurementError> {
     let state = observation
         .pointer("/population/state")
@@ -495,7 +517,7 @@ fn quoin_observations(
     Ok(vec![json!({
         "metric": METRIC, "planId": PLAN_ID, "definitionVersion": DEFINITION_VERSION,
         "state": "measured", "value": edge_fp, "unit": "count", "shape": "scalar",
-        "population": {"examined": examined, "matched": edge_fp, "repetitions": REPETITIONS, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
+        "population": {"examined": examined, "matched": edge_fp, "repetitions": repetitions, "complete": true, "identity": {"dimension":"overall", "key":"heuristic_edges"}},
         "dimensions": {"measure":"edge_false_positive", "dimension":"overall", "key":"overall", "population_state":"measured"}
     })])
 }
@@ -556,6 +578,7 @@ mod tests {
             python_version: "3.14.7".into(),
             source_remote: "local-source".into(),
             corpus_remote: "local-corpus".into(),
+            repetitions: 2,
         }
     }
 
@@ -777,12 +800,31 @@ mod tests {
             build_quoin_collection(&observation, Some(&scorer), &collection_inputs()).unwrap();
         assert_eq!(
             collection.pointer("/observations/0/population/repetitions"),
-            Some(&json!(REPETITIONS))
+            Some(&json!(2))
         );
         let mut huge = report();
         huge["confusion"]["axis_kind"]["edge"]["tp"] = json!(u64::MAX);
         huge["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
         assert!(build_quoin_collection(&observation, Some(&huge), &collection_inputs()).is_err());
+    }
+
+    // TC-124 / FR-012-AC-7: agreeing runs reconcile and are counted; a
+    // disagreeing run is a typed error, never a silent pick.
+    #[test]
+    fn repetitions_agree_or_fail_typed() {
+        let (merged, raw, count) =
+            reconcile_repetitions(vec![(report(), "a"), (report(), "b")]).unwrap();
+        assert_eq!((merged, raw, count), (report(), "a", 2));
+        let mut other = report();
+        other["confusion"]["axis_kind"]["edge"]["fp"] = json!(1);
+        assert!(matches!(
+            reconcile_repetitions(vec![(report(), ()), (other, ())]),
+            Err(MeasurementError::RepetitionMismatch(2))
+        ));
+        assert!(matches!(
+            reconcile_repetitions::<()>(vec![]),
+            Err(MeasurementError::NoRepetitions)
+        ));
     }
 
     // TC-122 / FR-012-AC-9: a non-measured population yields one not_computed
