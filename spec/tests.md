@@ -285,7 +285,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-188 | With two structural errors, `diagnostic()` names the earlier one in source order even when it is nested deeper | Unit | P1 | FR-013-AC-3 | ✅ |
 | TC-189 | Consumer parses a shell script (function, comment header, heredoc, `$( )`) and walks the tree | Integration | P2 | FR-013-AC-1 | ✅ |
 | TC-190 | Identical shell input yields a byte-identical tree; an unclosed shell function body reports a diagnostic at line 1 | Integration | P2 | FR-013-AC-5, FR-013-AC-3 | ✅ |
-| TC-191 | A body-local error inside a shell function collapses it to a structural diagnostic (disclosed limitation) | Integration | P2 | FR-013-AC-10 | ✅ |
+| TC-191 | A body-local error inside a shell function collapses it to a structural diagnostic (disclosed limitation) | Integration | P2 | FR-013-AC-3 | ✅ |
 | TC-192 | A stray `fi`/`done`/`}` yields neither diagnostic nor syntax_error (disclosed limitation) | Integration | P2 | FR-013-AC-3 | ✅ |
 
 ---

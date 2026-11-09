@@ -236,7 +236,7 @@ fn shell_parse_is_deterministic_and_unclosed_function_is_diagnosed() {
 }
 
 #[cfg(feature = "bash")]
-// TC-191, FR-013-AC-10: Bash departs from the body-local rule. An error inside
+// TC-191, FR-013-AC-3: Bash departs from the body-local rule. An error inside
 // a function body collapses the whole function into a top-level ERROR, so
 // `diagnostic()` is `Some` where Rust, Python and TypeScript return `None`.
 // Pinned so a grammar update that changes it is noticed.

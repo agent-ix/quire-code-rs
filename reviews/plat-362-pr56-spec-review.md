@@ -24,3 +24,10 @@ Ticket: PLAT-362 (part 1). Base checklist over the spec diff: FR-013-CON-3 now n
 ## Verdict
 
 Minor changes. CON-3's amendment is correct and testable through TC-137/TC-138. Update AC-4's text to name the bash grammar, and either bind TC-190 to FR-013-AC-3 as well or split the diagnostic assertion into its own row.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 06f7dae: FR-013-AC-4 and its Verification note now name the Python, TypeScript and Bash grammar crates |
+| FND-002 | fixed | 06f7dae: the TC-190 row binds FR-013-AC-5 and FR-013-AC-3, and the test tag reads `TC-190, FR-013-AC-5, FR-013-AC-3`; quoin matrix lists it under both |

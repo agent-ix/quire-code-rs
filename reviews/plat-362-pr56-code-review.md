@@ -40,3 +40,11 @@ scope:
 ## Verdict
 
 Changes requested (one high). The Rust change itself is minimal, idiomatic and correct: the variant is feature-gated and `#[non_exhaustive]` covers it, the grammar mapping is exhaustive under every cfg, bash is not a default feature, a rust-only build excludes tree-sitter-bash and the Makefile gate genuinely fails when it leaks in. The diagnostic predicate works well for shell on the probed inputs. The gap is gating: fix FND-001 by adding the `bash` feature to the lint and test lanes (for example `cargo clippy -p quire-code-parse --all-targets --features bash -- -D warnings` and `cargo test -p quire-code-parse --features bash` in `make lint`/`make test` and the CI Rust job). Fix FND-002 by making cargo deny see the feature (for example `[graph] features = ["quire-code-parse/bash"]` in deny.toml, or a deny invocation on the member with `--all-features`). FND-003: describe the input accurately (unclosed subshell / malformed header) and assert the diagnostic line.
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | still-open | 06f7dae adds `cargo clippy -p quire-code-parse --all-targets --features bash -- -D warnings` to `make lint` and `cargo test -p quire-code-parse --features bash` to `make test`, so `make ci` now runs TC-189..TC-192 and the Bash arm of TC-137. The CI Rust job is unchanged: .github/workflows/ci.yml:32 and :35 still run bare `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace`, not the make targets, so a PR's own CI still never compiles the `bash` feature. Remaining fix: point those two steps at `make lint` / `make test`, or add the two `--features bash` commands to the job. This is a workflow edit, which may need the owner's clearance first |
+| FND-002 | still-open | 06f7dae adds `cargo deny --manifest-path crates/quire-code-parse/Cargo.toml --all-features check licenses` to `make deny` (re-run here: licenses ok, tree-sitter-bash evaluated). The CI License Check step (.github/workflows/ci.yml:57) still runs bare `cargo deny check licenses`, which does not see tree-sitter-bash. Same remaining fix as FND-001: use `make deny` in CI or add the member invocation |
+| FND-003 | fixed | 06f7dae: TC-190 now parses an unclosed function and asserts file and line, with an accurate comment and test name |

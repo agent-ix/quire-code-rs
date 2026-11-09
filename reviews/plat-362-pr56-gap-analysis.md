@@ -23,3 +23,16 @@ Consumer contract (quire-rs FR-051, CR-213 note): the shell adapter needs a `bas
 ## Verdict
 
 Changes requested. The delivered feature meets what the quire-rs adapter needs: shell parsing, a gated variant and a working structural diagnostic on the inputs FR-051-AC-35/36/45 name. Close FND-002 with SR-11087 FND-001's gate fix. Close FND-001 by adding a Bash bullet to FR-013 "Known limitations" stating both shapes (a function-body error reads as structural; a stray closing keyword is accepted silently), with a test pinning each, and by updating the `executable_body_field` / `is_declaration_node` doc comments, which still say "all three grammars" although Bash's `function_definition` now flows through the same list.
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+| --- | --- | --- | --- |
+| FND-003 | low | TC-191 is tagged `FR-013-AC-10` and so counts as backing it, but it asserts the opposite of AC-10's outcome: `diagnostic()` is Some for a body-local error, where AC-10 requires None. The analogous Python limitation tests (TC-174, TC-175) bind FR-013-AC-3, the criterion their behaviour satisfies. So AC-10 is reported backed by a test that demonstrates an exception to it | crates/quire-code-parse/tests/integration.rs:239-251, spec/tests.md:288 |
+
+## Dispositions
+
+| FND | outcome | reason |
+| --- | --- | --- |
+| FND-001 | fixed | 06f7dae adds a Bash bullet to FR-013 Known limitations covering both shapes, pins each with a test (TC-191: body-local error gives diagnostic (1,1); TC-192: `fi`/`done`/`}` give neither diagnostic nor syntax_error), and corrects the is_declaration_node / executable_body_field doc comments |
+| FND-002 | fixed | 06f7dae: `make test` now runs `cargo test -p quire-code-parse --features bash`, so `make ci` (the merge gate) executes TC-189..TC-192. The CI job still runs bare cargo; that residual is tracked as SR-11087 FND-001 |
