@@ -37,3 +37,9 @@ FND-001 records what those checks cannot see.
 | ID | Severity | Summary | Refs |
 |---|---|---|---|
 | FND-001 | low | TC-134 states "the producer initiates no network request", but the producer delegates work to external programs it spawns (`args.python <corpus>/score.py`, `quire validate`, `git status`), which a source scan of this repo cannot see. The test comment should say subprocess behaviour is out of scope (owned by the corpus scorer / quire), so the ✅ does not over-claim. | src/bin/measure_graph_quality.rs:121-160, tests/dependency_boundary.rs:137-139 |
+
+## Dispositions
+
+| FND | outcome | reason |
+|---|---|---|
+| FND-001 | fixed | 345d8fb adds to the TC-134 comment: "Subprocess behaviour (the scorer's python, `quire validate`, `git status`) is out of scope for a source scan." |

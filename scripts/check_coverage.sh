@@ -78,7 +78,10 @@ for d in report["diagnostics"]:
     # module, which this repository cannot edit
     # (agent-ix/spec-artifacts-process#75); they match nothing here by design.
     # Any other declaration that matches nothing still fails.
-    if d.get("declaration") in MODULE_UNUSED_DECLARATIONS:
+    if (
+        d.get("declaration") in MODULE_UNUSED_DECLARATIONS
+        and d["reason"] == "archetype-matches-nothing"
+    ):
         continue
     if d["reason"] in {
         "id-column-matches-nothing",

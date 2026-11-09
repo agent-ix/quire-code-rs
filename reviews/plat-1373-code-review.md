@@ -71,3 +71,16 @@ fixed.
 |---|---|---|---|
 | FND-001 | high | Removing `archetype-matches-nothing` from the failing set wholesale makes the gate pass when the repository's own Test Matrix (or FR/NFR docs) is mistyped. Reproduced: `type: TestMatrx` → `139/177 targets backed`, exit 0, against a 364-target corpus; origin/main's script fails on `declaration 'test-case'`. Minimal fix: keep the reason and exempt only `d["declaration"] in {"inspection", "interface-acceptance-criterion", "suite"}` (module-declared targets with no instance here; owner fix is agent-ix/spec-artifacts-process#75), so any other declaration matching nothing still fails. | scripts/check_coverage.sh:72-84 |
 | FND-002 | low | TC-133/TC-134 substring-scan whole source files, comments included, so a doc comment linking `https://…` or mentioning `std::net` fails the test though no behaviour changed. Strip `//` comment text before matching (or match only string literals / `use` paths) so the scan tests code, not prose. | tests/dependency_boundary.rs:118-155 |
+
+## New findings (disposition pass 1)
+
+| ID | Severity | Summary | Refs |
+|---|---|---|---|
+| FND-003 | low | The skip `if d.get("declaration") in MODULE_UNUSED_DECLARATIONS: continue` drops every reason for those three declarations, not just `archetype-matches-nothing`. If the repository later adds an `Inspections` or `SuiteRegistry` document with a wrong section or id column, `section-holds-no-table` / `id-column-matches-nothing` on that declaration is silently swallowed. Narrow it to `d["reason"] == "archetype-matches-nothing" and d.get("declaration") in MODULE_UNUSED_DECLARATIONS`. Non-blocking: no such document exists today. | scripts/check_coverage.sh:71-82 |
+
+## Dispositions
+
+| FND | outcome | reason |
+|---|---|---|
+| FND-001 | fixed | 345d8fb restores `archetype-matches-nothing` and skips only the three module declarations; re-run: real tree exit 0 (325/364), mistyped `TestMatrx` exits 1 on `declaration 'test-case'`. |
+| FND-002 | fixed | 345d8fb adds `strip_line_comments` to `producer_sources()`; `//` after `:` (a URL scheme in a string) is kept, so code literals are still scanned; 3/3 tests pass. |
