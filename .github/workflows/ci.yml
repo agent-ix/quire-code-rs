@@ -29,10 +29,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Lint
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: make lint
 
       - name: Test
-        run: cargo test --workspace
+        run: make test
 
       - name: quire-code-parse single-grammar feature gate (FR-013-AC-4)
         run: make check-single-grammar
@@ -54,7 +54,7 @@ jobs:
         with:
           tool: cargo-deny
       - name: cargo deny check licenses
-        run: cargo deny check licenses
+        run: make deny
 
   benchmarks:
     name: Performance Lane (NFR-003)
