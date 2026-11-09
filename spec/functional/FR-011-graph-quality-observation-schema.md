@@ -2,7 +2,6 @@
 id: FR-011
 title: "Versioned graph-quality observation schema"
 type: FR
-object: data_schema
 relationships:
   - target: "ix://agent-ix/quire-code-rs/US-004"
     type: "implements"
