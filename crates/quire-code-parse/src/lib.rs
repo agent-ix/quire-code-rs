@@ -136,6 +136,15 @@
 //! down, the exact defect this program exists to end: one `ERROR` node
 //! anywhere silently costing a whole file's worth of symbols.
 //!
+//! ## Two error concepts
+//!
+//! [`ParsedFile::diagnostic`] reports only an unrecoverable *declaration
+//! structure* error. [`ParsedFile::syntax_error`] reports *any* `ERROR` or
+//! `MISSING` node, including the body-local ones `diagnostic()` leaves out;
+//! its position is that of the leftmost such node. Whenever `diagnostic()` is
+//! `Some`, `syntax_error()` is `Some` at the same position, never the
+//! converse (FR-013-AC-13, FR-013-AC-14).
+//!
 //! ## Consumer obligation
 //!
 //! Returning `Some(Diagnostic)` instead of `Err` only avoids one silent

@@ -119,6 +119,30 @@ impl<'src> ParsedFile<'src> {
     pub fn diagnostic(&self) -> Option<Diagnostic<'src>> {
         self.diagnostic
     }
+
+    /// `Some` where the tree contains an `ERROR` or `MISSING` node anywhere,
+    /// naming the file and the one-based line and zero-based column of the
+    /// leftmost such node (FR-013-AC-13). `None` for a clean parse.
+    ///
+    /// This is the broad concept: any syntax error at all, including the
+    /// body-local ones [`ParsedFile::diagnostic`] deliberately does not
+    /// report. Whenever `diagnostic()` is `Some`, this is `Some` too, at the
+    /// same position (FR-013-AC-14); the converse does not hold. A consumer
+    /// that counts files with syntax errors, or wants a position for any
+    /// error, reads this; a consumer deciding whether declaration structure
+    /// is recoverable reads `diagnostic()`.
+    pub fn syntax_error(&self) -> Option<Diagnostic<'src>> {
+        let root = self.tree.root_node();
+        if !root.has_error() {
+            return None;
+        }
+        let (line, column) = first_error_position(root).unwrap_or((1, 0));
+        Some(Diagnostic {
+            file: self.file,
+            line,
+            column,
+        })
+    }
 }
 
 impl std::fmt::Debug for ParsedFile<'_> {
@@ -809,6 +833,103 @@ mod tests {
             parsed.diagnostic().is_some(),
             "an enum variant tree-sitter could not resolve must be caught"
         );
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-184, FR-013-AC-13: a Rust body-local error is reported by
+    // `syntax_error()` with file, line and column while `diagnostic()` stays
+    // `None`.
+    #[test]
+    fn syntax_error_reports_a_rust_body_local_error() {
+        let source = "pub fn ok() {}\npub fn broken() -> u32 { 1 + }\n";
+        let parsed = parse_file(Language::Rust, "src/b.rs", source).expect("parses");
+        assert!(parsed.diagnostic().is_none());
+        let err = parsed.syntax_error().expect("body-local error is reported");
+        assert_eq!(err.file, "src/b.rs");
+        assert_eq!((err.line, err.column), (2, 28));
+    }
+
+    #[cfg(feature = "python")]
+    // TC-184, FR-013-AC-13: the TC-163 shape in Python.
+    #[test]
+    fn syntax_error_reports_a_python_body_local_error() {
+        let source = "class Foo:\n    def broken(self):\n        x = 1 +\n        return x\n    def intact(self):\n        return 2\n";
+        let parsed = parse_file(Language::Python, "x.py", source).expect("parses");
+        assert!(parsed.diagnostic().is_none());
+        let err = parsed.syntax_error().expect("body-local error is reported");
+        assert_eq!(err.file, "x.py");
+        assert_eq!(err.line, 4);
+    }
+
+    #[cfg(feature = "typescript")]
+    // TC-184, FR-013-AC-13: the TC-164 shape in TypeScript.
+    #[test]
+    fn syntax_error_reports_a_typescript_body_local_error() {
+        let source =
+            "namespace NS {\n    function broken() { 1 + }\n    function intact() { }\n}\n";
+        let parsed = parse_file(Language::TypeScript, "x.ts", source).expect("parses");
+        assert!(parsed.diagnostic().is_none());
+        let err = parsed.syntax_error().expect("body-local error is reported");
+        assert_eq!(err.file, "x.ts");
+        assert_eq!(err.line, 2);
+    }
+
+    // TC-185, FR-013-AC-13: a clean parse has no syntax error.
+    #[test]
+    fn syntax_error_is_none_for_a_clean_parse() {
+        #[cfg(feature = "rust")]
+        assert!(
+            parse_file(Language::Rust, "a.rs", "pub fn f() -> u32 { 1 }\n")
+                .expect("parses")
+                .syntax_error()
+                .is_none()
+        );
+        #[cfg(feature = "python")]
+        assert!(
+            parse_file(Language::Python, "a.py", "def f():\n    return 1\n")
+                .expect("parses")
+                .syntax_error()
+                .is_none()
+        );
+        #[cfg(feature = "typescript")]
+        assert!(
+            parse_file(Language::TypeScript, "a.ts", "function f() { return 1; }\n")
+                .expect("parses")
+                .syntax_error()
+                .is_none()
+        );
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-186, FR-013-AC-14: wherever `diagnostic()` is `Some`, `syntax_error()`
+    // is `Some` at the same position.
+    #[test]
+    fn diagnostic_some_implies_syntax_error_some_at_the_same_position() {
+        let sources = [
+            "pub fn broken(x: u32) -> u32 {\n    x +\n",
+            "mod m {\n    pub fn ( ) { }\n    pub fn intact() {}\n}\n",
+            "impl Foo {\n    pub fn (&self) { }\n}\n",
+            "pub enum E {\n    A = ,\n    B,\n}\n",
+        ];
+        for source in sources {
+            let parsed = parse_file(Language::Rust, "f.rs", source).expect("tree produced");
+            let diagnostic = parsed.diagnostic().expect("structural error");
+            assert_eq!(parsed.syntax_error(), Some(diagnostic), "{source}");
+        }
+    }
+
+    #[cfg(feature = "rust")]
+    // TC-187, FR-013-AC-15: a body-local error precedes a structural one in
+    // source order; `syntax_error()` names the earlier body-local position,
+    // `diagnostic()` the later structural one.
+    #[test]
+    fn syntax_error_names_the_earlier_body_local_error_before_a_structural_one() {
+        let source = "mod m {\n    pub fn a() -> u32 { 1 + }\n    pub fn ( ) { }\n}\n";
+        let parsed = parse_file(Language::Rust, "src/m.rs", source).expect("tree produced");
+        let syntax = parsed.syntax_error().expect("syntax error");
+        let structural = parsed.diagnostic().expect("structural error");
+        assert_eq!(syntax.line, 2);
+        assert_eq!(structural.line, 3);
     }
 
     /// Every node's kind and byte span, in traversal order — a determinism

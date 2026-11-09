@@ -42,7 +42,7 @@ is checkable by extracting this repository with the library it specifies.
 
 | Stakeholder Req | Trace to US/FR | Test/Validation | Coverage Status |
 |---|---|---|---|
-| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-175, TC-184..TC-187 | 🚧 Planned |
+| StR-001 Single deterministic engine | US-001, FR-001, FR-006, NFR-001, NFR-002, US-005, FR-013 | TC-001, TC-038, TC-054, TC-059, TC-135..TC-175, TC-184..TC-187 | ✅ Complete |
 | StR-002 Recovered traceability | US-002, US-003, FR-005, FR-008, NFR-004 | TC-026, TC-044, TC-066, TC-069 | ✅ Complete |
 | StR-003 Governed extractor-quality observations | US-004, FR-011, FR-012, NFR-005 | TC-108..TC-111 | ✅ Complete |
 
@@ -54,7 +54,7 @@ is checkable by extracting this repository with the library it specifies.
 | US-002 Trace requirement to code and tests | FR-005 | TC-026..TC-032 | ✅ Complete |
 | US-003 Follow call relationships | FR-004, FR-008 | TC-020..TC-025, TC-044..TC-053 | ✅ Complete |
 | US-004 Assess versioned extractor quality | FR-011, FR-012 | TC-108, TC-109, TC-120 | ✅ Complete |
-| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-175, TC-184..TC-187 | 🚧 Planned |
+| US-005 Share parse trees with an external consumer | FR-013 | TC-135..TC-175, TC-184..TC-187 | ✅ Complete |
 
 ### Functional Requirement Coverage
 
@@ -82,7 +82,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
 | FR-014 | FR-014-AC-1, FR-014-AC-2, FR-014-AC-3, FR-014-AC-4, FR-014-AC-5, FR-014-AC-6, FR-014-AC-7 | TC-177..TC-183 | ✅ |
-| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-AC-13, FR-013-AC-14, FR-013-AC-15, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175, TC-184..TC-187 | 🚧 |
+| FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-AC-13, FR-013-AC-14, FR-013-AC-15, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175, TC-184..TC-187 | ✅ |
 
 ### Measurement Plan Coverage
 
@@ -278,10 +278,10 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-173 | An enum variant tree-sitter could not resolve trips the structural check (FND-009) | Unit | P1 | FR-013-AC-3 | ✅ |
 | TC-174 | A dangling `return`, as the last statement in its suite, recovers outside the function's `body` field and reads as structural — a disclosed mechanical consequence of the body-node rule, not a body-local error (FND-015: not `return`-specific, see TC-175) | Unit | P1 | FR-013-AC-3 | ✅ |
 | TC-175 | A dangling assignment, as the last statement in its suite, recovers outside the function's `body` field the same way TC-174's `return` does, pinning suite position — not statement kind — as the real trigger (FND-015) | Unit | P1 | FR-013-AC-3 | ✅ |
-| TC-184 | `syntax_error()` is `Some` with file, line and column for a body-local error in Rust, Python and TypeScript where `diagnostic()` is `None` | Unit | P1 | FR-013-AC-13 | 🚧 |
-| TC-185 | `syntax_error()` is `None` for a clean parse | Unit | P1 | FR-013-AC-13 | 🚧 |
-| TC-186 | `diagnostic()` `Some` implies `syntax_error()` `Some` | Unit | P1 | FR-013-AC-14 | 🚧 |
-| TC-187 | A body-local error followed by a structural error: `syntax_error()` names the earlier body-local position, `diagnostic()` the later structural one | Unit | P1 | FR-013-AC-15 | 🚧 |
+| TC-184 | `syntax_error()` is `Some` with file, line and column for a body-local error in Rust, Python and TypeScript where `diagnostic()` is `None` | Unit | P1 | FR-013-AC-13 | ✅ |
+| TC-185 | `syntax_error()` is `None` for a clean parse | Unit | P1 | FR-013-AC-13 | ✅ |
+| TC-186 | `diagnostic()` `Some` implies `syntax_error()` `Some` | Unit | P1 | FR-013-AC-14 | ✅ |
+| TC-187 | A body-local error followed by a structural error: `syntax_error()` names the earlier body-local position, `diagnostic()` the later structural one | Unit | P1 | FR-013-AC-15 | ✅ |
 
 ---
 
