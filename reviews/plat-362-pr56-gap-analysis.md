@@ -36,3 +36,4 @@ Changes requested. The delivered feature meets what the quire-rs adapter needs: 
 | --- | --- | --- |
 | FND-001 | fixed | 06f7dae adds a Bash bullet to FR-013 Known limitations covering both shapes, pins each with a test (TC-191: body-local error gives diagnostic (1,1); TC-192: `fi`/`done`/`}` give neither diagnostic nor syntax_error), and corrects the is_declaration_node / executable_body_field doc comments |
 | FND-002 | fixed | 06f7dae: `make test` now runs `cargo test -p quire-code-parse --features bash`, so `make ci` (the merge gate) executes TC-189..TC-192. The CI job still runs bare cargo; that residual is tracked as SR-11087 FND-001 |
+| FND-003 | fixed | 70c39f6: TC-191's tag now reads `TC-191, FR-013-AC-3` and its spec/tests.md row binds FR-013-AC-3, matching the Python limitation tests TC-174/TC-175 |
