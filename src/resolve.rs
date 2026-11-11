@@ -213,6 +213,7 @@ pub fn imported_types(
 mod tests {
     use super::*;
     use crate::typeenv::{RawBinding, TypeSource};
+    use ix_trace_rs::trace;
 
     fn corpus_with(methods: &[(&str, &str, &str)]) -> Corpus {
         let mut corpus = Corpus::default();
@@ -253,7 +254,8 @@ mod tests {
         )
     }
 
-    // TC-044, FR-008-AC-1: a typed receiver resolves, marked receiver-typed.
+    // a typed receiver resolves, marked receiver-typed.
+    #[trace("TC-044", "FR-008-AC-1")]
     #[test]
     fn a_typed_receiver_resolves_to_its_types_method() {
         let corpus = corpus_with(&[
@@ -273,8 +275,9 @@ mod tests {
         assert_eq!(resolved.reason, Reason::ReceiverTyped);
     }
 
-    // TC-045, FR-008-AC-2, FR-008-CON-1, StR-002-VC-3: an unrecoverable receiver with several candidates
+    // an unrecoverable receiver with several candidates
     // yields nothing.
+    #[trace("TC-045", "FR-008-AC-2", "FR-008-CON-1", "StR-002-VC-3")]
     #[test]
     fn an_ambiguous_receiver_yields_no_edge() {
         let corpus = corpus_with(&[

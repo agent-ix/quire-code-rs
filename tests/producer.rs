@@ -6,6 +6,7 @@
 //! tested here rather than left to the corpus: by the time the corpus notices,
 //! the evidence has already been recorded through the changed shape.
 
+use ix_trace_rs::trace;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -52,7 +53,8 @@ fn run(args: &[&str]) -> (bool, String, String) {
     )
 }
 
-// TC-101, FR-010-AC-1: the documented invocation writes canonical records.
+// the documented invocation writes canonical records.
+#[trace("TC-101", "FR-010-AC-1")]
 #[test]
 fn the_documented_invocation_writes_records() {
     let tree = Tree::new("tc101");
@@ -79,8 +81,9 @@ fn the_documented_invocation_writes_records() {
     );
 }
 
-// TC-102, FR-010-AC-2: the order files are read in is not the order the
+// the order files are read in is not the order the
 // filesystem hands them back.
+#[trace("TC-102", "FR-010-AC-2")]
 #[test]
 fn extraction_order_does_not_depend_on_the_filesystem() {
     let tree = Tree::new("tc102");
@@ -115,8 +118,9 @@ fn extraction_order_does_not_depend_on_the_filesystem() {
     assert_eq!(files, sorted, "file records come out in path order");
 }
 
-// TC-103, FR-010-AC-3: a file in an unsupported language is skipped, silently
+// a file in an unsupported language is skipped, silently
 // and successfully — a README is not an extraction failure.
+#[trace("TC-103", "FR-010-AC-3")]
 #[test]
 fn an_unsupported_language_is_skipped_without_failing() {
     let tree = Tree::new("tc103");
@@ -142,8 +146,9 @@ fn an_unsupported_language_is_skipped_without_failing() {
     );
 }
 
-// TC-104, FR-010-AC-4: a malformed invocation fails before writing anything a
+// a malformed invocation fails before writing anything a
 // caller could mistake for records.
+#[trace("TC-104", "FR-010-AC-4")]
 #[test]
 fn a_malformed_invocation_writes_no_records() {
     for args in [
@@ -162,8 +167,9 @@ fn a_malformed_invocation_writes_no_records() {
     }
 }
 
-// TC-105, FR-010-AC-5: a symbolic link is not followed. A link to an ancestor
+// a symbolic link is not followed. A link to an ancestor
 // is the shape that makes a naive walk non-terminating.
+#[trace("TC-105", "FR-010-AC-5")]
 #[cfg(unix)]
 #[test]
 fn a_symbolic_link_is_not_followed() {

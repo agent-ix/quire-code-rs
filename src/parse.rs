@@ -1282,6 +1282,7 @@ fn simplify_bare(text: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn rust(content: &str) -> ParsedFile {
         parse_file(&SourceFile::new(
@@ -1293,7 +1294,8 @@ mod tests {
         ))
     }
 
-    // TC-078, FR-009-AC-1: Rust visibility modifiers classify three ways.
+    // Rust visibility modifiers classify three ways.
+    #[trace("TC-078", "FR-009-AC-1")]
     #[test]
     fn rust_visibility_modifiers_classify_public_crate_and_private() {
         let parsed = rust(
@@ -1320,7 +1322,8 @@ mod tests {
         );
     }
 
-    // TC-079, FR-009-AC-2: TypeScript `export` and class access modifiers.
+    // TypeScript `export` and class access modifiers.
+    #[trace("TC-079", "FR-009-AC-2")]
     #[test]
     fn typescript_export_and_access_modifiers_classify() {
         let parsed = parse_file(&SourceFile::new(
@@ -1354,7 +1357,8 @@ mod tests {
         assert_eq!(vis("#hard"), Visibility::Private);
     }
 
-    // TC-080, FR-009-AC-3: Python's underscore convention is the visibility.
+    // Python's underscore convention is the visibility.
+    #[trace("TC-080", "FR-009-AC-3")]
     #[test]
     fn python_underscore_convention_classifies_visibility() {
         let parsed = parse_file(&SourceFile::new(
@@ -1383,8 +1387,9 @@ mod tests {
         assert_eq!(vis("__init__"), Visibility::Public);
     }
 
-    // TC-081, FR-009-AC-4: trait and trait-impl items inherit the trait's
+    // trait and trait-impl items inherit the trait's
     // reach; an inherent-impl item keeps its own modifier.
+    #[trace("TC-081", "FR-009-AC-4")]
     #[test]
     fn rust_trait_items_are_public_and_inherent_impl_items_are_not() {
         let parsed = rust(
@@ -1418,7 +1423,8 @@ mod tests {
         assert_eq!(helper.visibility, Visibility::Private);
     }
 
-    // TC-082, FR-009-AC-5: parameter types and return type, receiver as self.
+    // parameter types and return type, receiver as self.
+    #[trace("TC-082", "FR-009-AC-5")]
     #[test]
     fn signature_renders_parameter_types_and_return_type() {
         let parsed = rust(
@@ -1454,7 +1460,8 @@ mod tests {
         );
     }
 
-    // TC-083, FR-009-AC-6: reformatting and in-list comments change nothing.
+    // reformatting and in-list comments change nothing.
+    #[trace("TC-083", "FR-009-AC-6")]
     #[test]
     fn signature_is_stable_across_reformatting_and_comments() {
         let compact = rust("pub fn parse(input: &str, limit: u32) -> Doc {}\n");
@@ -1480,8 +1487,9 @@ mod tests {
         assert_eq!(signature(&compact).as_deref(), Some("(&str, u32) -> Doc"));
     }
 
-    // TC-084, FR-009-AC-7: unannotated params fall back to names; a
+    // unannotated params fall back to names; a
     // declaration with no parameter list carries no signature.
+    #[trace("TC-084", "FR-009-AC-7")]
     #[test]
     fn unannotated_parameters_render_names_and_non_callables_have_no_signature() {
         let parsed = parse_file(&SourceFile::new(
@@ -1513,9 +1521,10 @@ mod tests {
         assert_eq!(file.visibility, Visibility::Public);
     }
 
-    // TC-085, FR-009-AC-8: a parameter-type change is visible in the
+    // a parameter-type change is visible in the
     // signature and invisible to identity; a new private helper disturbs no
     // existing record.
+    #[trace("TC-085", "FR-009-AC-8")]
     #[test]
     fn parameter_type_change_moves_the_signature_not_the_identity() {
         let before = rust("pub fn parse(input: &str) -> Doc {}\n");
@@ -1552,7 +1561,8 @@ mod tests {
         );
     }
 
-    // TC-001, FR-001-AC-1: a Rust fixture yields all four fact types.
+    // a Rust fixture yields all four fact types.
+    #[trace("TC-001", "FR-001-AC-1")]
     #[test]
     fn rust_fixture_yields_every_fact_type() {
         let parsed = rust(
@@ -1586,7 +1596,8 @@ mod store {
         );
     }
 
-    // TC-009, FR-002-AC-2: a method is named with its implementing type.
+    // a method is named with its implementing type.
+    #[trace("TC-009", "FR-002-AC-2")]
     #[test]
     fn methods_are_named_by_their_implementing_type() {
         let parsed = rust(
@@ -1618,7 +1629,8 @@ impl Persist for Store {
         );
     }
 
-    // TC-004, FR-001-AC-4: an empty file still yields one code_file fact.
+    // an empty file still yields one code_file fact.
+    #[trace("TC-004", "FR-001-AC-4")]
     #[test]
     fn an_empty_file_still_yields_its_file_fact() {
         let parsed = rust("");
@@ -1626,7 +1638,8 @@ impl Persist for Store {
         assert_eq!(parsed.facts[0].object_type, ObjectType::CodeFile);
     }
 
-    // TC-005, FR-001-AC-5: facts carry a kind and one-based inclusive spans.
+    // facts carry a kind and one-based inclusive spans.
+    #[trace("TC-005", "FR-001-AC-5")]
     #[test]
     fn facts_carry_kind_and_one_based_spans() {
         let parsed = rust("pub fn first() {}\n");
@@ -1640,7 +1653,8 @@ impl Persist for Store {
         assert!(func.span.end >= func.span.start);
     }
 
-    // TC-006, FR-001-AC-6: facts are ordered by declaration start position.
+    // facts are ordered by declaration start position.
+    #[trace("TC-006", "FR-001-AC-6")]
     #[test]
     fn facts_are_ordered_by_start_position() {
         let parsed = rust("fn a() {}\nfn b() {}\nfn c() {}\n");
@@ -1655,7 +1669,8 @@ impl Persist for Store {
         assert_eq!(lines, sorted);
     }
 
-    // TC-041, FR-007-AC-3: intact declarations survive a malformed sibling.
+    // intact declarations survive a malformed sibling.
+    #[trace("TC-041", "FR-007-AC-3")]
     #[test]
     fn a_malformed_declaration_does_not_sink_its_siblings() {
         let parsed = rust("fn good() {}\nfn broken( {\nfn also_good() {}\n");
@@ -1671,8 +1686,9 @@ impl Persist for Store {
         assert!(names.contains(&"good"), "got {names:?}");
     }
 
-    // TC-041, FR-007-AC-3: the unparseable declaration contributes nothing,
+    // the unparseable declaration contributes nothing,
     // while its intact siblings survive.
+    #[trace("TC-041", "FR-007-AC-3")]
     #[test]
     fn an_unparseable_declaration_contributes_no_fact() {
         let parsed = rust("fn good() {}\nfn broken( {\nfn also_good() {}\n");
@@ -1688,8 +1704,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-075, FR-007-AC-7: an error inside a body does not cost the
+    // an error inside a body does not cost the
     // declaration its fact. Its signature is readable, so its identity is too.
+    #[trace("TC-075", "FR-007-AC-7")]
     #[test]
     fn a_body_error_does_not_suppress_the_declaration() {
         let parsed = rust("fn outer() {\n    let x = ;\n}\nfn after() {}\n");
@@ -1709,8 +1726,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-071, FR-007-AC-6: a file the grammar cannot resolve contributes its
+    // a file the grammar cannot resolve contributes its
     // `code_file` fact and nothing else.
+    #[trace("TC-071", "FR-007-AC-6")]
     #[test]
     fn an_error_root_yields_the_file_fact_alone() {
         // A lifetime token where an item must begin defeats the grammar's
@@ -1736,8 +1754,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-090, FR-001-AC-9: a TypeScript interface member is the same
+    // a TypeScript interface member is the same
     // declaration as a trait method, and is a fact for the same reason.
+    #[trace("TC-090", "FR-001-AC-9")]
     #[test]
     fn an_interface_member_is_a_declaration_of_its_interface() {
         let parsed = parse_file(&SourceFile::new(
@@ -1759,9 +1778,10 @@ impl Persist for Store {
         );
     }
 
-    // TC-100, FR-001-AC-9: an abstract method is a declaration too. Its own
+    // an abstract method is a declaration too. Its own
     // grammar node, and the half of an abstract class's surface that has no
     // body — the part a subclass is obliged to provide.
+    #[trace("TC-100", "FR-001-AC-9")]
     #[test]
     fn an_abstract_method_is_a_declaration_of_its_class() {
         let parsed = parse_file(&SourceFile::new(
@@ -1783,8 +1803,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-091, FR-001-AC-10: a const initialized with a function is a callable
+    // a const initialized with a function is a callable
     // declaration; a const initialized with anything else is not.
+    #[trace("TC-091", "FR-001-AC-10")]
     #[test]
     fn only_a_const_holding_a_function_is_a_declaration() {
         let parsed = parse_file(&SourceFile::new(
@@ -1808,9 +1829,10 @@ impl Persist for Store {
         );
     }
 
-    // TC-099, FR-005-AC-9: an annotation run does not escape the block that
+    // an annotation run does not escape the block that
     // opened it. A comment trailing inside one declaration introduced nothing,
     // and must not become a claim about the next one.
+    #[trace("TC-099", "FR-005-AC-9")]
     #[test]
     fn a_trailing_comment_does_not_attach_to_the_next_declaration() {
         let parsed = rust(
@@ -1829,9 +1851,10 @@ impl Persist for Store {
         );
     }
 
-    // TC-098, FR-005-AC-9: an `export` wrapper is transparent to the comment
+    // an `export` wrapper is transparent to the comment
     // above it. The keyword is a node too, and treating it as the end of the
     // annotation run gave the comment back to the file.
+    #[trace("TC-098", "FR-005-AC-9")]
     #[test]
     fn an_export_wrapper_does_not_break_leading_attribution() {
         let parsed = parse_file(&SourceFile::new(
@@ -1849,8 +1872,9 @@ impl Persist for Store {
         assert_eq!(comment.owner, "agent-ix/demo/src/index.ts::StoreView");
     }
 
-    // TC-089, FR-001-AC-9: a Rust trait method is a declaration, parented by
+    // a Rust trait method is a declaration, parented by
     // its trait.
+    #[trace("TC-089", "FR-001-AC-9")]
     #[test]
     fn a_trait_method_is_a_declaration_of_its_trait() {
         let parsed = rust("pub trait Persist {\n    fn save(&self);\n}\n");
@@ -1871,8 +1895,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-092, FR-003-AC-6: a method's containment parent is the declaration its
+    // a method's containment parent is the declaration its
     // qualified name names, whichever language declared it.
+    #[trace("TC-092", "FR-003-AC-6")]
     #[test]
     fn containment_parent_is_the_declaring_type_in_every_language() {
         let cases = [
@@ -1911,8 +1936,9 @@ impl Persist for Store {
         }
     }
 
-    // TC-093, FR-005-AC-9: a comment above a declaration's attributes belongs to
+    // a comment above a declaration's attributes belongs to
     // that declaration, not to the scope the attributes sit in.
+    #[trace("TC-093", "FR-005-AC-9")]
     #[test]
     fn a_leading_comment_belongs_to_the_declaration_it_introduces() {
         let parsed = rust("// TC-001 covers this.\n#[test]\nfn a_test() {}\n");
@@ -1928,8 +1954,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-094, FR-005-AC-9: an inner doc comment describes what it is written
+    // an inner doc comment describes what it is written
     // inside, even when a declaration follows it.
+    #[trace("TC-094", "FR-005-AC-9")]
     #[test]
     fn an_inner_doc_comment_stays_with_its_enclosing_scope() {
         let parsed = rust("//! Storage. Implements FR-002.\n\npub struct Store;\n");
@@ -1944,7 +1971,8 @@ impl Persist for Store {
         );
     }
 
-    // TC-040, FR-007-AC-2: the diagnostic carries path and first error position.
+    // the diagnostic carries path and first error position.
+    #[trace("TC-040", "FR-007-AC-2")]
     #[test]
     fn parse_diagnostics_carry_a_position() {
         let parsed = rust("fn good() {}\nfn broken( {\n");
@@ -1957,7 +1985,8 @@ impl Persist for Store {
         assert!(diag.line.is_some());
     }
 
-    // TC-043, FR-007-AC-5, FR-007-CON-1: arbitrary input yields a diagnostic, never a panic.
+    // arbitrary input yields a diagnostic, never a panic.
+    #[trace("TC-043", "FR-007-AC-5", "FR-007-CON-1")]
     #[test]
     fn arbitrary_input_never_panics() {
         for content in ["", "\0\0\0", "((((((", "🙂🙂🙂", "fn"] {
@@ -1966,7 +1995,8 @@ impl Persist for Store {
         }
     }
 
-    // TC-003, FR-001-AC-3: Python yields class, method and function facts.
+    // Python yields class, method and function facts.
+    #[trace("TC-003", "FR-001-AC-3")]
     #[test]
     fn python_fixture_yields_classes_and_functions() {
         let parsed = parse_file(&SourceFile::new(
@@ -1995,8 +2025,9 @@ impl Persist for Store {
         );
     }
 
-    // TC-076, FR-001-AC-8: `code_module` denotes a namespace declared *within*
+    // `code_module` denotes a namespace declared *within*
     // a file, never a file that merely happens to be importable.
+    #[trace("TC-076", "FR-001-AC-8")]
     #[test]
     fn only_in_file_namespaces_yield_module_facts() {
         let python = parse_file(&SourceFile::new(
@@ -2041,7 +2072,8 @@ impl Persist for Store {
         );
     }
 
-    // TC-002, FR-001-AC-2: TypeScript and TSX yield their declaration forms.
+    // TypeScript and TSX yield their declaration forms.
+    #[trace("TC-002", "FR-001-AC-2")]
     #[test]
     fn typescript_fixture_yields_classes_interfaces_and_aliases() {
         let parsed = parse_file(&SourceFile::new(

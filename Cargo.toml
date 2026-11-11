@@ -91,6 +91,7 @@ quire-code-parse = { path = "crates/quire-code-parse" }
 measurement = ["dep:jsonschema"]
 
 [dev-dependencies]
+ix-trace-rs = { version = "=0.1.0", git = "https://github.com/agent-ix/ix-trace-rs", tag = "v0.1.1" }
 serde_json = "^1"
 
 [profile.release]

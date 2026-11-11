@@ -168,12 +168,14 @@ fn python_module_path(specifier: &str, importer_path: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn paths(entries: &[&str]) -> BTreeSet<String> {
         entries.iter().map(|s| s.to_string()).collect()
     }
 
-    // TC-016, FR-003-AC-2: a relative import naming a batch file resolves.
+    // a relative import naming a batch file resolves.
+    #[trace("TC-016", "FR-003-AC-2")]
     #[test]
     fn relative_typescript_import_resolves_to_a_batch_path() {
         let batch = paths(&["src/store.ts", "src/app.ts"]);
@@ -183,8 +185,9 @@ mod tests {
         );
     }
 
-    // TC-018, FR-003-AC-4: extensionless specifiers use the language's
+    // extensionless specifiers use the language's
     // extension and index conventions.
+    #[trace("TC-018", "FR-003-AC-4")]
     #[test]
     fn extensionless_specifiers_try_extensions_then_index_stems() {
         let batch = paths(&["src/widgets/index.ts", "src/app.ts"]);
@@ -241,8 +244,9 @@ mod tests {
         );
     }
 
-    // TC-017, FR-003-AC-3: bare specifiers are not relative, so they resolve
+    // bare specifiers are not relative, so they resolve
     // to nothing and (in the caller) produce no diagnostic.
+    #[trace("TC-017", "FR-003-AC-3")]
     #[test]
     fn bare_specifiers_are_not_relative() {
         assert!(!is_relative("react", Language::TypeScript));

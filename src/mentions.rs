@@ -164,6 +164,7 @@ pub fn harvest(comments: &[CommentText], file_path: &str) -> Vec<Mention> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn comment(text: &str, owner_is_test: bool) -> CommentText {
         CommentText {
@@ -174,7 +175,8 @@ mod tests {
         }
     }
 
-    // TC-026, FR-005-AC-1, StR-002-VC-1: a tag in a test declaration is a tracking tag.
+    // a tag in a test declaration is a tracking tag.
+    #[trace("TC-026", "FR-005-AC-1", "StR-002-VC-1")]
     #[test]
     fn a_tag_inside_a_test_is_a_tracking_tag() {
         let found = harvest(
@@ -188,7 +190,8 @@ mod tests {
         assert_eq!(found[0].file, "src/lib.rs");
     }
 
-    // TC-072, FR-005-AC-8: the same tag outside a test is a citation.
+    // the same tag outside a test is a citation.
+    #[trace("TC-072", "FR-005-AC-8")]
     #[test]
     fn a_tag_outside_a_test_is_only_a_citation() {
         let found = harvest(
@@ -198,7 +201,8 @@ mod tests {
         assert_eq!(found[0].kind, MentionKind::RequirementCitation);
     }
 
-    // TC-027, FR-005-AC-2: requirement citations are harvested.
+    // requirement citations are harvested.
+    #[trace("TC-027", "FR-005-AC-2")]
     #[test]
     fn requirement_citations_are_harvested() {
         let found = harvest(
@@ -214,7 +218,8 @@ mod tests {
         assert!(ids.contains(&"Task-150"), "got {ids:?}");
     }
 
-    // TC-028, FR-005-AC-3, StR-002-VC-2: ix:// references are harvested.
+    // ix:// references are harvested.
+    #[trace("TC-028", "FR-005-AC-3", "StR-002-VC-2")]
     #[test]
     fn ix_references_are_harvested() {
         let found = harvest(
@@ -259,8 +264,9 @@ mod tests {
         assert_eq!(ids, vec!["FR-004", "ix://agent-ix/demo/FR-003"]);
     }
 
-    // TC-095, FR-005-AC-10: a criterion-level identifier is one mention,
+    // a criterion-level identifier is one mention,
     // addressed as written — not its bare requirement prefix, and not both.
+    #[trace("TC-095", "FR-005-AC-10")]
     #[test]
     fn criterion_level_identifiers_are_harvested_whole() {
         for (text, expected) in [
@@ -276,8 +282,9 @@ mod tests {
         }
     }
 
-    // TC-096, FR-005-AC-5: the whole-token rule still holds over the longer
+    // the whole-token rule still holds over the longer
     // form, so a criterion id with a suffix is not a mention of its prefix.
+    #[trace("TC-096", "FR-005-AC-5")]
     #[test]
     fn a_suffixed_criterion_identifier_is_not_a_mention() {
         for text in [
@@ -290,7 +297,8 @@ mod tests {
         }
     }
 
-    // TC-030, FR-005-AC-5: an identifier inside a longer token is not a match.
+    // an identifier inside a longer token is not a match.
+    #[trace("TC-030", "FR-005-AC-5")]
     #[test]
     fn embedded_identifiers_are_not_mentions() {
         for text in [
@@ -312,8 +320,9 @@ mod tests {
         }
     }
 
-    // TC-031, FR-005-AC-6: a mention of something absent is still reported,
+    // a mention of something absent is still reported,
     // addressed by the identifier exactly as written.
+    #[trace("TC-031", "FR-005-AC-6")]
     #[test]
     fn unresolvable_mentions_are_still_reported_as_written() {
         let found = harvest(

@@ -39,6 +39,7 @@ tree-sitter-bash = { workspace = true, optional = true }
 thiserror = "^2"
 
 [dev-dependencies]
+ix-trace-rs = { version = "=0.1.0", git = "https://github.com/agent-ix/ix-trace-rs", tag = "v0.1.1" }
 # Dev-only: proves the Send/Sync claim in the crate docs by compiling a
 # static assertion instead of asserting it in prose (PLAT-841). Never reaches
 # a consumer's dependency graph.

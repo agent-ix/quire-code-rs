@@ -118,9 +118,11 @@ impl<'src> Diagnostic<'src> {
 mod tests {
     use super::*;
     use crate::{parse_file, Language};
+    use ix_trace_rs::trace;
 
-    // TC-139, FR-013-AC-11: `ParseError`'s accessors return the file and a
+    // `ParseError`'s accessors return the file and a
     // one-based line, never an absent value.
+    #[trace("TC-139", "FR-013-AC-11")]
     #[test]
     fn every_variant_carries_file_and_line() {
         let no_tree = ParseError::NoTree {
@@ -131,8 +133,9 @@ mod tests {
         assert_eq!(no_tree.line(), 1);
     }
 
-    // TC-140, FR-013-AC-11: the diagnostic renders the file and line in its
+    // the diagnostic renders the file and line in its
     // message, so it is legible without calling the accessors.
+    #[trace("TC-140", "FR-013-AC-11")]
     #[test]
     fn no_tree_error_message_names_file_and_line() {
         let err = ParseError::NoTree {
@@ -145,13 +148,14 @@ mod tests {
         );
     }
 
-    // TC-170, FR-013-AC-11: a `ParseError` boxes as a trait object with no
+    // a `ParseError` boxes as a trait object with no
     // lifetime tied to any source it might have been produced alongside —
     // this compiles only because `ParseError` owns its `file` and is
     // `'static` (PLAT-841 PR #22 review finding FND-005). Constructed
     // directly here (allowed only inside this crate, since the variant is
     // `#[non_exhaustive]`) rather than produced through `parse_file`, since
     // `NoTree` is a defensive case this crate's own inputs do not reach.
+    #[trace("TC-170", "FR-013-AC-11")]
     #[test]
     fn parse_error_boxes_as_a_static_trait_object() {
         let err = ParseError::NoTree {
@@ -162,12 +166,13 @@ mod tests {
         assert!(boxed.to_string().contains("src/lib.rs"));
     }
 
-    // TC-161, FR-013-AC-9, FR-013-AC-12 (FND-013): a declaration-structure
+    // a declaration-structure
     // error attaches a `Diagnostic` to `Ok(ParsedFile)`, carrying the file
     // identifier alongside the line — the tree and the diagnostic are never
     // in tension, since neither costs the caller the other, and the
     // diagnostic never costs the caller having to re-pair it with the file
     // by hand either.
+    #[trace("TC-161", "FR-013-AC-9", "FR-013-AC-12")]
     #[cfg(feature = "rust")]
     #[test]
     fn syntax_error_file_returns_ok_with_a_diagnostic_naming_the_line() {

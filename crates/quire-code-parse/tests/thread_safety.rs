@@ -19,20 +19,23 @@
 //! can bind a `TC-NNN` id to (FR-005) — a bare macro invocation with no
 //! enclosing declaration mints nothing for it to attribute the comment to.
 
+use ix_trace_rs::trace;
 use quire_code_parse::ParsedFile;
 
-// TC-144, FR-013-AC-7: `ParsedFile` may be sent to another thread — a worker
+// `ParsedFile` may be sent to another thread — a worker
 // thread may parse and send its `ParsedFile` back to a collecting thread.
+#[trace("TC-144", "FR-013-AC-7")]
 #[test]
 fn parsed_file_is_send() {
     static_assertions::assert_impl_all!(ParsedFile<'static>: Send);
 }
 
-// TC-145, FR-013-AC-7: `ParsedFile` may also be shared behind `&ParsedFile`
+// `ParsedFile` may also be shared behind `&ParsedFile`
 // reached from two threads at once — concurrent read-only traversal of one
 // already-parsed tree from a pool of reader threads is sound, because this
 // crate exposes no `&mut` method on `ParsedFile` and tree-sitter's own `Tree`
 // is `Sync` at the version in use.
+#[trace("TC-145", "FR-013-AC-7")]
 #[test]
 fn parsed_file_is_sync() {
     static_assertions::assert_impl_all!(ParsedFile<'static>: Sync);
@@ -40,7 +43,7 @@ fn parsed_file_is_sync() {
 
 fn assert_static<T: 'static>() {}
 
-// TC-169, FR-013-AC-11: `ParseError` is `'static` — compiled, not asserted in
+// `ParseError` is `'static` — compiled, not asserted in
 // prose. An earlier shape of this crate carried a borrowed `ParsedFile<'src>`
 // inside `ParseError::Syntax`, which could never satisfy this bound (`E0597`
 // on any attempt); `ParseError` no longer carries the tree at all (PLAT-841
@@ -52,6 +55,7 @@ fn assert_static<T: 'static>() {}
 // tag here originally sat above the helper, catching exactly that trap
 // (PLAT-841 PR #22 review finding FND-014; see `spec/tests.md`'s Coverage
 // Notes for the record).
+#[trace("TC-169", "FR-013-AC-11")]
 #[test]
 fn parse_error_is_static() {
     assert_static::<quire_code_parse::ParseError>();

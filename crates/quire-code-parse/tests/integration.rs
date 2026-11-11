@@ -13,11 +13,13 @@
 //! than the crate's production-code denial being relaxed.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use ix_trace_rs::trace;
 use quire_code_parse::{parse_file, Language};
 
 #[cfg(feature = "rust")]
-// TC-135, FR-013-AC-1: a consumer parses Rust source and walks the tree with
+// a consumer parses Rust source and walks the tree with
 // tree-sitter's own Node/TreeCursor API.
+#[trace("TC-135", "FR-013-AC-1")]
 #[test]
 fn consumer_parses_rust_and_walks_the_tree() {
     let source = "pub struct Store {\n    pub n: u32,\n}\n\nimpl Store {\n    pub fn n(&self) -> u32 { self.n }\n}\n";
@@ -33,7 +35,8 @@ fn consumer_parses_rust_and_walks_the_tree() {
 }
 
 #[cfg(feature = "python")]
-// TC-146: the Python grammar parses and walks the same way.
+// the Python grammar parses and walks the same way.
+#[trace("TC-146")]
 #[test]
 fn consumer_parses_python_and_walks_the_tree() {
     let source = "def helper(x):\n    return x + 1\n";
@@ -47,7 +50,8 @@ fn consumer_parses_python_and_walks_the_tree() {
 }
 
 #[cfg(feature = "typescript")]
-// TC-147: the TypeScript and TSX grammars both parse and walk.
+// the TypeScript and TSX grammars both parse and walk.
+#[trace("TC-147")]
 #[test]
 fn consumer_parses_typescript_and_tsx_and_walks_the_tree() {
     let ts_source = "export function render(node: string): string { return node; }\n";
@@ -60,9 +64,10 @@ fn consumer_parses_typescript_and_tsx_and_walks_the_tree() {
 }
 
 #[cfg(feature = "rust")]
-// TC-136, FR-013-AC-3: a declaration-structure error returns `Ok` with a
+// a declaration-structure error returns `Ok` with a
 // diagnostic naming the one-based line, never an empty or default result with
 // no way to tell it apart from a clean parse.
+#[trace("TC-136", "FR-013-AC-3")]
 #[test]
 fn syntax_error_file_returns_ok_with_a_named_diagnostic() {
     let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
@@ -77,12 +82,13 @@ fn syntax_error_file_returns_ok_with_a_named_diagnostic() {
 }
 
 #[cfg(feature = "rust")]
-// TC-151, FR-013-AC-10: a body-local syntax error — inside one declaration's
+// a body-local syntax error — inside one declaration's
 // own expression, a sibling declaration intact — returns `Ok`, not `Err`.
 // This is the case `filament-ide-rs` needs: a file mid-edit almost always
 // carries exactly this shape of error, and the API must still hand back a
 // walkable tree, not a hard failure, or live editing gets `Err` on every
 // keystroke.
+#[trace("TC-151", "FR-013-AC-10")]
 #[test]
 fn body_local_syntax_error_still_returns_ok_with_a_walkable_tree() {
     let source = "pub fn broken() -> u32 { 1 + }\npub fn intact() -> u32 { 2 }\n";
@@ -106,10 +112,11 @@ fn body_local_syntax_error_still_returns_ok_with_a_walkable_tree() {
 }
 
 #[cfg(feature = "rust")]
-// TC-154, FR-013-AC-9: the tree tree-sitter produced is reachable through
+// the tree tree-sitter produced is reachable through
 // `Ok(ParsedFile)` even when `diagnostic()` is `Some` — a hard diagnostic is
 // never the price of losing the tree, and it is never gated behind `Err`
 // either (PLAT-841 PR #22 review finding FND-005).
+#[trace("TC-154", "FR-013-AC-9")]
 #[test]
 fn syntax_error_still_carries_the_tree_it_names_a_diagnostic_against() {
     let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
@@ -120,7 +127,8 @@ fn syntax_error_still_carries_the_tree_it_names_a_diagnostic_against() {
 }
 
 #[cfg(feature = "python")]
-// TC-148: the same hard-diagnostic rule holds for Python, not just Rust.
+// the same hard-diagnostic rule holds for Python, not just Rust.
+#[trace("TC-148")]
 #[test]
 fn syntax_error_file_returns_diagnostic_for_python_too() {
     let source = "def broken(\n    pass\n";
@@ -133,8 +141,9 @@ fn syntax_error_file_returns_diagnostic_for_python_too() {
 }
 
 #[cfg(feature = "rust")]
-// TC-149, FR-013-AC-5: parsing the same bytes twice, independently, yields
+// parsing the same bytes twice, independently, yields
 // the same tree structure both times.
+#[trace("TC-149", "FR-013-AC-5")]
 #[test]
 fn identical_input_yields_identical_tree_structure_across_independent_parses() {
     let source = "pub struct Store { pub n: u32 }\n\
@@ -149,9 +158,10 @@ fn identical_input_yields_identical_tree_structure_across_independent_parses() {
 }
 
 #[cfg(feature = "rust")]
-// TC-150, FR-013-AC-2: the returned value's source outlives the call and
+// the returned value's source outlives the call and
 // slices from it stay valid — proven by returning a slice from a helper and
 // reading it after the helper's own locals are gone.
+#[trace("TC-150", "FR-013-AC-2")]
 #[test]
 fn parsed_file_source_outlives_the_call_that_produced_it() {
     fn parse_and_return<'src>(source: &'src str) -> quire_code_parse::ParsedFile<'src> {
@@ -164,12 +174,13 @@ fn parsed_file_source_outlives_the_call_that_produced_it() {
 }
 
 #[cfg(feature = "rust")]
-// TC-155, FR-013-AC-5: the tree's rendered structure matches a golden
+// the tree's rendered structure matches a golden
 // s-expression committed to the repo, not just another tree produced by the
 // same process in the same test run. TC-142/TC-149 only prove determinism
 // within one process; a golden file is what would catch drift across a
 // tree-sitter version bump or a different machine, since the committed
 // fixture is graded against, not regenerated by, the test that reads it.
+#[trace("TC-155", "FR-013-AC-5")]
 #[test]
 fn tree_structure_matches_a_golden_fixture_committed_across_process_boundaries() {
     let source = include_str!("fixtures/determinism.rs.txt");
@@ -180,11 +191,12 @@ fn tree_structure_matches_a_golden_fixture_committed_across_process_boundaries()
 }
 
 #[cfg(feature = "typescript")]
-// TC-168, FR-013-AC-3 (FND-001): a class method tree-sitter could not
+// a class method tree-sitter could not
 // resolve at all, nested inside a `namespace` two levels deep from root
 // (`namespace` > `class` > method), trips the structural check the same way
 // a top-level item would — exercising `class_body`'s own unconditional
 // container status from inside a `namespace`, not only at the top level.
+#[trace("TC-168", "FR-013-AC-3")]
 #[test]
 fn unresolvable_class_method_in_a_namespace_counts_as_a_declaration_structure_error() {
     let source = "namespace NS {\n    class C {\n        m(: void { }\n    }\n}\n";
@@ -200,8 +212,9 @@ fn unresolvable_class_method_in_a_namespace_counts_as_a_declaration_structure_er
 const SHELL_SOURCE: &str = "#!/usr/bin/env bash\n# Deploys the thing.\n\ndeploy() {\n  local out\n  out=$(git rev-parse HEAD)\n  cat <<EOF\nrev $out\nEOF\n}\n";
 
 #[cfg(feature = "bash")]
-// TC-189: the Bash grammar parses a script with a comment header, a function,
+// the Bash grammar parses a script with a comment header, a function,
 // a heredoc and a `$( )` substitution, and the tree walks.
+#[trace("TC-189")]
 #[test]
 fn consumer_parses_shell_and_walks_the_tree() {
     let parsed =
@@ -219,9 +232,10 @@ fn consumer_parses_shell_and_walks_the_tree() {
 }
 
 #[cfg(feature = "bash")]
-// TC-190, FR-013-AC-5, FR-013-AC-3: identical shell input yields a
+// identical shell input yields a
 // byte-identical tree, and an unclosed function body surfaces as a
 // diagnostic at a reported line rather than silence.
+#[trace("TC-190", "FR-013-AC-5", "FR-013-AC-3")]
 #[test]
 fn shell_parse_is_deterministic_and_unclosed_function_is_diagnosed() {
     let first = parse_file(Language::Bash, "a.sh", SHELL_SOURCE).expect("parses");
@@ -236,10 +250,11 @@ fn shell_parse_is_deterministic_and_unclosed_function_is_diagnosed() {
 }
 
 #[cfg(feature = "bash")]
-// TC-191, FR-013-AC-3: Bash departs from the body-local rule. An error inside
+// Bash departs from the body-local rule. An error inside
 // a function body collapses the whole function into a top-level ERROR, so
 // `diagnostic()` is `Some` where Rust, Python and TypeScript return `None`.
 // Pinned so a grammar update that changes it is noticed.
+#[trace("TC-191", "FR-013-AC-3")]
 #[test]
 fn shell_body_local_error_reads_as_structural() {
     let parsed =
@@ -250,9 +265,10 @@ fn shell_body_local_error_reads_as_structural() {
 }
 
 #[cfg(feature = "bash")]
-// TC-192, FR-013-AC-3: a stray closing keyword parses as an ordinary command
+// a stray closing keyword parses as an ordinary command
 // word, so neither `diagnostic()` nor `syntax_error()` reports it. Pinned as
 // a disclosed limitation.
+#[trace("TC-192", "FR-013-AC-3")]
 #[test]
 fn shell_stray_closing_keyword_is_accepted_silently() {
     for source in ["fi\n", "done\n", "}\n"] {

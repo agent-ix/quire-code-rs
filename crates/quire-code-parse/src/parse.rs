@@ -477,6 +477,7 @@ fn column_number(column: usize) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     // FR-013-AC-1 and FR-013-AC-3 are covered end to end, as an external
     // consumer would exercise them, by `tests/integration.rs` (TC-135,
@@ -487,8 +488,9 @@ mod tests {
     // determinism.
 
     #[cfg(feature = "rust")]
-    // TC-141, FR-013-AC-2: the returned value borrows the source for the
+    // the returned value borrows the source for the
     // caller's own lifetime, and its slices are readable after the call.
+    #[trace("TC-141", "FR-013-AC-2")]
     #[test]
     fn parsed_file_borrows_source_for_the_callers_lifetime() {
         let source = String::from("pub fn kept() {}\n");
@@ -501,8 +503,9 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-142, FR-013-AC-5 / determinism: identical input yields a
+    // identical input yields a
     // byte-identical tree on every call, within this process.
+    #[trace("TC-142", "FR-013-AC-5")]
     #[test]
     fn identical_input_yields_byte_identical_tree() {
         let source =
@@ -517,8 +520,9 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-143: never panics on adversarial byte content that is still valid
+    // never panics on adversarial byte content that is still valid
     // UTF-8 — empty input, and input that is only punctuation.
+    #[trace("TC-143")]
     #[test]
     fn never_panics_on_edge_case_input() {
         for source in ["", "}}}}", "\u{0}\u{0}\u{0}", "// just a comment\n"] {
@@ -530,11 +534,12 @@ mod tests {
     proptest::proptest! {
         #![proptest_config(proptest::prelude::ProptestConfig::with_cases(256))]
 
-        // TC-156, FR-013-AC-6: no `&str` a caller can construct causes a
+        // no `&str` a caller can construct causes a
         // panic, checked over generated Unicode input (not only the four
         // fixed cases TC-143 hand-picks) — the smoke test can miss a
         // grammar-specific panic path that a wider search would find
         // (PLAT-841 PR #22 review finding 8).
+        #[trace("TC-156", "FR-013-AC-6")]
         #[test]
         fn never_panics_on_arbitrary_str_input(source in ".*") {
             let _ = parse_file(Language::Rust, "src/fuzz.rs", &source);
@@ -542,9 +547,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-152, FR-013-AC-10: a body-local error — the declaration's own kind,
+    // a body-local error — the declaration's own kind,
     // name and signature are still readable — does not trip
     // `first_declaration_structure_error`, even though `has_error()` is true.
+    #[trace("TC-152", "FR-013-AC-10")]
     #[test]
     fn body_local_error_does_not_count_as_a_declaration_structure_error() {
         let source = "pub fn broken() -> u32 { 1 + }\npub fn intact() -> u32 { 2 }\n";
@@ -569,9 +575,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-153, FR-013-AC-3: an item tree-sitter could not resolve as a
+    // an item tree-sitter could not resolve as a
     // declaration at all (truncated mid-declaration, nothing after it to
     // resync against) trips the structural check.
+    #[trace("TC-153", "FR-013-AC-3")]
     #[test]
     fn unresolvable_top_level_item_counts_as_a_declaration_structure_error() {
         let source = "pub fn broken(x: u32) -> u32 {\n    x +\n";
@@ -588,10 +595,11 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-157, FR-013-AC-3, FR-013-AC-10 (FND-001): a declaration nested one
+    // a declaration nested one
     // level inside a `mod` that tree-sitter cannot resolve at all (missing
     // its own name) trips the structural check, exactly as an equivalent
     // top-level item would — the check is not a depth-1 rule.
+    #[trace("TC-157", "FR-013-AC-3", "FR-013-AC-10")]
     #[test]
     fn unresolvable_item_nested_in_a_mod_counts_as_a_declaration_structure_error() {
         let source = "mod m {\n    pub fn ( ) { }\n    pub fn intact() {}\n}\n";
@@ -604,9 +612,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-158, FR-013-AC-10 (FND-001): a body-local error nested inside a
+    // a body-local error nested inside a
     // `mod`'s declaration stays `Ok` with no diagnostic — depth alone does
     // not trip the check, only an unresolvable declaration does.
+    #[trace("TC-158", "FR-013-AC-10")]
     #[test]
     fn body_local_error_nested_in_a_mod_stays_ok_with_no_diagnostic() {
         let source =
@@ -620,10 +629,11 @@ mod tests {
     }
 
     #[cfg(feature = "python")]
-    // TC-159, FR-013-AC-3, FR-013-AC-10 (FND-001): a Python method tree-sitter
+    // a Python method tree-sitter
     // could not resolve at all (missing its own name) trips the structural
     // check, even though every Python method sits one level inside
     // `class_definition` — the exact shape PLAT-14 named.
+    #[trace("TC-159", "FR-013-AC-3", "FR-013-AC-10")]
     #[test]
     fn unresolvable_method_in_a_class_counts_as_a_declaration_structure_error() {
         let source =
@@ -636,7 +646,7 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-162, FR-013-AC-3 (FND-001, FND-007): a struct field tree-sitter
+    // a struct field tree-sitter
     // could not resolve — a name given but no type — trips the structural
     // check; a struct has no separate executable body to distinguish its
     // signature from, so a field is exactly as structural as a top-level
@@ -645,6 +655,7 @@ mod tests {
     // claims; the original fixture (bare `!!!` garbage) landed as a direct
     // `ERROR` child regardless of which check ran, so it never actually
     // exercised the field-declaration case the row describes.
+    #[trace("TC-162", "FR-013-AC-3")]
     #[test]
     fn unresolvable_struct_field_counts_as_a_declaration_structure_error() {
         let source = "mod m {\n    struct S {\n        a: ,\n    }\n}\n";
@@ -657,9 +668,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-165, FR-013-AC-3 (FND-001): a broken `impl` method (missing its own
+    // a broken `impl` method (missing its own
     // name) trips the structural check the same way a broken top-level `fn`
     // would.
+    #[trace("TC-165", "FR-013-AC-3")]
     #[test]
     fn unresolvable_impl_method_counts_as_a_declaration_structure_error() {
         let source = "impl Foo {\n    pub fn (&self) { }\n}\n";
@@ -672,11 +684,12 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-166, FR-013-AC-3 (FND-001): garbage two levels deep — a `mod`
+    // garbage two levels deep — a `mod`
     // nested inside a `mod` — trips the structural check; depth alone is not
     // what determines whether this predicate looks, only whether the
     // enclosing node is itself a declaration-list-shaped body, at whatever
     // depth it occurs.
+    #[trace("TC-166", "FR-013-AC-3")]
     #[test]
     fn unresolvable_item_nested_two_mods_deep_counts_as_a_declaration_structure_error() {
         let source = "mod a {\n    mod b {\n        bad\n    }\n}\n";
@@ -689,9 +702,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-167, FR-013-AC-3 (FND-001): a `mod` missing its closing brace — the
+    // a `mod` missing its closing brace — the
     // grammar inserts a `MISSING "}"` as a direct child of the mod's own
     // `declaration_list` — trips the structural check.
+    #[trace("TC-167", "FR-013-AC-3")]
     #[test]
     fn mod_missing_closing_brace_counts_as_a_declaration_structure_error() {
         let source = "mod m {\n    pub fn f() {}\n";
@@ -704,7 +718,7 @@ mod tests {
     }
 
     #[cfg(feature = "python")]
-    // TC-163, FR-013-AC-10 (FND-001): a body-local error inside a method
+    // a body-local error inside a method
     // nested inside a class stays `Ok` with no diagnostic — nesting alone
     // does not trip the check, only an unresolvable declaration does. This
     // fixture's broken assignment (`x = 1 +`) is *followed by another
@@ -716,6 +730,7 @@ mod tests {
     // body-node rule reads them as structural. Suite position, not
     // statement kind, is the discriminator — documented in FR-013's "Known
     // limitations" section rather than folded silently into this test.
+    #[trace("TC-163", "FR-013-AC-10")]
     #[test]
     fn body_local_error_in_a_method_nested_in_a_class_stays_ok_with_no_diagnostic() {
         let source = "class Foo:\n    def broken(self):\n        x = 1 +\n        return x\n    def intact(self):\n        return 2\n";
@@ -727,7 +742,7 @@ mod tests {
     }
 
     #[cfg(feature = "python")]
-    // TC-174, FR-013-AC-3: a dangling `return`, as the *last* statement in
+    // a dangling `return`, as the *last* statement in
     // its method's body (nothing follows before the next declaration), is a
     // documented case where the body-node rule and intuition disagree.
     // Python's grammar recovers `return 1 +` here by attaching the
@@ -741,6 +756,7 @@ mod tests {
     // body-local. The body-node rule reads this as structural, mechanically
     // and consistently (it is, literally, not inside the body node); this is
     // a documented known limitation, not a bug.
+    #[trace("TC-174", "FR-013-AC-3")]
     #[test]
     fn dangling_return_recovers_outside_the_body_node_and_reads_as_structural() {
         let source = "class Foo:\n    def broken(self):\n        return 1 +\n    def intact(self):\n        return 2\n";
@@ -752,7 +768,7 @@ mod tests {
     }
 
     #[cfg(feature = "python")]
-    // TC-175, FR-013-AC-3 (FND-015): pins the real trigger behind TC-174 —
+    // pins the real trigger behind TC-174 —
     // it is not `return`-specific. A dangling *assignment*, in the same
     // last-statement-in-a-suite position TC-174 uses for `return`, recovers
     // the same way: Python's grammar attaches the resulting `ERROR` as an
@@ -761,6 +777,7 @@ mod tests {
     // against. Contrast TC-163, the identical broken assignment *followed*
     // by another statement in the same suite, which stays body-local — the
     // discriminator is suite position, not statement kind.
+    #[trace("TC-175", "FR-013-AC-3")]
     #[test]
     fn dangling_assignment_as_the_last_statement_recovers_outside_the_body_node_and_reads_as_structural(
     ) {
@@ -773,8 +790,9 @@ mod tests {
     }
 
     #[cfg(feature = "typescript")]
-    // TC-164, FR-013-AC-10 (FND-001): a body-local error inside a function
+    // a body-local error inside a function
     // nested inside a namespace stays `Ok` with no diagnostic.
+    #[trace("TC-164", "FR-013-AC-10")]
     #[test]
     fn body_local_error_in_a_namespace_fn_stays_ok_with_no_diagnostic() {
         let source =
@@ -787,13 +805,14 @@ mod tests {
     }
 
     #[cfg(feature = "typescript")]
-    // TC-160, FR-013-AC-3, FR-013-AC-10 (FND-001): a TypeScript function
+    // a TypeScript function
     // tree-sitter could not resolve at all, nested inside a `namespace`,
     // trips the structural check the same way a top-level one would. (An
     // anonymous `function () {}` is not used here — TypeScript's grammar
     // accepts a nameless function as a valid function-expression statement,
     // so it produces no `ERROR`/`MISSING` node at all; a malformed parameter
     // list is what genuinely defeats the grammar.)
+    #[trace("TC-160", "FR-013-AC-3", "FR-013-AC-10")]
     #[test]
     fn unresolvable_function_in_a_namespace_counts_as_a_declaration_structure_error() {
         let source =
@@ -806,13 +825,14 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-172, FR-013-AC-3 (FND-008): a malformed parameter list — the `ERROR`/
+    // a malformed parameter list — the `ERROR`/
     // `MISSING` sits inside `parameters`, the declaration's own signature,
     // not its executable body — trips the structural check even though the
     // function's own `body` block is syntactically intact. The body-node
     // rule catches this with no enumeration of `parameters` as a special
     // case: `parameters` was never a declaration's executable body, so its
     // direct children get the structural check by default.
+    #[trace("TC-172", "FR-013-AC-3")]
     #[test]
     fn malformed_parameter_list_counts_as_a_declaration_structure_error() {
         let source = "pub fn f( -> u32 {}\n";
@@ -825,10 +845,11 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-173, FR-013-AC-3 (FND-009): an enum variant tree-sitter could not
+    // an enum variant tree-sitter could not
     // resolve — a discriminant value missing after `=` — trips the
     // structural check; an `enum_variant` has no executable body either, so
     // it needs no special case, the same as `field_declaration` above.
+    #[trace("TC-173", "FR-013-AC-3")]
     #[test]
     fn unresolvable_enum_variant_counts_as_a_declaration_structure_error() {
         let source = "pub enum E {\n    A = ,\n    B,\n}\n";
@@ -841,9 +862,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-184, FR-013-AC-13: a Rust body-local error is reported by
+    // a Rust body-local error is reported by
     // `syntax_error()` with file, line and column while `diagnostic()` stays
     // `None`.
+    #[trace("TC-184", "FR-013-AC-13")]
     #[test]
     fn syntax_error_reports_a_rust_body_local_error() {
         let source = "pub fn ok() {}\npub fn broken() -> u32 { 1 + }\n";
@@ -855,7 +877,8 @@ mod tests {
     }
 
     #[cfg(feature = "python")]
-    // TC-184, FR-013-AC-13: the TC-163 shape in Python.
+    // the TC-163 shape in Python.
+    #[trace("TC-184", "FR-013-AC-13")]
     #[test]
     fn syntax_error_reports_a_python_body_local_error() {
         let source = "class Foo:\n    def broken(self):\n        x = 1 +\n        return x\n    def intact(self):\n        return 2\n";
@@ -867,7 +890,8 @@ mod tests {
     }
 
     #[cfg(feature = "typescript")]
-    // TC-184, FR-013-AC-13: the TC-164 shape in TypeScript.
+    // the TC-164 shape in TypeScript.
+    #[trace("TC-184", "FR-013-AC-13")]
     #[test]
     fn syntax_error_reports_a_typescript_body_local_error() {
         let source =
@@ -879,7 +903,8 @@ mod tests {
         assert_eq!((err.line, err.column), (2, 24));
     }
 
-    // TC-185, FR-013-AC-13: a clean parse has no syntax error.
+    // a clean parse has no syntax error.
+    #[trace("TC-185", "FR-013-AC-13")]
     #[test]
     fn syntax_error_is_none_for_a_clean_parse() {
         #[cfg(feature = "rust")]
@@ -906,8 +931,9 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-186, FR-013-AC-14: wherever `diagnostic()` is `Some`, `syntax_error()`
+    // wherever `diagnostic()` is `Some`, `syntax_error()`
     // is `Some`.
+    #[trace("TC-186", "FR-013-AC-14")]
     #[test]
     fn diagnostic_some_implies_syntax_error_some() {
         let sources = [
@@ -924,9 +950,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-187, FR-013-AC-15: a body-local error precedes a structural one in
+    // a body-local error precedes a structural one in
     // source order; `syntax_error()` names the earlier body-local position,
     // `diagnostic()` the later structural one.
+    #[trace("TC-187", "FR-013-AC-15")]
     #[test]
     fn syntax_error_names_the_earlier_body_local_error_before_a_structural_one() {
         let source = "mod m {\n    pub fn a() -> u32 { 1 + }\n    pub fn ( ) { }\n}\n";
@@ -938,9 +965,10 @@ mod tests {
     }
 
     #[cfg(feature = "rust")]
-    // TC-188, FR-013-AC-3: with two structural errors, `diagnostic()` names
+    // with two structural errors, `diagnostic()` names
     // the earlier one in source order even when it is nested deeper than the
     // later one.
+    #[trace("TC-188", "FR-013-AC-3")]
     #[test]
     fn diagnostic_names_the_earliest_structural_error_when_it_is_nested_deeper() {
         let source = "mod m {\n    pub fn ( ) { }\n}\nfn ( ) {}\n";
