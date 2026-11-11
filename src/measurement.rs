@@ -42,6 +42,54 @@ pub enum MeasurementError {
     RepetitionMismatch(usize),
     #[error("no scorer repetition was performed")]
     NoRepetitions,
+    #[error("measurement plan is invalid: {0}")]
+    InvalidPlan(String),
+}
+
+/// The plan's `protected_apparatus` paths, read from its YAML frontmatter.
+/// Quoin requires the collection's verification stack to name each of them,
+/// so the collection derives its `artifacts` from the plan rather than
+/// restating the list.
+///
+/// Only plain relative file paths are accepted. Quoin expands `<dir>/**`
+/// entries and would reject quoted or commented scalars, so those fail here
+/// rather than producing a collection that intake refuses.
+pub fn protected_apparatus(plan_text: &str) -> Result<Vec<String>, MeasurementError> {
+    let paths = plan_frontmatter(plan_text)?
+        .lines()
+        .skip_while(|line| *line != "protected_apparatus:")
+        .skip(1)
+        .map_while(|line| line.strip_prefix("  - "))
+        .map(|path| plain_relative_file(path.trim()).map(str::to_owned))
+        .collect::<Result<Vec<_>, _>>()?;
+    if paths.is_empty() {
+        return Err(MeasurementError::InvalidPlan(
+            "protected_apparatus is missing or empty".into(),
+        ));
+    }
+    Ok(paths)
+}
+
+fn plain_relative_file(entry: &str) -> Result<&str, MeasurementError> {
+    let unsupported = entry.is_empty()
+        || entry.starts_with('/')
+        || entry.split('/').any(|part| part == "..")
+        || entry.contains(['*', '?', '[', '"', '\'', '#']);
+    if unsupported {
+        return Err(MeasurementError::InvalidPlan(format!(
+            "protected_apparatus entry `{entry}` is not a plain relative file path"
+        )));
+    }
+    Ok(entry)
+}
+
+/// The YAML frontmatter of a plan document.
+pub fn plan_frontmatter(plan_text: &str) -> Result<&str, MeasurementError> {
+    plan_text
+        .strip_prefix("---\n")
+        .and_then(|rest| rest.split_once("\n---\n"))
+        .map(|(frontmatter, _)| frontmatter)
+        .ok_or_else(|| MeasurementError::InvalidPlan("no YAML frontmatter".into()))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,11 +115,12 @@ pub struct CollectionInputs {
     pub timestamp: String,
     pub node_version: String,
     pub rust_version: String,
-    pub python_version: String,
     pub source_remote: String,
     pub corpus_remote: String,
     /// Scorer runs actually performed and found identical (FR-012-AC-7).
     pub repetitions: u64,
+    /// Paths the verification stack attests (the plan's `protected_apparatus`).
+    pub artifacts: Vec<String>,
 }
 
 /// Collapse the scorer runs of one producer invocation into one report.
@@ -252,19 +301,18 @@ pub fn build_quoin_collection(
         "timestamp": inputs.timestamp,
         "environment": {
             "node": inputs.node_version,
-            "rust": inputs.rust_version,
-            "python": inputs.python_version
+            "rust": inputs.rust_version
         },
         "verificationStack": {
             "schemaVersion": "verification-stack-attestation-v1",
             "buildProfile": "release",
-            "toolchains": { "node": inputs.node_version, "rust": inputs.rust_version, "python": inputs.python_version },
+            "toolchains": { "node": inputs.node_version, "rust": inputs.rust_version },
             "sources": {
                 "quire-code-rs": { "sourceState": "clean", "remote": inputs.source_remote },
                 "quire-corpus": { "sourceState": "clean", "remote": inputs.corpus_remote }
             },
             "capabilities": ["graph-quality-observation-v1", "quire-corpus-scorer-v1"],
-            "artifacts": ["release-extractor", "measurement-plan", "observation-schema", "raw-scorer-output"]
+            "artifacts": inputs.artifacts
         },
         "observations": observations,
         "rawEvidence": { "graphQualityObservation": observation, "scorerReport": scorer_report }
@@ -570,15 +618,17 @@ mod tests {
         }
     }
 
+    const PLAN: &str = include_str!("../spec/assurance/MP-001-graph-quality-observation.md");
+
     fn collection_inputs() -> CollectionInputs {
         CollectionInputs {
             timestamp: "2026-08-31T00:00:00Z".into(),
             node_version: "24.15.0".into(),
             rust_version: "1.95.0".into(),
-            python_version: "3.14.7".into(),
             source_remote: "local-source".into(),
             corpus_remote: "local-corpus".into(),
             repetitions: 2,
+            artifacts: protected_apparatus(PLAN).unwrap(),
         }
     }
 
@@ -734,6 +784,54 @@ mod tests {
         }
     }
 
+    // TC-193 / FR-012-AC-10: Quoin rejects a collection whose verification
+    // stack omits a protected apparatus path (QM-APPARATUS-UNDECLARED).
+    #[test]
+    fn artifacts_cover_every_protected_apparatus_path() {
+        let observation = build_observation(
+            Some(&report()),
+            &population(PopulationState::Measured),
+            "raw/scorer.json",
+        )
+        .unwrap();
+        let collection =
+            build_quoin_collection(&observation, Some(&report()), &collection_inputs()).unwrap();
+        let artifacts: Vec<&str> = collection
+            .pointer("/verificationStack/artifacts")
+            .and_then(Value::as_array)
+            .unwrap()
+            .iter()
+            .map(|path| path.as_str().unwrap())
+            .collect();
+        let apparatus = protected_apparatus(PLAN).unwrap();
+        assert!(apparatus.len() >= 4);
+        for path in &apparatus {
+            assert!(artifacts.contains(&path.as_str()), "{path} not attested");
+        }
+    }
+
+    // TC-194 / FR-012-AC-10: only entries Quoin accepts verbatim are attested.
+    #[test]
+    fn protected_apparatus_rejects_entries_quoin_would_expand_or_refuse() {
+        for entry in [
+            "src/**",
+            "\"src/a.rs\"",
+            "'src/a.rs'",
+            "src/a.rs # why",
+            "/etc/passwd",
+            "../a.rs",
+        ] {
+            let plan = format!("---\nprotected_apparatus:\n  - Makefile\n  - {entry}\n---\nbody\n");
+            assert!(
+                matches!(
+                    protected_apparatus(&plan),
+                    Err(MeasurementError::InvalidPlan(_))
+                ),
+                "accepted {entry}"
+            );
+        }
+    }
+
     // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3, FR-012-AC-9:
     // Quoin receives exactly one graph_quality observation, the census-wide
     // edge false-positive count, and the producer/extractor attestations
@@ -752,10 +850,10 @@ mod tests {
         assert_eq!(
             collection.pointer("/verificationStack/artifacts"),
             Some(&json!([
-                "release-extractor",
-                "measurement-plan",
-                "observation-schema",
-                "raw-scorer-output"
+                "Makefile",
+                "src/bin/measure_graph_quality.rs",
+                "src/measurement.rs",
+                "schemas/graph-quality-observation-v1.schema.json"
             ]))
         );
         let observations = collection["observations"].as_array().unwrap();

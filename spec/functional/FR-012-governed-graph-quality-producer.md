@@ -40,11 +40,15 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 ## Behavior
 
 - When scoring begins, the producer SHALL validate MP-001 with Quire.
-- The producer SHALL invoke the corpus's real `score.py --json` scorer with the
-  real release `extract_tree` binary; neither scorer truth comparison nor
-  extractor behavior may be reimplemented in the measurement producer.
+- The producer SHALL invoke the corpus's real scorer, the `quire-corpus` Rust
+  CLI (`quire-corpus --root <corpus> score --producer <extractor>
+  --producer-arg ... --json`), with the real release `extract_tree` binary;
+  neither scorer truth comparison nor extractor behavior may be reimplemented
+  in the measurement producer.
 - The producer SHALL accept only the checked-out `target/release` producer and
-  extractor binaries.
+  extractor binaries, and only the corpus checkout's own
+  `target/release/quire-corpus` as the scorer, so the clean-checkout check on
+  the corpus covers the grading logic.
 - The producer SHALL require MP-001 to be active and match the plan identifier,
   metric, definition version, complete-census sampling rule, and
   zero-wrong-heuristic-edge decision rule before emitting output.
@@ -81,12 +85,15 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 - The producer SHALL retain the raw scorer output used to derive the observation.
 - The producer SHALL write dimension collections in canonical sorted order.
 - The producer SHALL derive the observation identifier from canonical content.
-- The producer SHALL use a caller-supplied collection timestamp and
-  toolchain identities so Quoin's required envelope remains deterministic.
+- The producer SHALL use a caller-supplied collection timestamp and Node and
+  Rust toolchain identities so Quoin's required envelope remains deterministic.
 - The producer SHALL emit a Quoin v2 verification-stack attestation containing
-  clean source states, Node/Rust/Python identities, and the names of the
-  release extractor, measurement plan, observation schema, and retained raw
-  scorer output artifacts.
+  clean source states, Node and Rust identities, and, as its `artifacts`, the
+  file paths listed in the active plan's `protected_apparatus`, derived from
+  the plan and never restated.
+- If a `protected_apparatus` entry is not a plain relative file path (a glob
+  such as `<dir>/**`, a quoted or commented scalar, an absolute path, or a
+  parent traversal), then the producer SHALL fail without an observation.
 
 ## Constraints
 
@@ -109,6 +116,8 @@ graph-quality producer SHALL emit one canonical graph-quality observation.
 | FR-012-AC-7 | Two repetitions with pinned inputs produce byte-identical canonical observations, and disagreeing scorer runs within one invocation fail with a repetition mismatch. | Test (TC-124) |
 | FR-012-AC-8 | Invalid MeasurementPlan or observation data is rejected before a record is offered to Quoin. | Test (TC-125) |
 | FR-012-AC-9 | The collection's typed `observations` hold exactly one `graph_quality` observation whose `value` equals `population.matched` and the census-wide edge false-positive count, stating `population.repetitions` as the count of scorer runs performed and found identical; a non-measured population yields one `not_computed` observation with a null value. | Test (TC-120, TC-122) |
+| FR-012-AC-10 | The collection's `verificationStack.artifacts` equal the active plan's `protected_apparatus` paths, so Quoin's `measurement record` accepts it; a `protected_apparatus` entry that is not a plain relative file path is rejected with an invalid-plan error. | Test (TC-193, TC-194) |
+| FR-012-AC-11 | The scorer is the corpus checkout's `target/release/quire-corpus`; any other `--scorer` executable is rejected before scoring. | Test (TC-195) |
 
 ## Dependencies
 

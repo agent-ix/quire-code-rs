@@ -6,8 +6,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use quire_code_rs::measurement::{
-    build_observation, build_quoin_collection, canonical_bytes, reconcile_repetitions,
-    CollectionInputs, Population, PopulationState, DEFINITION_VERSION, METRIC, PLAN_ID,
+    build_observation, build_quoin_collection, canonical_bytes, plan_frontmatter,
+    protected_apparatus, reconcile_repetitions, CollectionInputs, Population, PopulationState,
+    DEFINITION_VERSION, METRIC, PLAN_ID,
 };
 use serde_json::{json, Value};
 
@@ -55,9 +56,10 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
     validate_inputs(&parsed)?;
     validate_release_extractor(&parsed.repo_root, &parsed.extractor)?;
     validate_release_producer(&parsed.repo_root, producer_executable)?;
+    validate_release_scorer(&parsed.corpus, &parsed.scorer)?;
     verify_clean_source(&parsed.repo_root, "quire-code-rs")?;
     verify_clean_source(&parsed.corpus, "quire-corpus")?;
-    validate_plan(&parsed.quire, &parsed.repo_root)?;
+    let artifacts = validate_plan(&parsed.quire, &parsed.repo_root)?;
 
     let population = inspect_population(&parsed.corpus)?;
     let raw_relative = "raw/scorer-report.json";
@@ -91,10 +93,10 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
         timestamp: parsed.timestamp,
         node_version: parsed.node_version,
         rust_version: parsed.rust_version,
-        python_version: parsed.python_version,
         source_remote: parsed.source_remote,
         corpus_remote: parsed.corpus_remote,
         repetitions,
+        artifacts,
     };
     let collection = build_quoin_collection(&observation, report.as_ref(), &collection_inputs)
         .map_err(|error| error.to_string())?;
@@ -114,16 +116,17 @@ fn run_with_producer(args: Vec<String>, producer_executable: &Path) -> Result<Ru
 const SCORER_RUNS: usize = 2;
 
 fn score_once(args: &Args) -> Result<(Value, Vec<u8>), String> {
-    let producer = format!(
-        "{} --org '{{org}}' --repo '{{repo}}' '{{input}}'",
-        shell_quote(&args.extractor.to_string_lossy())
-    );
-    let mut command = Command::new(&args.python);
+    let mut command = Command::new(&args.scorer);
     command
-        .arg(args.corpus.join("score.py"))
+        .arg("--root")
+        .arg(&args.corpus)
+        .arg("score")
         .arg("--producer")
-        .arg(producer)
-        .arg("--json");
+        .arg(&args.extractor);
+    for template in ["--org", "{org}", "--repo", "{repo}", "{input}"] {
+        command.arg("--producer-arg").arg(template);
+    }
+    command.arg("--json");
     command.current_dir(&args.corpus);
     let output = command
         .output()
@@ -143,7 +146,8 @@ fn score_once(args: &Args) -> Result<(Value, Vec<u8>), String> {
     Ok((report, output.stdout))
 }
 
-fn validate_plan(quire: &Path, repo: &Path) -> Result<(), String> {
+/// Validate MP-001 and return its protected apparatus paths.
+fn validate_plan(quire: &Path, repo: &Path) -> Result<Vec<String>, String> {
     let path = repo.join("spec/assurance/MP-001-graph-quality-observation.md");
     let text = fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     validate_plan_semantics(&text)?;
@@ -155,7 +159,7 @@ fn validate_plan(quire: &Path, repo: &Path) -> Result<(), String> {
         .output()
         .map_err(|error| format!("could not run Quire: {error}"))?;
     if output.status.success() {
-        return Ok(());
+        return protected_apparatus(&text).map_err(|error| error.to_string());
     }
     Err(format!(
         "MP-001 failed Quire validation: {}",
@@ -164,13 +168,7 @@ fn validate_plan(quire: &Path, repo: &Path) -> Result<(), String> {
 }
 
 fn validate_plan_semantics(text: &str) -> Result<(), String> {
-    let frontmatter = text
-        .strip_prefix("---\n")
-        .and_then(|rest| {
-            rest.split_once("\n---\n")
-                .map(|(frontmatter, _)| frontmatter)
-        })
-        .ok_or_else(|| "MP-001 has no YAML frontmatter".to_string())?;
+    let frontmatter = plan_frontmatter(text).map_err(|error| format!("MP-001: {error}"))?;
     for expected in [
         format!("id: {PLAN_ID}"),
         "type: MeasurementPlan".into(),
@@ -279,16 +277,11 @@ fn supported(path: &Path) -> bool {
     )
 }
 
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
-}
-
 fn validate_inputs(args: &Args) -> Result<(), String> {
     for (name, value) in [
         ("timestamp", &args.timestamp),
         ("node-version", &args.node_version),
         ("rust-version", &args.rust_version),
-        ("python-version", &args.python_version),
         ("source-remote", &args.source_remote),
         ("corpus-remote", &args.corpus_remote),
     ] {
@@ -308,6 +301,23 @@ fn validate_release_extractor(repo: &Path, extractor: &Path) -> Result<(), Strin
     if actual != expected {
         return Err(format!(
             "--extractor must be the release binary {}",
+            expected.display()
+        ));
+    }
+    Ok(())
+}
+
+/// The scorer is the grading logic, so it must be the release build of the
+/// checkout `verify_clean_source` proves clean, not an arbitrary executable.
+fn validate_release_scorer(corpus: &Path, scorer: &Path) -> Result<(), String> {
+    let expected_scorer = corpus.join("target/release/quire-corpus");
+    let actual =
+        fs::canonicalize(scorer).map_err(|error| format!("{}: {error}", scorer.display()))?;
+    let expected = fs::canonicalize(&expected_scorer)
+        .map_err(|error| format!("{}: {error}", expected_scorer.display()))?;
+    if actual != expected {
+        return Err(format!(
+            "--scorer must be the corpus release binary {}",
             expected.display()
         ));
     }
@@ -334,12 +344,11 @@ struct Args {
     corpus: PathBuf,
     extractor: PathBuf,
     quire: PathBuf,
-    python: PathBuf,
+    scorer: PathBuf,
     output_dir: PathBuf,
     timestamp: String,
     node_version: String,
     rust_version: String,
-    python_version: String,
     source_remote: String,
     corpus_remote: String,
 }
@@ -361,12 +370,11 @@ impl Args {
                     | "--corpus"
                     | "--extractor"
                     | "--quire"
-                    | "--python"
+                    | "--scorer"
                     | "--output-dir"
                     | "--timestamp"
                     | "--node-version"
                     | "--rust-version"
-                    | "--python-version"
                     | "--source-remote"
                     | "--corpus-remote"
             ) {
@@ -389,12 +397,11 @@ impl Args {
             corpus: PathBuf::from(one("--corpus")?),
             extractor: PathBuf::from(one("--extractor")?),
             quire: PathBuf::from(one("--quire")?),
-            python: PathBuf::from(one("--python")?),
+            scorer: PathBuf::from(one("--scorer")?),
             output_dir: PathBuf::from(one("--output-dir")?),
             timestamp: one("--timestamp")?,
             node_version: one("--node-version")?,
             rust_version: one("--rust-version")?,
-            python_version: one("--python-version")?,
             source_remote: one("--source-remote")?,
             corpus_remote: one("--corpus-remote")?,
         })
@@ -402,7 +409,7 @@ impl Args {
 }
 
 fn usage() -> &'static str {
-    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --python FILE --output-dir DIR --timestamp RFC3339 --node-version VERSION --rust-version VERSION --python-version VERSION --source-remote URL --corpus-remote URL"
+    "usage: measure_graph_quality --repo-root DIR --corpus DIR --extractor FILE --quire FILE --scorer FILE --output-dir DIR --timestamp RFC3339 --node-version VERSION --rust-version VERSION --source-remote URL --corpus-remote URL"
 }
 
 #[cfg(test)]
@@ -415,12 +422,11 @@ mod tests {
             ("--corpus", "../quire-corpus"),
             ("--extractor", "target/release/extract_tree"),
             ("--quire", "quire"),
-            ("--python", "python3"),
+            ("--scorer", "quire-corpus"),
             ("--output-dir", "target/measurement"),
             ("--timestamp", "2026-08-31T00:00:00Z"),
             ("--node-version", "24.15.0"),
             ("--rust-version", "1.95.0"),
-            ("--python-version", "3.14.7"),
             ("--source-remote", "local-source"),
             ("--corpus-remote", "local-corpus"),
         ]
@@ -474,7 +480,13 @@ mod tests {
                     .to_string(),
             ),
             ("--quire", "/usr/bin/true".into()),
-            ("--python", "/usr/bin/true".into()),
+            (
+                "--scorer",
+                corpus
+                    .join("target/release/quire-corpus")
+                    .display()
+                    .to_string(),
+            ),
             ("--output-dir", output.display().to_string()),
         ]
         .into_iter()
@@ -529,6 +541,17 @@ mod tests {
         })
     }
 
+    /// Install `script` as the corpus's release scorer; `target/` is ignored so
+    /// the checkout stays clean.
+    fn write_scorer(root: &Path, script: &str) {
+        use std::os::unix::fs::PermissionsExt;
+        let scorer = root.join("target/release/quire-corpus");
+        fs::create_dir_all(scorer.parent().unwrap()).unwrap();
+        fs::write(root.join(".gitignore"), "target/\n").unwrap();
+        fs::write(&scorer, format!("#!/bin/sh\n{script}")).unwrap();
+        fs::set_permissions(&scorer, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
     fn make_measured_corpus(root: &Path, report: &Value, scorer_exit: i32) {
         fs::create_dir_all(root.join("fixtures/relations/ambiguous/rust/input")).unwrap();
         fs::write(
@@ -538,11 +561,10 @@ mod tests {
         .unwrap();
         let payload = serde_json::to_string(report).unwrap();
         assert!(!payload.contains('\''));
-        fs::write(
-            root.join("score.py"),
-            format!("printf '%s\\n' '{payload}'\nexit {scorer_exit}\n"),
-        )
-        .unwrap();
+        write_scorer(
+            root,
+            &format!("printf '%s\\n' '{payload}'\nexit {scorer_exit}\n"),
+        );
         commit_repo(root);
     }
 
@@ -554,7 +576,6 @@ mod tests {
             "--timestamp",
             "--node-version",
             "--rust-version",
-            "--python-version",
             "--source-remote",
             "--corpus-remote",
         ] {
@@ -566,6 +587,22 @@ mod tests {
             run(Vec::new()).is_err(),
             "failed runs produce no stdout payload"
         );
+    }
+
+    // TC-195 / FR-012-AC-11: the scorer is the corpus checkout's release build.
+    #[test]
+    fn scorer_must_be_the_corpus_release_binary() {
+        let scratch =
+            std::env::temp_dir().join(format!("quire-code-scorer-{}", std::process::id()));
+        fs::create_dir_all(&scratch).unwrap();
+        write_scorer(&scratch, "exit 0\n");
+        let release = scratch.join("target/release/quire-corpus");
+        validate_release_scorer(&scratch, &release).unwrap();
+        let other = scratch.join("other-scorer");
+        fs::copy(&release, &other).unwrap();
+        let error = validate_release_scorer(&scratch, &other).unwrap_err();
+        assert!(error.contains("--scorer must be the corpus release binary"));
+        fs::remove_dir_all(scratch).unwrap();
     }
 
     // TC-125 / FR-012-AC-8: structural Quire validity cannot mask semantic drift.
@@ -615,6 +652,7 @@ mod tests {
             let fixture = corpus.join("fixtures").join(relative);
             fs::create_dir_all(fixture.parent().unwrap()).unwrap();
             fs::write(&fixture, bytes).unwrap();
+            write_scorer(&corpus, "exit 0\n");
             commit_repo(&corpus);
             let result = run_with_producer(
                 non_measured_args(&repo, &corpus, &scratch.join(format!("out-{state}"))),
@@ -652,12 +690,7 @@ mod tests {
         {
             let corpus = scratch.join(format!("corpus-{name}"));
             make_measured_corpus(&corpus, &scorer_report(edge_fp), scorer_exit);
-            let mut args = non_measured_args(&repo, &corpus, &scratch.join(format!("out-{name}")));
-            for pair in args.chunks_exact_mut(2) {
-                if pair[0] == "--python" {
-                    pair[1] = "/bin/sh".into();
-                }
-            }
+            let args = non_measured_args(&repo, &corpus, &scratch.join(format!("out-{name}")));
             let result =
                 run_with_producer(args, &repo.join("target/release/measure_graph_quality"))
                     .unwrap();
