@@ -1,7 +1,7 @@
 //! Real ecosystem lane for the governed measurement producer.
 //!
 //! Run after a clean release build with:
-//! `QUIRE_CORPUS_ROOT=../quire-corpus QUOIN_BIN=quoin QUIRE_BIN=quire cargo test --test measurement_pipeline -- --ignored --nocapture`.
+//! `QUIRE_CORPUS_ROOT=../quire-corpus QUIRE_CORPUS_BIN=<built quire-corpus> QUOIN_BIN=quoin QUIRE_BIN=quire cargo test --test measurement_pipeline -- --ignored --nocapture`.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -91,7 +91,7 @@ fn complete_cli_args() -> Vec<String> {
         ("--corpus", "../quire-corpus"),
         ("--extractor", "target/release/extract_tree"),
         ("--quire", "quire"),
-        ("--python", "python3"),
+        ("--scorer", "quire-corpus"),
         ("--output-dir", "target/measurement"),
         ("--timestamp", "2026-08-31T00:00:00Z"),
         ("--node-version", "24.15.0"),
@@ -141,13 +141,13 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
 // StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..9,
 // NFR-005-AC-1..2, MP-001, IT-001: real extractor + scorer + Quire + Quoin.
 #[test]
-#[ignore = "requires clean pinned sibling checkouts and installed Quire/Quoin CLIs; Quoin intake currently rejects the collection envelope (PLAT-1361)"]
+#[ignore = "requires a clean quire-corpus checkout and built quire-corpus, installed Quire and Quoin CLIs (QUIRE_CORPUS_ROOT, QUIRE_CORPUS_BIN, QUOIN_BIN, QUIRE_BIN)"]
 fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let corpus = PathBuf::from(std::env::var("QUIRE_CORPUS_ROOT").expect("QUIRE_CORPUS_ROOT"));
     let quoin = std::env::var("QUOIN_BIN").expect("QUOIN_BIN");
     let quire = std::env::var("QUIRE_BIN").expect("QUIRE_BIN");
-    let python = std::env::var("PYTHON_BIN").unwrap_or_else(|_| "python3".into());
+    let scorer = std::env::var("QUIRE_CORPUS_BIN").expect("QUIRE_CORPUS_BIN");
     let release_extractor = repo.join("target/release/extract_tree");
     let release_producer = repo.join("target/release/measure_graph_quality");
     assert!(release_extractor.is_file(), "run make build first");
@@ -168,6 +168,16 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
         intake.join("spec/assurance/MP-001-graph-quality-observation.md"),
     )
     .expect("copy plan");
+    let plan_path = "spec/assurance/MP-001-graph-quality-observation.md";
+    let apparatus = quire_code_rs::measurement::protected_apparatus(
+        &fs::read_to_string(repo.join(plan_path)).expect("read plan"),
+    )
+    .expect("plan apparatus");
+    for path in &apparatus {
+        let target = intake.join(path);
+        fs::create_dir_all(target.parent().expect("apparatus parent")).expect("create parent");
+        fs::copy(repo.join(path), target).expect("copy apparatus");
+    }
 
     let first = output(
         Command::new(&release_producer)
@@ -177,7 +187,7 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
             .arg(&corpus)
             .args(["--extractor"])
             .arg(&release_extractor)
-            .args(["--quire", &quire, "--python", &python])
+            .args(["--quire", &quire, "--scorer", &scorer])
             .args(["--output-dir"])
             .arg(&output_dir)
             .args([
@@ -203,7 +213,7 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
             .arg(&reordered_corpus)
             .args(["--extractor"])
             .arg(&release_extractor)
-            .args(["--quire", &quire, "--python", &python])
+            .args(["--quire", &quire, "--scorer", &scorer])
             .args(["--output-dir"])
             .arg(output_dir.with_file_name("producer-second"))
             .args([
@@ -233,12 +243,7 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
     );
     assert_eq!(
         parsed.pointer("/verificationStack/artifacts"),
-        Some(&serde_json::json!([
-            "release-extractor",
-            "measurement-plan",
-            "observation-schema",
-            "raw-scorer-output"
-        ]))
+        Some(&serde_json::json!(apparatus))
     );
     let observations = parsed["observations"].as_array().unwrap();
     assert_eq!(
