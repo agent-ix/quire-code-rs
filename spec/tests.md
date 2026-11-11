@@ -79,7 +79,7 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | NFR-004 | NFR-004-AC-1, NFR-004-AC-2, NFR-004-AC-3, NFR-004-AC-4, NFR-004-AC-5 | TC-066, TC-067, TC-068, TC-069, TC-070 | ✅ |
 | FR-010 | FR-010-AC-1, FR-010-AC-2, FR-010-AC-3, FR-010-AC-4, FR-010-AC-5 | TC-101, TC-102, TC-103, TC-104, TC-105 | ✅ |
 | FR-011 | FR-011-AC-1, FR-011-AC-2, FR-011-AC-3, FR-011-AC-4, FR-011-AC-5, FR-011-AC-6, FR-011-CON-1, FR-011-CON-2 | TC-112..TC-117, TC-130, TC-131 | ✅ |
-| FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-AC-9, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134 | ✅ |
+| FR-012 | FR-012-AC-1, FR-012-AC-2, FR-012-AC-3, FR-012-AC-4, FR-012-AC-5, FR-012-AC-6, FR-012-AC-7, FR-012-AC-8, FR-012-AC-9, FR-012-AC-10, FR-012-AC-11, FR-012-CON-1, FR-012-CON-2, FR-012-CON-3 | TC-118..TC-125, TC-132, TC-133, TC-134, TC-193, TC-194, TC-195 | ✅ |
 | NFR-005 | NFR-005-AC-1, NFR-005-AC-2, NFR-005-AC-3 | TC-126..TC-128 | ✅ |
 | FR-014 | FR-014-AC-1, FR-014-AC-2, FR-014-AC-3, FR-014-AC-4, FR-014-AC-5, FR-014-AC-6, FR-014-AC-7 | TC-177..TC-183 | ✅ |
 | FR-013 | FR-013-AC-1, FR-013-AC-2, FR-013-AC-3, FR-013-AC-4, FR-013-AC-5, FR-013-AC-6, FR-013-AC-7, FR-013-AC-8, FR-013-AC-9, FR-013-AC-10, FR-013-AC-11, FR-013-AC-12, FR-013-AC-13, FR-013-AC-14, FR-013-AC-15, FR-013-CON-1, FR-013-CON-2, FR-013-CON-3, FR-013-CON-4 | TC-135..TC-175, TC-184..TC-192 | ✅ |
@@ -287,6 +287,9 @@ targets backed; a row whose test is unwritten carries 🚧 and says so.
 | TC-190 | Identical shell input yields a byte-identical tree; an unclosed shell function body reports a diagnostic at line 1 | Integration | P2 | FR-013-AC-5, FR-013-AC-3 | ✅ |
 | TC-191 | A body-local error inside a shell function collapses it to a structural diagnostic (disclosed limitation) | Integration | P2 | FR-013-AC-3 | ✅ |
 | TC-192 | A stray `fi`/`done`/`}` yields neither diagnostic nor syntax_error (disclosed limitation) | Integration | P2 | FR-013-AC-3 | ✅ |
+| TC-193 | Collection `artifacts` cover every plan `protected_apparatus` path | Unit | P0 | FR-012-AC-10 | ✅ |
+| TC-194 | A glob, quoted, commented, absolute or parent-relative `protected_apparatus` entry is rejected as an invalid plan | Unit | P0 | FR-012-AC-10 | ✅ |
+| TC-195 | A scorer other than the corpus checkout's release `quire-corpus` is rejected | Unit | P0 | FR-012-AC-11 | ✅ |
 
 ---
 

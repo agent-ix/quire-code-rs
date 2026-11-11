@@ -96,7 +96,6 @@ fn complete_cli_args() -> Vec<String> {
         ("--timestamp", "2026-08-31T00:00:00Z"),
         ("--node-version", "24.15.0"),
         ("--rust-version", "1.95.0"),
-        ("--python-version", "3.14.7"),
         ("--source-remote", "local-source"),
         ("--corpus-remote", "local-corpus"),
     ]
@@ -114,7 +113,6 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
         "--timestamp",
         "--node-version",
         "--rust-version",
-        "--python-version",
         "--source-remote",
         "--corpus-remote",
     ] {
@@ -138,7 +136,7 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
 }
 
 // TC-108, TC-109, TC-110, TC-111, TC-118, TC-119, TC-124, TC-125, TC-127, TC-129 /
-// StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..9,
+// StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..11,
 // NFR-005-AC-1..2, MP-001, IT-001: real extractor + scorer + Quire + Quoin.
 #[test]
 #[ignore = "requires a clean quire-corpus checkout and built quire-corpus, installed Quire and Quoin CLIs (QUIRE_CORPUS_ROOT, QUIRE_CORPUS_BIN, QUOIN_BIN, QUIRE_BIN)"]
@@ -162,6 +160,12 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
     let intake = scratch.join("intake");
     let reordered_corpus = scratch.join("corpus-reordered");
     reversed_creation_checkout(&corpus, &reordered_corpus);
+    // The scorer must be the checkout's own release build, so the reordered
+    // checkout carries a copy of the same binary.
+    let reordered_scorer = reordered_corpus.join("target/release/quire-corpus");
+    fs::create_dir_all(reordered_scorer.parent().unwrap()).expect("create scorer dir");
+    fs::copy(&scorer, &reordered_scorer).expect("copy scorer");
+    let reordered_scorer = reordered_scorer.display().to_string();
     fs::create_dir_all(intake.join("spec/assurance")).expect("create intake");
     fs::copy(
         repo.join("spec/assurance/MP-001-graph-quality-observation.md"),
@@ -197,8 +201,6 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
                 "24.15.0",
                 "--rust-version",
                 "1.95.0",
-                "--python-version",
-                "3.14.7",
                 "--source-remote",
                 &remote(&repo),
                 "--corpus-remote",
@@ -213,7 +215,7 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
             .arg(&reordered_corpus)
             .args(["--extractor"])
             .arg(&release_extractor)
-            .args(["--quire", &quire, "--scorer", &scorer])
+            .args(["--quire", &quire, "--scorer", &reordered_scorer])
             .args(["--output-dir"])
             .arg(output_dir.with_file_name("producer-second"))
             .args([
@@ -223,8 +225,6 @@ fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
                 "24.15.0",
                 "--rust-version",
                 "1.95.0",
-                "--python-version",
-                "3.14.7",
                 "--source-remote",
                 &remote(&repo),
                 "--corpus-remote",
