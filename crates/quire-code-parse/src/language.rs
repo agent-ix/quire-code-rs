@@ -56,8 +56,10 @@ impl Language {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
-    // TC-137, FR-013-CON-3: every compiled-in language loads its grammar.
+    // every compiled-in language loads its grammar.
+    #[trace("TC-137", "FR-013-CON-3")]
     #[test]
     fn every_compiled_language_loads_its_grammar() {
         let languages: &[Language] = &[
@@ -79,9 +81,10 @@ mod tests {
         }
     }
 
-    // TC-138, FR-013-CON-3: with only the `rust` feature compiled, `Language`
+    // with only the `rust` feature compiled, `Language`
     // has exactly the one variant that feature enables — checked by
     // compiling only under that exact feature set, not by inspection.
+    #[trace("TC-138", "FR-013-CON-3")]
     #[cfg(all(
         feature = "rust",
         not(feature = "python"),

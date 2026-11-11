@@ -158,6 +158,7 @@ pub const REASONS: [Reason; 6] = [
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn fact(name: &str, start: u32) -> CodeFact {
         CodeFact {
@@ -176,10 +177,11 @@ mod tests {
         }
     }
 
-    // TC-086, FR-009-AC-9, FR-009-CON-1 / FR-009-CON-1: the two fields are additive. A
+    // the two fields are additive. A
     // record serialized before FR-009 carries neither, and must still read
     // back — as `public` (the pre-FR-009 assumption that every declaration is
     // an export) with no signature.
+    #[trace("TC-086", "FR-009-AC-9", "FR-009-CON-1", "FR-009-CON-1")]
     #[test]
     fn records_without_visibility_or_signature_still_deserialize() {
         let legacy = r#"{
@@ -208,7 +210,8 @@ mod tests {
         assert!(round_tripped.contains("\"visibility\":\"public\""));
     }
 
-    // TC-033, FR-006-AC-1: records carry a hex id, an ix:// ref and a kind.
+    // records carry a hex id, an ix:// ref and a kind.
+    #[trace("TC-033", "FR-006-AC-1")]
     #[test]
     fn node_records_carry_id_reference_and_kind() {
         let record = node_record(&fact("agent-ix/repo/src/lib.rs::f", 1));
@@ -222,7 +225,8 @@ mod tests {
         assert_eq!(record.data.kind, "function");
     }
 
-    // TC-034, FR-006-AC-2: moving a declaration preserves its id.
+    // moving a declaration preserves its id.
+    #[trace("TC-034", "FR-006-AC-2")]
     #[test]
     fn moving_a_declaration_preserves_its_id() {
         let before = node_record(&fact("agent-ix/repo/src/lib.rs::f", 10));
@@ -231,8 +235,9 @@ mod tests {
         assert_ne!(before.data.span, after.data.span);
     }
 
-    // TC-087, FR-006-CON-1: node identity is a pure function of
+    // node identity is a pure function of
     // `(object_type, qualified_name)`, so the two components cannot alias.
+    #[trace("TC-087", "FR-006-CON-1")]
     #[test]
     fn identity_separates_type_from_name() {
         // Without a separator, ("code_type", "x") and ("code", "typex") would
@@ -243,7 +248,8 @@ mod tests {
         );
     }
 
-    // TC-035, FR-006-AC-3: records appear in stable order.
+    // records appear in stable order.
+    #[trace("TC-035", "FR-006-AC-3")]
     #[test]
     fn records_sort_into_stable_order() {
         let mut nodes = vec![
@@ -277,7 +283,8 @@ mod tests {
         assert_eq!(edges[0].source_ref, "a");
     }
 
-    // TC-036, FR-006-AC-4, FR-006-CON-2: the edge-type set matches the contract exactly.
+    // the edge-type set matches the contract exactly.
+    #[trace("TC-036", "FR-006-AC-4", "FR-006-CON-2")]
     #[test]
     fn the_edge_type_set_matches_the_consumer_contract() {
         let names: Vec<_> = EDGE_TYPES.iter().map(|t| t.as_str()).collect();
@@ -294,8 +301,9 @@ mod tests {
         );
     }
 
-    // TC-088, FR-004-CON-1: the `reason` vocabulary matches the set the
+    // the `reason` vocabulary matches the set the
     // consumer contract in filament-ide-rs FR-072 reads, value for value.
+    #[trace("TC-088", "FR-004-CON-1")]
     #[test]
     fn the_reason_vocabulary_matches_the_consumer_contract() {
         let names: Vec<_> = REASONS.iter().map(|r| r.as_str()).collect();

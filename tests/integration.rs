@@ -5,6 +5,7 @@
 //! parity (FR-006-AC-6), and the dogfooding check that this repository's own
 //! tracking tags are recoverable (FR-005-AC-7).
 
+use ix_trace_rs::trace;
 use std::collections::BTreeSet;
 
 use quire_code_rs::{extract, extract_with, parse_file, Language, MentionKind, SourceFile};
@@ -105,8 +106,9 @@ def main():
     ]
 }
 
-// TC-046, FR-001-AC-1, FR-001-AC-2, FR-001-AC-3: a mixed-language batch yields  (structural slice)
+// a mixed-language batch yields  (structural slice)
 // the four node types and structural edges across every language.
+#[trace("TC-046", "FR-001-AC-1", "FR-001-AC-2", "FR-001-AC-3")]
 #[test]
 fn mixed_language_batch_yields_every_node_type() {
     let result = extract(&fixture());
@@ -126,7 +128,8 @@ fn mixed_language_batch_yields_every_node_type() {
     assert!(edge_types.contains("imports"), "got {edge_types:?}");
 }
 
-// TC-038, FR-006-AC-6: extraction of the fixture matches its golden file.
+// extraction of the fixture matches its golden file.
+#[trace("TC-038", "FR-006-AC-6")]
 #[test]
 fn fixture_extraction_matches_the_golden_file() {
     let result = extract(&fixture());
@@ -151,7 +154,8 @@ fn fixture_extraction_matches_the_golden_file() {
     }
 }
 
-// TC-054, NFR-001-AC-1: one hundred repeated extractions are byte-identical.
+// one hundred repeated extractions are byte-identical.
+#[trace("TC-054", "NFR-001-AC-1")]
 #[test]
 fn a_hundred_extractions_are_byte_identical() {
     let files = fixture();
@@ -162,7 +166,8 @@ fn a_hundred_extractions_are_byte_identical() {
     }
 }
 
-// TC-055, NFR-001-AC-2, StR-001-VC-4: concurrent extractions are byte-identical.
+// concurrent extractions are byte-identical.
+#[trace("TC-055", "NFR-001-AC-2", "StR-001-VC-4")]
 #[test]
 fn concurrent_extractions_are_byte_identical() {
     let files = fixture();
@@ -180,7 +185,8 @@ fn concurrent_extractions_are_byte_identical() {
     }
 }
 
-// TC-056, NFR-001-AC-3: shuffling the batch order changes nothing.
+// shuffling the batch order changes nothing.
+#[trace("TC-056", "NFR-001-AC-3")]
 #[test]
 fn shuffled_batch_order_produces_identical_output() {
     let forward = extract(&fixture());
@@ -190,9 +196,10 @@ fn shuffled_batch_order_produces_identical_output() {
     assert_eq!(extract(&shuffled), forward);
 }
 
-// TC-032, FR-005-AC-7 — the dogfooding check: extracting this repository's own
+// the dogfooding check: extracting this repository's own
 // sources recovers the TC tags its tests carry, using the library the tags
 // document.
+#[trace("TC-032", "FR-005-AC-7")]
 #[test]
 fn self_extraction_recovers_this_repositorys_own_tracking_tags() {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -252,7 +259,8 @@ fn self_extraction_recovers_this_repositorys_own_tracking_tags() {
     assert_eq!(result.stats.files_with_errors, 0, "our own sources parse");
 }
 
-// TC-059, NFR-002-AC-1: no HTTP, RPC or socket client crate in the closure.
+// no HTTP, RPC or socket client crate in the closure.
+#[trace("TC-059", "NFR-002-AC-1")]
 #[test]
 fn the_dependency_closure_holds_no_network_client() {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -275,12 +283,13 @@ fn the_dependency_closure_holds_no_network_client() {
     }
 }
 
-// TC-007, FR-001-AC-7, StR-001-VC-2: a dependency audit confirms no filesystem or network
+// a dependency audit confirms no filesystem or network
 // crate is reachable from the extraction path.
 //
 // An allowlist rather than a denylist: a denylist only rejects the crates
 // somebody thought to name, and the criterion is about what the extraction path
 // *may* reach, not about which of today's crates it happens not to.
+#[trace("TC-007", "FR-001-AC-7", "StR-001-VC-2")]
 #[test]
 fn the_declared_dependencies_are_the_audited_set() {
     let root = env!("CARGO_MANIFEST_DIR");
@@ -332,8 +341,9 @@ fn the_declared_dependencies_are_the_audited_set() {
     );
 }
 
-// TC-060, NFR-002-AC-2, FR-003-CON-1: no filesystem, environment or process access in the
+// no filesystem, environment or process access in the
 // extraction path.
+#[trace("TC-060", "NFR-002-AC-2", "FR-003-CON-1")]
 #[test]
 fn extraction_touches_no_ambient_state() {
     // Tests are exempt — this very test reads files — so only the extraction
@@ -349,12 +359,13 @@ fn extraction_touches_no_ambient_state() {
     });
 }
 
-// TC-058, NFR-001-AC-5: a static audit finds no clock, randomness, process or
+// a static audit finds no clock, randomness, process or
 // environment read in extraction paths.
 //
 // Separate from TC-060 because the two criteria fail for different reasons: an
 // ambient *read* breaks the filesystem boundary, while a clock or a random
 // source breaks determinism even where no boundary is crossed.
+#[trace("TC-058", "NFR-001-AC-5")]
 #[test]
 fn extraction_reads_no_clock_and_no_randomness() {
     for_each_extraction_source(|path, code| {
@@ -409,7 +420,8 @@ fn for_each_extraction_source(check: impl Fn(String, &str)) {
     }
 }
 
-// TC-057, NFR-001-AC-4: no order-observable hash iteration in extraction.
+// no order-observable hash iteration in extraction.
+#[trace("TC-057", "NFR-001-AC-4")]
 #[test]
 fn extraction_paths_use_ordered_collections_only() {
     for_each_extraction_source(|path, code| {
@@ -456,8 +468,7 @@ fn strip_comments(source: &str) -> String {
 /// changed one file need not repeat.
 /// Assumptions: the fixture is the same mixed-language repository the rest of
 /// this suite uses, so the comparison covers every record kind it emits.
-/// ACs: NFR-003-AC-5.
-/// Trace: TC-077, NFR-003-AC-5
+#[trace("TC-077", "NFR-003-AC-5")]
 #[test]
 fn tc_077_caller_supplied_parses_are_reused_and_change_nothing() {
     use std::collections::BTreeMap;

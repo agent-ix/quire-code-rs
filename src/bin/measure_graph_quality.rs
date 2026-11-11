@@ -415,6 +415,7 @@ fn usage() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn valid_args() -> Vec<String> {
         [
@@ -568,7 +569,8 @@ mod tests {
         commit_repo(root);
     }
 
-    // TC-123 / FR-012-AC-6: missing inputs name the exact input and emit nothing.
+    // missing inputs name the exact input and emit nothing.
+    #[trace("TC-123", "FR-012-AC-6")]
     #[test]
     fn parser_names_every_missing_identity_before_any_output_exists() {
         let args = valid_args();
@@ -589,7 +591,8 @@ mod tests {
         );
     }
 
-    // TC-195 / FR-012-AC-11: the scorer is the corpus checkout's release build.
+    // the scorer is the corpus checkout's release build.
+    #[trace("TC-195", "FR-012-AC-11")]
     #[test]
     fn scorer_must_be_the_corpus_release_binary() {
         let scratch =
@@ -605,7 +608,8 @@ mod tests {
         fs::remove_dir_all(scratch).unwrap();
     }
 
-    // TC-125 / FR-012-AC-8: structural Quire validity cannot mask semantic drift.
+    // structural Quire validity cannot mask semantic drift.
+    #[trace("TC-125", "FR-012-AC-8")]
     #[test]
     fn measurement_plan_must_remain_active_and_match_the_governed_decision() {
         let good = include_str!("../../spec/assurance/MP-001-graph-quality-observation.md");
@@ -627,8 +631,9 @@ mod tests {
         }
     }
 
-    // TC-122 / FR-012-AC-5: all three absence states emit evidence but no
+    // all three absence states emit evidence but no
     // measured result and map to a non-zero main-process decision.
+    #[trace("TC-122", "FR-012-AC-5")]
     #[test]
     fn binary_pipeline_emits_each_non_measured_state_without_results() {
         let unique = std::time::SystemTime::now()
@@ -669,8 +674,9 @@ mod tests {
         fs::remove_dir_all(scratch).unwrap();
     }
 
-    // TC-120, TC-121 / FR-012-AC-3..4: child-process status, recall, and
+    // child-process status, recall, and
     // non-edge findings do not control the decision; a heuristic-edge FP does.
+    #[trace("TC-120", "TC-121", "FR-012-AC-3", "FR-012-AC-4")]
     #[test]
     fn binary_pipeline_gates_only_on_false_positive_heuristic_edges() {
         let unique = std::time::SystemTime::now()

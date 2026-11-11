@@ -400,6 +400,7 @@ fn types_by_file(
 mod tests {
     use super::*;
     use crate::lang::Language;
+    use ix_trace_rs::trace;
 
     fn batch() -> Vec<SourceFile> {
         vec![
@@ -420,7 +421,8 @@ mod tests {
         ]
     }
 
-    // TC-015, FR-003-AC-1: containment forms a tree rooted at the file.
+    // containment forms a tree rooted at the file.
+    #[trace("TC-015", "FR-003-AC-1")]
     #[test]
     fn containment_forms_a_tree_rooted_at_the_file() {
         let result = extract(&batch());
@@ -438,7 +440,8 @@ mod tests {
         assert_eq!(before, targets.len(), "a node has two parents");
     }
 
-    // TC-019, FR-003-AC-5: structural edges carry confidence 1.0.
+    // structural edges carry confidence 1.0.
+    #[trace("TC-019", "FR-003-AC-5")]
     #[test]
     fn structural_edges_are_fully_confident() {
         let result = extract(&batch());
@@ -463,8 +466,9 @@ mod tests {
         assert_eq!(import.reason, "path-resolved");
     }
 
-    // TC-017, FR-003-AC-3: a bare specifier is silent; a broken relative one
+    // a bare specifier is silent; a broken relative one
     // is diagnosed.
+    #[trace("TC-017", "FR-003-AC-3")]
     #[test]
     fn bare_imports_are_silent_and_broken_relative_imports_are_diagnosed() {
         let quiet = extract(&[SourceFile::new(
@@ -513,8 +517,9 @@ mod tests {
         assert_eq!(mention_edge.confidence, 1.0);
     }
 
-    // TC-039, FR-007-AC-1: one syntactically invalid file in a batch is
+    // one syntactically invalid file in a batch is
     // diagnosed, and every other file still yields complete records.
+    #[trace("TC-039", "FR-007-AC-1")]
     #[test]
     fn one_invalid_file_does_not_cost_the_batch_its_records() {
         let mut with_broken = batch();
@@ -550,9 +555,10 @@ mod tests {
         );
     }
 
-    // TC-029, FR-005-AC-4: an identifier inside a string literal yields no
+    // an identifier inside a string literal yields no
     // mention. The harvester reads comments only, so the criterion is about
     // what reaches it — a literal never does.
+    #[trace("TC-029", "FR-005-AC-4")]
     #[test]
     fn an_identifier_in_a_string_literal_is_not_a_mention() {
         let result = extract(&[SourceFile::new(
@@ -573,7 +579,8 @@ mod tests {
         );
     }
 
-    // TC-037, FR-006-AC-5: no timestamp, absolute path, hostname or pid.
+    // no timestamp, absolute path, hostname or pid.
+    #[trace("TC-037", "FR-006-AC-5")]
     #[test]
     fn serialized_output_carries_nothing_environmental() {
         let result = extract(&batch());
@@ -585,7 +592,8 @@ mod tests {
         }
     }
 
-    // TC-042, FR-007-AC-4: healthy files are unaffected by a malformed sibling.
+    // healthy files are unaffected by a malformed sibling.
+    #[trace("TC-042", "FR-007-AC-4")]
     #[test]
     fn a_malformed_file_does_not_change_its_siblings_records() {
         let healthy = extract(&batch());
@@ -611,7 +619,8 @@ mod tests {
         assert_eq!(mixed.stats.files_with_errors, 1);
     }
 
-    // TC-056, NFR-001-AC-3: shuffling the batch changes nothing.
+    // shuffling the batch changes nothing.
+    #[trace("TC-056", "NFR-001-AC-3")]
     #[test]
     fn batch_order_does_not_affect_output() {
         let forward = extract(&batch());
@@ -621,7 +630,8 @@ mod tests {
         assert_eq!(forward, backward);
     }
 
-    // TC-054, NFR-001-AC-1, StR-001-VC-3: repeated extractions are identical.
+    // repeated extractions are identical.
+    #[trace("TC-054", "NFR-001-AC-1", "StR-001-VC-3")]
     #[test]
     fn repeated_extractions_are_identical() {
         let files = batch();

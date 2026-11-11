@@ -61,8 +61,10 @@ pub fn ix_ref(qualified_name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
-    // TC-013, FR-002-AC-6, FR-002-CON-1: Windows-style paths normalize to forward slashes.
+    // Windows-style paths normalize to forward slashes.
+    #[trace("TC-013", "FR-002-AC-6", "FR-002-CON-1")]
     #[test]
     fn windows_paths_normalize_to_forward_slashes() {
         assert_eq!(normalize_path("src\\core\\lib.rs"), "src/core/lib.rs");
@@ -74,7 +76,8 @@ mod tests {
         );
     }
 
-    // TC-010, FR-002-AC-3: a code_file name carries no `::` segment.
+    // a code_file name carries no `::` segment.
+    #[trace("TC-010", "FR-002-AC-3")]
     #[test]
     fn file_names_carry_no_segment_separator() {
         let name = file_name("agent-ix", "quire-code-rs", "src/lib.rs");
@@ -82,7 +85,8 @@ mod tests {
         assert!(!name.contains("::"));
     }
 
-    // TC-008, FR-002-AC-1: a free function's qualified name shape.
+    // a free function's qualified name shape.
+    #[trace("TC-008", "FR-002-AC-1")]
     #[test]
     fn free_function_name_has_the_documented_shape() {
         let file = file_name("agent-ix", "quire-code-rs", "src/lib.rs");
@@ -92,7 +96,8 @@ mod tests {
         );
     }
 
-    // TC-011, FR-002-AC-4: the same repo under two orgs yields disjoint names.
+    // the same repo under two orgs yields disjoint names.
+    #[trace("TC-011", "FR-002-AC-4")]
     #[test]
     fn org_prefix_keeps_same_named_repos_disjoint() {
         let a = file_name("agent-ix", "widgets", "src/lib.rs");
@@ -100,8 +105,9 @@ mod tests {
         assert_ne!(a, b);
     }
 
-    // TC-012, FR-002-AC-5: anonymous segments are ordinal-derived, so they
+    // anonymous segments are ordinal-derived, so they
     // survive an edit that shifts the declaration's lines.
+    #[trace("TC-012", "FR-002-AC-5")]
     #[test]
     fn anonymous_segments_are_ordinal_not_positional() {
         assert_eq!(anonymous_segment("closure", 0), "<closure#0>");
@@ -111,7 +117,8 @@ mod tests {
         );
     }
 
-    // TC-014, FR-002-AC-7, FR-002-CON-2: every ix:// reference has at least three segments.
+    // every ix:// reference has at least three segments.
+    #[trace("TC-014", "FR-002-AC-7", "FR-002-CON-2")]
     #[test]
     fn ix_refs_carry_at_least_three_segments() {
         let name = file_name("agent-ix", "quire-code-rs", "src/lib.rs");

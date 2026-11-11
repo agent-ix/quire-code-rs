@@ -22,11 +22,14 @@
 //! test fail, then reverting (recorded in the PR body rather than repeated
 //! here).
 
-// TC-176: no workspace member other than `quire-code-parse` names
+// no workspace member other than `quire-code-parse` names
 // `tree-sitter` (or a `tree-sitter-*` grammar) as a direct dependency, and
 // `quire-code-parse` itself does — the mechanism PLAT-849 exists to add.
 // No owning acceptance criterion yet (PR #27 review N3); tagged here so this
 // mechanism is visible to the Test Matrix rather than invisible to deletion.
+use ix_trace_rs::trace;
+
+#[trace("TC-176")]
 #[test]
 fn tree_sitter_is_reachable_only_through_the_quire_code_parse_pin() {
     let metadata = cargo_metadata();
@@ -109,10 +112,11 @@ fn cargo_metadata() -> serde_json::Value {
     serde_json::from_slice(&output.stdout).expect("cargo metadata emits JSON")
 }
 
-// TC-133 / FR-012-CON-2: the producer reads local filesystem inputs only. Its
+// the producer reads local filesystem inputs only. Its
 // sources name no URL scheme and run no git subcommand that reaches a remote;
 // `--source-remote` and `--corpus-remote` are recorded identities, never
 // fetched.
+#[trace("TC-133", "FR-012-CON-2")]
 #[test]
 fn producer_sources_reach_only_local_filesystem_inputs() {
     let mut checked = 0;
@@ -134,10 +138,11 @@ fn producer_sources_reach_only_local_filesystem_inputs() {
     assert!(checked > 0, "no producer source was scanned");
 }
 
-// TC-134 / FR-012-CON-3: the producer initiates no network request. No source
+// the producer initiates no network request. No source
 // names a socket API and no workspace member depends on a network crate.
 // Subprocess behaviour (the scorer's python, `quire validate`, `git status`)
 // is out of scope for a source scan.
+#[trace("TC-134", "FR-012-CON-3")]
 #[test]
 fn producer_sources_and_dependencies_initiate_no_network_request() {
     let mut checked = 0;

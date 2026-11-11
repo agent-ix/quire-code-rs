@@ -10,6 +10,7 @@
 //! point: a missing edge leaves a reader where they already were, a wrong one
 //! sends them somewhere irrelevant and discredits the rest of the view.
 
+use ix_trace_rs::trace;
 use std::collections::BTreeSet;
 
 use quire_code_rs::{extract, EdgeRecord, ExtractionResult, Language, SourceFile};
@@ -245,27 +246,31 @@ def from_constructor():
     }
 }
 
-// TC-066, NFR-004-AC-1, StR-002-VC-4: zero wrong edges on the Rust precision corpus.
+// zero wrong edges on the Rust precision corpus.
+#[trace("TC-066", "NFR-004-AC-1", "StR-002-VC-4")]
 #[test]
 fn rust_corpus_emits_no_wrong_edges() {
     assert_precision(&rust_corpus());
 }
 
-// TC-067, NFR-004-AC-2: zero wrong edges on the TypeScript precision corpus.
+// zero wrong edges on the TypeScript precision corpus.
+#[trace("TC-067", "NFR-004-AC-2")]
 #[test]
 fn typescript_corpus_emits_no_wrong_edges() {
     assert_precision(&typescript_corpus());
 }
 
-// TC-068, NFR-004-AC-3: zero wrong edges on the Python precision corpus.
+// zero wrong edges on the Python precision corpus.
+#[trace("TC-068", "NFR-004-AC-3")]
 #[test]
 fn python_corpus_emits_no_wrong_edges() {
     assert_precision(&python_corpus());
 }
 
-// TC-069, NFR-004-AC-4: the ambiguity corpus produces no call edge at all.
+// the ambiguity corpus produces no call edge at all.
 // Every call site here is deliberately unresolvable: two unrelated types
 // declare the same method name and no receiver type is recoverable.
+#[trace("TC-069", "NFR-004-AC-4")]
 #[test]
 fn the_ambiguity_corpus_emits_nothing() {
     let files = vec![
@@ -307,11 +312,12 @@ fn the_ambiguity_corpus_emits_nothing() {
     );
 }
 
-// TC-051, FR-008-AC-8: a call through a Rust trait object resolves to the
+// a call through a Rust trait object resolves to the
 // trait's own method and never to an implementor. The source names the
 // interface and does not determine which implementation runs, so the interface
 // is the whole of what is known — and now that a trait method is a declaration
 // (#11), it is a node the edge can point at rather than an absence.
+#[trace("TC-051", "FR-008-AC-8")]
 #[test]
 fn a_trait_object_call_resolves_to_the_trait_and_no_further() {
     let files = vec![SourceFile::new(
@@ -359,7 +365,7 @@ pub fn run(sink: &dyn Persist) {
     }
 }
 
-// TC-107, FR-008-AC-13: one declaration shape resolves at one tier in every
+// one declaration shape resolves at one tier in every
 // language. An annotated receiver whose type is declared in the same file
 // resolves, so FR-008 says `receiver-typed` — and saying `import-scoped` in one
 // language makes that language's dependencies rank below identical ones
@@ -368,6 +374,7 @@ pub fn run(sink: &dyn Persist) {
 // Raw strings, deliberately: an escaped literal here was reflowed by `cargo
 // fmt` into an indented continuation, which changed the Python fixture into a
 // different shape and made the test fail for a reason that was not the defect.
+#[trace("TC-107", "FR-008-AC-13")]
 #[test]
 fn one_shape_resolves_at_one_tier_in_every_language() {
     let rust = r#"pub struct Store;
@@ -417,9 +424,10 @@ def same_file(store: Store) -> None:
     }
 }
 
-// TC-097, FR-008-AC-7: a Python base class is an `extends` relation, so a
+// a Python base class is an `extends` relation, so a
 // supertype is reachable in every language rather than only where the grammar
 // spells the keyword.
+#[trace("TC-097", "FR-008-AC-7")]
 #[test]
 fn a_python_base_class_yields_an_extends_edge() {
     let result = extract(&[SourceFile::new(
@@ -444,8 +452,9 @@ fn a_python_base_class_yields_an_extends_edge() {
     );
 }
 
-// TC-050, FR-008-AC-7: Rust impls yield `implements_trait`, TypeScript
+// Rust impls yield `implements_trait`, TypeScript
 // subclasses yield `extends`.
+#[trace("TC-050", "FR-008-AC-7")]
 #[test]
 fn type_relations_are_emitted_for_both_languages() {
     let rust = extract(&[SourceFile::new(
@@ -475,8 +484,9 @@ fn type_relations_are_emitted_for_both_languages() {
     );
 }
 
-// TC-052, FR-008-AC-9, FR-008-CON-3: same-file resolution is unaffected by batch
+// same-file resolution is unaffected by batch
 // composition.
+#[trace("TC-052", "FR-008-AC-9", "FR-008-CON-3")]
 #[test]
 fn same_file_resolution_is_independent_of_the_rest_of_the_batch() {
     let alone = SourceFile::new(
@@ -519,7 +529,8 @@ impl Local {
     assert!(!solo_calls.is_empty(), "the self-call should resolve");
 }
 
-// TC-073, FR-008-AC-11: the result reports what the batch bounded.
+// the result reports what the batch bounded.
+#[trace("TC-073", "FR-008-AC-11")]
 #[test]
 fn the_result_reports_batch_size_and_unresolved_calls() {
     let result = extract(&rust_corpus().files);
@@ -527,7 +538,8 @@ fn the_result_reports_batch_size_and_unresolved_calls() {
     assert_eq!(result.stats.files_with_errors, 0);
 }
 
-// TC-070, NFR-004-AC-5: recall is computed and reported for every corpus.
+// recall is computed and reported for every corpus.
+#[trace("TC-070", "NFR-004-AC-5")]
 #[test]
 fn recall_is_reported_for_every_language() {
     for corpus in [rust_corpus(), typescript_corpus(), python_corpus()] {
@@ -547,8 +559,9 @@ fn recall_is_reported_for_every_language() {
 // the edges *inside* each file. The batch ambiguity is real, but it is not the
 // ambiguity the call site has — FR-008 requires same-file resolution to succeed
 // without consulting other files.
-// TC-074, FR-008-AC-12: a simple type name declared in two files still
+// a simple type name declared in two files still
 // resolves within each file that declares it.
+#[trace("TC-074", "FR-008-AC-12")]
 #[test]
 fn a_name_shared_across_languages_does_not_suppress_same_file_edges() {
     let files = vec![

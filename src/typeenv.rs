@@ -223,6 +223,7 @@ impl TypeEnv {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn corpus() -> Corpus {
         let mut corpus = Corpus::default();
@@ -271,8 +272,9 @@ mod tests {
         assert_eq!(env.lookup("", "s"), Some("Store"));
     }
 
-    // TC-046, FR-008-AC-3, StR-001-VC-1: a copy binding resolves through the fixpoint, even
+    // a copy binding resolves through the fixpoint, even
     // when written before the binding it copies.
+    #[trace("TC-046", "FR-008-AC-3", "StR-001-VC-1")]
     #[test]
     fn copy_chains_resolve_in_either_order() {
         let reverse_order = [
@@ -286,7 +288,8 @@ mod tests {
         assert_eq!(env.lookup("", "c"), Some("Store"));
     }
 
-    // TC-047, FR-008-AC-4: a call-result binding resolves through the fixpoint.
+    // a call-result binding resolves through the fixpoint.
+    #[trace("TC-047", "FR-008-AC-4")]
     #[test]
     fn call_result_bindings_resolve_from_declared_return_types() {
         let env = TypeEnv::build(
@@ -327,7 +330,8 @@ mod tests {
         assert_eq!(env.lookup("", "r"), Some("Row"));
     }
 
-    // TC-048, FR-008-AC-5: a local rebinding does not leak to file level.
+    // a local rebinding does not leak to file level.
+    #[trace("TC-048", "FR-008-AC-5")]
     #[test]
     fn local_bindings_do_not_leak_to_file_scope() {
         let bindings = [
@@ -341,8 +345,9 @@ mod tests {
         assert_eq!(env.lookup("g@20", "s"), Some("Store"));
     }
 
-    // TC-049, FR-008-AC-6, FR-008-CON-2: a cycle terminates at the bound and emits only what
+    // a cycle terminates at the bound and emits only what
     // resolved, rather than looping or guessing.
+    #[trace("TC-049", "FR-008-AC-6", "FR-008-CON-2")]
     #[test]
     fn cyclic_bindings_terminate_without_guessing() {
         let bindings = [

@@ -201,6 +201,7 @@ impl EdgeAccumulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn ev(file: &str, line: u32) -> Evidence {
         Evidence {
@@ -209,8 +210,9 @@ mod tests {
         }
     }
 
-    // TC-106, FR-006-AC-7: an edge whose source and target are equal is not
+    // an edge whose source and target are equal is not
     // emitted, whatever produced it.
+    #[trace("TC-106", "FR-006-AC-7")]
     #[test]
     fn a_self_edge_is_never_emitted() {
         let mut acc = EdgeAccumulator::new();
@@ -239,7 +241,8 @@ mod tests {
         );
     }
 
-    // TC-020, FR-004-AC-1: two sites on one triple fold to one edge, count 2.
+    // two sites on one triple fold to one edge, count 2.
+    #[trace("TC-020", "FR-004-AC-1")]
     #[test]
     fn repeated_sites_fold_onto_one_edge() {
         let mut acc = EdgeAccumulator::new();
@@ -263,7 +266,8 @@ mod tests {
         assert_eq!(edges[0].evidence.len(), 2);
     }
 
-    // TC-021, FR-004-AC-2, FR-004-CON-2: thirty sites yield count 30 and 20 evidence entries.
+    // thirty sites yield count 30 and 20 evidence entries.
+    #[trace("TC-021", "FR-004-AC-2", "FR-004-CON-2")]
     #[test]
     fn evidence_is_capped_but_count_is_not() {
         let mut acc = EdgeAccumulator::new();
@@ -284,7 +288,8 @@ mod tests {
         assert_eq!(edges[0].evidence[EVIDENCE_CAP - 1].line, 20);
     }
 
-    // TC-022, FR-004-AC-3: highest confidence and its reason win.
+    // highest confidence and its reason win.
+    #[trace("TC-022", "FR-004-AC-3")]
     #[test]
     fn stronger_reason_wins_regardless_of_arrival_order() {
         let mut weak_first = EdgeAccumulator::new();
@@ -314,7 +319,8 @@ mod tests {
         }
     }
 
-    // TC-023, FR-004-AC-4: every reason is in the enum and confidence in [0,1].
+    // every reason is in the enum and confidence in [0,1].
+    #[trace("TC-023", "FR-004-AC-4")]
     #[test]
     fn every_reason_carries_a_confidence_within_the_unit_interval() {
         for reason in [
@@ -330,7 +336,8 @@ mod tests {
         }
     }
 
-    // TC-024, FR-004-AC-5: evidence is ordered by file then line.
+    // evidence is ordered by file then line.
+    #[trace("TC-024", "FR-004-AC-5")]
     #[test]
     fn evidence_is_ordered_by_file_then_line() {
         let mut acc = EdgeAccumulator::new();
@@ -346,7 +353,8 @@ mod tests {
         assert_eq!(got, vec![("a.rs", 2), ("a.rs", 9), ("z.rs", 5)]);
     }
 
-    // TC-025, FR-004-AC-6: syntactic reasons carry confidence 1.0.
+    // syntactic reasons carry confidence 1.0.
+    #[trace("TC-025", "FR-004-AC-6")]
     #[test]
     fn source_read_reasons_are_fully_confident() {
         assert_eq!(Reason::Syntactic.confidence(), 1.0);
@@ -354,7 +362,8 @@ mod tests {
         assert_eq!(Reason::ExplicitMention.confidence(), 1.0);
     }
 
-    // TC-053, FR-008-AC-10: the resolution tiers rank as the contract states.
+    // the resolution tiers rank as the contract states.
+    #[trace("TC-053", "FR-008-AC-10")]
     #[test]
     fn resolution_tiers_rank_receiver_over_import_over_name() {
         assert!(Reason::ReceiverTyped.confidence() > Reason::ImportScoped.confidence());

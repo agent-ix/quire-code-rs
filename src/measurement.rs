@@ -573,6 +573,7 @@ fn quoin_observations(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ix_trace_rs::trace;
 
     fn report() -> Value {
         json!({
@@ -636,7 +637,16 @@ mod tests {
         value["observation_id"] = Value::String(observation_id(value).unwrap());
     }
 
-    // TC-112, TC-113, TC-130, TC-131 / FR-011-AC-1..2, FR-011-CON-1..2.
+    #[trace(
+        "TC-112",
+        "TC-113",
+        "TC-130",
+        "TC-131",
+        "FR-011-AC-1",
+        "FR-011-AC-2",
+        "FR-011-CON-1",
+        "FR-011-CON-2"
+    )]
     #[test]
     fn measured_observation_is_schema_valid_and_dimension_complete() {
         let value = build_observation(
@@ -695,7 +705,7 @@ mod tests {
         }
     }
 
-    // TC-114, TC-122 / FR-011-AC-3, FR-012-AC-5.
+    #[trace("TC-114", "TC-122", "FR-011-AC-3", "FR-012-AC-5")]
     #[test]
     fn absence_states_never_acquire_results_or_measured_zero() {
         for state in [
@@ -709,7 +719,14 @@ mod tests {
         }
     }
 
-    // TC-115, TC-116, TC-117 / FR-011-AC-4..6.
+    #[trace(
+        "TC-115",
+        "TC-116",
+        "TC-117",
+        "FR-011-AC-4",
+        "FR-011-AC-5",
+        "FR-011-AC-6"
+    )]
     #[test]
     fn schema_rejects_bad_paths_vocabularies_and_unknown_fields() {
         let good = build_observation(
@@ -763,8 +780,17 @@ mod tests {
         assert!(validate_observation(&missing_dimension).is_err());
     }
 
-    // TC-120, TC-121, TC-128, TC-132 / FR-012-AC-3..4, NFR-005-AC-3,
-    // FR-012-CON-1: recall is reported but never changes the false-positive gate.
+    // recall is reported but never changes the false-positive gate.
+    #[trace(
+        "TC-120",
+        "TC-121",
+        "TC-128",
+        "TC-132",
+        "FR-012-AC-3",
+        "FR-012-AC-4",
+        "NFR-005-AC-3",
+        "FR-012-CON-1"
+    )]
     #[test]
     fn recall_and_wrong_edges_stay_independent_and_no_ambient_identity_is_added() {
         let value = build_observation(
@@ -784,8 +810,9 @@ mod tests {
         }
     }
 
-    // TC-193 / FR-012-AC-10: Quoin rejects a collection whose verification
+    // Quoin rejects a collection whose verification
     // stack omits a protected apparatus path (QM-APPARATUS-UNDECLARED).
+    #[trace("TC-193", "FR-012-AC-10")]
     #[test]
     fn artifacts_cover_every_protected_apparatus_path() {
         let observation = build_observation(
@@ -810,7 +837,8 @@ mod tests {
         }
     }
 
-    // TC-194 / FR-012-AC-10: only entries Quoin accepts verbatim are attested.
+    // only entries Quoin accepts verbatim are attested.
+    #[trace("TC-194", "FR-012-AC-10")]
     #[test]
     fn protected_apparatus_rejects_entries_quoin_would_expand_or_refuse() {
         for entry in [
@@ -832,10 +860,17 @@ mod tests {
         }
     }
 
-    // TC-108, TC-110, TC-120 / StR-003-VC-1..3, FR-012-AC-3, FR-012-AC-9:
     // Quoin receives exactly one graph_quality observation, the census-wide
     // edge false-positive count, and the producer/extractor attestations
     // retain their distinct executable identities.
+    #[trace(
+        "TC-108",
+        "TC-110",
+        "TC-120",
+        "StR-003-VC-1",
+        "FR-012-AC-3",
+        "FR-012-AC-9"
+    )]
     #[test]
     fn collection_exposes_one_edge_false_positive_count_and_named_artifacts() {
         let mut scorer = report();
@@ -884,7 +919,8 @@ mod tests {
         );
     }
 
-    // TC-120 / FR-012-AC-9: the observation states the declared repetitions.
+    // the observation states the declared repetitions.
+    #[trace("TC-120", "FR-012-AC-9")]
     #[test]
     fn measured_observation_states_repetitions_and_rejects_overflow() {
         let scorer = report();
@@ -906,8 +942,9 @@ mod tests {
         assert!(build_quoin_collection(&observation, Some(&huge), &collection_inputs()).is_err());
     }
 
-    // TC-124 / FR-012-AC-7: agreeing runs reconcile and are counted; a
+    // agreeing runs reconcile and are counted; a
     // disagreeing run is a typed error, never a silent pick.
+    #[trace("TC-124", "FR-012-AC-7")]
     #[test]
     fn repetitions_agree_or_fail_typed() {
         let (merged, raw, count) =
@@ -925,8 +962,9 @@ mod tests {
         ));
     }
 
-    // TC-122 / FR-012-AC-9: a non-measured population yields one not_computed
+    // a non-measured population yields one not_computed
     // observation with a null value, never a measured zero.
+    #[trace("TC-122", "FR-012-AC-9")]
     #[test]
     fn non_measured_population_emits_one_not_computed_observation() {
         for state in [
@@ -950,7 +988,7 @@ mod tests {
         }
     }
 
-    // TC-124, TC-126 / FR-012-AC-7, NFR-005-AC-1.
+    #[trace("TC-124", "TC-126", "FR-012-AC-7", "NFR-005-AC-1")]
     #[test]
     fn pinned_inputs_are_byte_identical_when_report_maps_arrive_reordered() {
         let first = build_observation(

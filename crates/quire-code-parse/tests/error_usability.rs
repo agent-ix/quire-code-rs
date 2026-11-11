@@ -24,10 +24,11 @@
 //! below (PLAT-841 PR #22 review round 3, finding FND-012).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+use ix_trace_rs::trace;
 use quire_code_parse::{parse_file, Language};
 
 #[cfg(feature = "rust")]
-// TC-171, FR-013-AC-3, FR-013-AC-12: a consumer walking several files reads each file's
+// a consumer walking several files reads each file's
 // `Diagnostic` — itself borrowed from that file's own `ParsedFile`, per
 // FND-013 now carrying `file` alongside `line` — and projects it into an
 // owned `String` before the loop moves to the next file, so the borrow never
@@ -36,6 +37,7 @@ use quire_code_parse::{parse_file, Language};
 // `Diagnostic`'s per-file borrow discipline being exercised, not
 // `ParseError`'s `'static`-ness — see the module docs for why this row no
 // longer cites AC-11.
+#[trace("TC-171", "FR-013-AC-3", "FR-013-AC-12")]
 #[test]
 fn diagnostics_from_several_files_project_into_one_vec_outliving_their_sources() {
     fn diagnostics_for(files: &[(&str, &str)]) -> Vec<String> {

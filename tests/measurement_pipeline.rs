@@ -3,6 +3,7 @@
 //! Run after a clean release build with:
 //! `QUIRE_CORPUS_ROOT=../quire-corpus QUIRE_CORPUS_BIN=<built quire-corpus> QUOIN_BIN=quoin QUIRE_BIN=quire cargo test --test measurement_pipeline -- --ignored --nocapture`.
 
+use ix_trace_rs::trace;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -104,8 +105,9 @@ fn complete_cli_args() -> Vec<String> {
     .collect()
 }
 
-// TC-123 / FR-012-AC-6: every missing identity fails the real CLI process
+// every missing identity fails the real CLI process
 // before stdout can contain an observation.
+#[trace("TC-123", "FR-012-AC-6")]
 #[test]
 fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
     let complete = complete_cli_args();
@@ -135,9 +137,28 @@ fn missing_identity_exits_nonzero_with_empty_stdout_and_exact_field() {
     }
 }
 
-// TC-108, TC-109, TC-110, TC-111, TC-118, TC-119, TC-124, TC-125, TC-127, TC-129 /
-// StR-003-VC-1..4, US-004-EX-1..2, FR-012-AC-1..2, FR-012-AC-7..11,
-// NFR-005-AC-1..2, MP-001, IT-001: real extractor + scorer + Quire + Quoin.
+// real extractor + scorer + Quire + Quoin.
+#[trace(
+    "TC-108",
+    "TC-109",
+    "TC-110",
+    "TC-111",
+    "TC-118",
+    "TC-119",
+    "TC-124",
+    "TC-125",
+    "TC-127",
+    "TC-129",
+    "FR-012-AC-1",
+    "FR-012-AC-2",
+    "FR-012-AC-7",
+    "FR-012-AC-8",
+    "FR-012-AC-9",
+    "FR-012-AC-10",
+    "FR-012-AC-11",
+    "NFR-005-AC-1",
+    "NFR-005-AC-2"
+)]
 #[test]
 #[ignore = "requires a clean quire-corpus checkout and built quire-corpus, installed Quire and Quoin CLIs (QUIRE_CORPUS_ROOT, QUIRE_CORPUS_BIN, QUOIN_BIN, QUIRE_BIN)"]
 fn real_corpus_observation_is_retained_and_rendered_by_quoin() {
