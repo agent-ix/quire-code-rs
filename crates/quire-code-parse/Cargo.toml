@@ -1,6 +1,6 @@
 [package]
 name = "quire-code-parse"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 rust-version = "1.75"
 description = "Shared tree-sitter parse layer: a borrowed syntax tree plus its source text, with no fact model, classification or analysis attached."
@@ -39,7 +39,7 @@ tree-sitter-bash = { workspace = true, optional = true }
 thiserror = "^2"
 
 [dev-dependencies]
-ix-trace-rs = { version = "=0.1.0", git = "https://github.com/agent-ix/ix-trace-rs", tag = "v0.1.1" }
+ix-trace-rs = { version = "=0.1.2", git = "https://github.com/agent-ix/ix-trace-rs", tag = "v0.1.2" }
 # Dev-only: proves the Send/Sync claim in the crate docs by compiling a
 # static assertion instead of asserting it in prose (PLAT-841). Never reaches
 # a consumer's dependency graph.
